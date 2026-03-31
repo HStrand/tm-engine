@@ -64,6 +64,7 @@ public static class CardRegistry
         [.. All.Values
             .Where(e => expansions.Contains(e.Definition.Expansion))
             .Where(e => e.Definition.Type is CardType.Automated or CardType.Active or CardType.Event)
+            .OrderBy(e => e.Definition.Id)
             .Select(e => e.Definition.Id)];
 
     /// <summary>
@@ -73,6 +74,7 @@ public static class CardRegistry
         [.. All.Values
             .Where(e => expansions.Contains(e.Definition.Expansion))
             .Where(e => e.Definition.Type == CardType.Corporation)
+            .OrderBy(e => e.Definition.Id)
             .Select(e => e.Definition.Id)];
 
     /// <summary>
@@ -81,6 +83,7 @@ public static class CardRegistry
     public static ImmutableArray<string> GetPreludeIds() =>
         [.. All.Values
             .Where(e => e.Definition.Type == CardType.Prelude)
+            .OrderBy(e => e.Definition.Id)
             .Select(e => e.Definition.Id)];
 
     private static ImmutableDictionary<string, CardEntry> BuildRegistry()
