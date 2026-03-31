@@ -220,8 +220,7 @@ public static class MoveValidator
         if (!map.MilestoneNames.Contains(move.MilestoneName))
             return $"Milestone '{move.MilestoneName}' does not exist on this map.";
 
-        // Milestone-specific requirements will be checked by MilestoneLogic (Phase 6)
-        return null;
+        return MilestoneAndAwardLogic.CheckMilestoneEligibility(state, move.PlayerId, move.MilestoneName);
     }
 
     private static string? ValidateFundAward(GameState state, FundAwardMove move)

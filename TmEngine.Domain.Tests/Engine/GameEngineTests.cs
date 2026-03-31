@@ -275,6 +275,7 @@ public class GameEngineTests
     public void ClaimMilestone_Costs8MC_RecordsClaim()
     {
         var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with { TerraformRating = 35 });
 
         var (newState, result) = GameEngine.Apply(state,
             new ClaimMilestoneMove(0, "Terraformer"));

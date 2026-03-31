@@ -47,8 +47,12 @@ public static class GameEngine
     /// </summary>
     public static GameState Setup(GameSetupOptions options, int seed)
     {
+        if (options.PlayerCount < Constants.MinPlayers || options.PlayerCount > Constants.MaxPlayers)
+            throw new ArgumentOutOfRangeException(nameof(options),
+                $"Player count must be between {Constants.MinPlayers} and {Constants.MaxPlayers}.");
+
         var players = ImmutableList.CreateBuilder<PlayerState>();
-        var startingTR = options.CorporateEra ? Constants.StartingTR : Constants.StartingTR;
+        var startingTR = Constants.StartingTR;
 
         for (int i = 0; i < options.PlayerCount; i++)
         {
