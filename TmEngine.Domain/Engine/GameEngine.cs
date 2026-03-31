@@ -659,14 +659,13 @@ public static class GameEngine
         var card = entry.Definition;
         var player = state.GetPlayer(move.PlayerId);
 
-        // Calculate effective cost with discounts
-        var discount = RequirementChecker.GetCardDiscount(player, card.Tags);
-        var effectiveCost = Math.Max(0, card.Cost - discount);
+        // Check if this is resolving a PlayCardFromHandPending (prelude effect)
+        var isFromPending = state.PendingAction is PlayCardFromHandPending;
+        var pendingDiscount = isFromPending ? ((PlayCardFromHandPending)state.PendingAction!).CostDiscount : 0;
 
-        // Validate and apply payment
-        var steelValue = RequirementChecker.GetSteelValue(player);
-        var titaniumValue = RequirementChecker.GetTitaniumValue(player);
-        var totalPayment = move.Payment.TotalValue(steelValue, titaniumValue);
+        // Calculate effective cost with discounts
+        var discount = RequirementChecker.GetCardDiscount(player, card.Tags) + pendingDiscount;
+        var effectiveCost = Math.Max(0, card.Cost - discount);
 
         // Deduct resources
         state = state.UpdatePlayer(move.PlayerId, p => p with
@@ -679,8 +678,13 @@ public static class GameEngine
                 Energy: p.Resources.Energy,
                 Heat: p.Resources.Heat - move.Payment.Heat),
             Hand = p.Hand.Remove(move.CardId),
-            ActionsThisTurn = p.ActionsThisTurn + 1,
+            // Only count as an action if this is a normal action phase play
+            ActionsThisTurn = isFromPending ? p.ActionsThisTurn : p.ActionsThisTurn + 1,
         });
+
+        // Clear the pending action if resolving one
+        if (isFromPending)
+            state = state with { PendingAction = null };
 
         // Place card in appropriate pile
         state = card.Type switch
@@ -714,6 +718,10 @@ public static class GameEngine
             return state with { PendingAction = pending };
 
         // TODO: Fire triggered effects for other players' cards (TriggerSystem)
+
+        // If resolved from a pending action during setup, don't advance turn
+        if (isFromPending)
+            return state;
 
         return PhaseManager.AfterAction(state);
     }

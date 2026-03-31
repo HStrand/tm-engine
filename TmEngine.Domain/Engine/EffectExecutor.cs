@@ -48,6 +48,10 @@ public static class EffectExecutor
             // Special
             IncreaseLowestProductionEffect => ApplyIncreaseLowestProduction(state, playerId),
             DrawAndPlayOneEffect e => ApplyDrawAndPlayOne(state, playerId, e),
+            RevealUntilTagEffect e => (ApplyRevealUntilTag(state, playerId, e), null),
+            PlayCardFromHandEffect e => (state, new PlayCardFromHandPending(
+                e.IgnoreGlobalRequirements ? "Play a card from hand (ignoring global requirements):" : $"Play a card from hand ({e.CostDiscount} MC discount):",
+                e.IgnoreGlobalRequirements, e.CostDiscount)),
             GrantFreeAwardEffect => (state.UpdatePlayer(playerId, p => p with { HasFreeAwardFunding = true }), null),
 
             // Choices
@@ -355,6 +359,53 @@ public static class EffectExecutor
         return (state, new ChooseOptionPending(
             $"Choose which production to increase (all at {min}):",
             options));
+    }
+
+    private static GameState ApplyRevealUntilTag(GameState state, int playerId, RevealUntilTagEffect e)
+    {
+        var kept = new List<string>();
+        var discarded = new List<string>();
+        var allRevealed = new List<string>();
+        var deck = state.DrawPile;
+
+        int found = 0;
+        while (found < e.Count && !deck.IsEmpty)
+        {
+            var cardId = deck[0];
+            deck = deck.RemoveAt(0);
+            allRevealed.Add(cardId);
+
+            var tags = CardRegistry.GetTags(cardId);
+            if (tags.Contains(e.Tag))
+            {
+                kept.Add(cardId);
+                found++;
+            }
+            else
+            {
+                discarded.Add(cardId);
+            }
+        }
+
+        state = state with
+        {
+            DrawPile = deck,
+            DiscardPile = state.DiscardPile.AddRange(discarded),
+        };
+
+        // Add matching cards to player's hand
+        state = state.UpdatePlayer(playerId, p => p with
+        {
+            Hand = p.Hand.AddRange(kept),
+        });
+
+        // Log all revealed cards (visible to all players)
+        var revealedNames = string.Join(", ", allRevealed);
+        var keptNames = string.Join(", ", kept);
+        state = state.AppendLog(
+            $"Player {playerId} reveals: [{revealedNames}]. Keeps: [{keptNames}].");
+
+        return state;
     }
 
     private static (GameState, PendingAction?) ApplyDrawAndPlayOne(

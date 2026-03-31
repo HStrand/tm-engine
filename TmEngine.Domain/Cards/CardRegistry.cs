@@ -96,7 +96,7 @@ public static class CardRegistry
 
         // Apply hand-coded effects on top of loaded definitions
         RegisterCorporationEffects(builder);
-        // RegisterPreludeEffects(builder);
+        RegisterPreludeEffects(builder);
         // RegisterProjectCardEffects(builder);
 
         return builder.ToImmutable();
@@ -292,5 +292,255 @@ public static class CardRegistry
                 new GrantFreeAwardEffect(),
             ],
             ongoingEffects: [new VPCardRebateEffect(3)]);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  PRELUDE EFFECTS
+    // ═══════════════════════════════════════════════════════════
+
+    private static void RegisterPreludeEffects(ImmutableDictionary<string, CardEntry>.Builder builder)
+    {
+        // P01: Allied Banks — +4 MC prod, +3 MC
+        SetEffects(builder, "P01", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.MegaCredits, 4),
+            new ChangeResourceEffect(ResourceType.MegaCredits, 3),
+        ]);
+
+        // P02: Aquifer Turbines — Place ocean, +2 energy prod, pay 3 MC
+        SetEffects(builder, "P02", onPlayEffects:
+        [
+            new PlaceOceanEffect(1),
+            new ChangeProductionEffect(ResourceType.Energy, 2),
+            new ChangeResourceEffect(ResourceType.MegaCredits, -3),
+        ]);
+
+        // P03: Biofuels — +1 energy prod, +1 plant prod, +2 plants
+        SetEffects(builder, "P03", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, 1),
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+            new ChangeResourceEffect(ResourceType.Plants, 2),
+        ]);
+
+        // P04: Biolab — +1 plant prod, draw 3 cards
+        SetEffects(builder, "P04", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+            new DrawCardsEffect(3),
+        ]);
+
+        // P05: Biosphere Support — +2 plant prod, -1 MC prod
+        SetEffects(builder, "P05", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Plants, 2),
+            new ChangeProductionEffect(ResourceType.MegaCredits, -1),
+        ]);
+
+        // P06: Business Empire — +6 MC prod, pay 6 MC
+        SetEffects(builder, "P06", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.MegaCredits, 6),
+            new ChangeResourceEffect(ResourceType.MegaCredits, -6),
+        ]);
+
+        // P07: Dome Farming — +2 MC prod, +1 plant prod
+        SetEffects(builder, "P07", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.MegaCredits, 2),
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+        ]);
+
+        // P08: Donation — +21 MC
+        SetEffects(builder, "P08", onPlayEffects:
+            [new ChangeResourceEffect(ResourceType.MegaCredits, 21)]);
+
+        // P09: Early Settlement — +1 plant prod, place city
+        SetEffects(builder, "P09", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+            new PlaceTileEffect(TileType.City),
+        ]);
+
+        // P10: Ecology Experts — +1 plant prod, play a card ignoring global parameter requirements
+        SetEffects(builder, "P10", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+            new PlayCardFromHandEffect(IgnoreGlobalRequirements: true),
+        ]);
+
+        // P11: Eccentric Sponsor — Play 1 card from hand with 25 MC discount
+        SetEffects(builder, "P11", onPlayEffects:
+            [new PlayCardFromHandEffect(CostDiscount: 25)]);
+
+        // P12: Experimental Forest — Place greenery, reveal cards until 2 plant tags found
+        SetEffects(builder, "P12", onPlayEffects:
+        [
+            new PlaceTileEffect(TileType.Greenery),
+            new RevealUntilTagEffect(Tag.Plant, 2),
+        ]);
+
+        // P13: Galilean Mining — +2 titanium prod, pay 5 MC
+        SetEffects(builder, "P13", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Titanium, 2),
+            new ChangeResourceEffect(ResourceType.MegaCredits, -5),
+        ]);
+
+        // P14: Great Aquifer — Place 2 ocean tiles
+        SetEffects(builder, "P14", onPlayEffects:
+            [new PlaceOceanEffect(1), new PlaceOceanEffect(1)]);
+
+        // P15: Huge Asteroid — +3 temperature steps, pay 5 MC
+        SetEffects(builder, "P15", onPlayEffects:
+        [
+            new RaiseTemperatureEffect(3),
+            new ChangeResourceEffect(ResourceType.MegaCredits, -5),
+        ]);
+
+        // P16: Io Research Outpost — +1 titanium prod, draw 1 card
+        SetEffects(builder, "P16", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Titanium, 1),
+            new DrawCardsEffect(1),
+        ]);
+
+        // P17: Loan — +30 MC, -2 MC prod
+        SetEffects(builder, "P17", onPlayEffects:
+        [
+            new ChangeResourceEffect(ResourceType.MegaCredits, 30),
+            new ChangeProductionEffect(ResourceType.MegaCredits, -2),
+        ]);
+
+        // P18: Martian Industries — +1 energy prod, +1 steel prod, +6 MC
+        SetEffects(builder, "P18", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, 1),
+            new ChangeProductionEffect(ResourceType.Steel, 1),
+            new ChangeResourceEffect(ResourceType.MegaCredits, 6),
+        ]);
+
+        // P19: Metal-rich Asteroid — +1 temperature, +4 titanium, +4 steel
+        SetEffects(builder, "P19", onPlayEffects:
+        [
+            new RaiseTemperatureEffect(1),
+            new ChangeResourceEffect(ResourceType.Titanium, 4),
+            new ChangeResourceEffect(ResourceType.Steel, 4),
+        ]);
+
+        // P20: Metals Company — +1 MC prod, +1 steel prod, +1 titanium prod
+        SetEffects(builder, "P20", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.MegaCredits, 1),
+            new ChangeProductionEffect(ResourceType.Steel, 1),
+            new ChangeProductionEffect(ResourceType.Titanium, 1),
+        ]);
+
+        // P21: Mining Operations — +2 steel prod, +4 steel
+        SetEffects(builder, "P21", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Steel, 2),
+            new ChangeResourceEffect(ResourceType.Steel, 4),
+        ]);
+
+        // P22: Mohole — +3 heat prod, +3 heat
+        SetEffects(builder, "P22", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Heat, 3),
+            new ChangeResourceEffect(ResourceType.Heat, 3),
+        ]);
+
+        // P23: Mohole Excavation — +1 steel prod, +2 heat prod, +2 heat
+        SetEffects(builder, "P23", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Steel, 1),
+            new ChangeProductionEffect(ResourceType.Heat, 2),
+            new ChangeResourceEffect(ResourceType.Heat, 2),
+        ]);
+
+        // P24: Nitrogen Shipment — +1 plant prod, +1 TR, +5 MC
+        SetEffects(builder, "P24", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+            new ChangeTREffect(1),
+            new ChangeResourceEffect(ResourceType.MegaCredits, 5),
+        ]);
+
+        // P25: Orbital Construction Yard — +1 titanium prod, +4 titanium
+        SetEffects(builder, "P25", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Titanium, 1),
+            new ChangeResourceEffect(ResourceType.Titanium, 4),
+        ]);
+
+        // P26: Polar Industries — +2 heat prod, place ocean
+        SetEffects(builder, "P26", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Heat, 2),
+            new PlaceOceanEffect(1),
+        ]);
+
+        // P27: Power Generation — +3 energy prod
+        SetEffects(builder, "P27", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Energy, 3)]);
+
+        // P28: Research Network — +1 MC prod, draw 3 cards
+        SetEffects(builder, "P28", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.MegaCredits, 1),
+            new DrawCardsEffect(3),
+        ]);
+
+        // P29: Self-Sufficient Settlement — +2 MC prod, place city
+        SetEffects(builder, "P29", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.MegaCredits, 2),
+            new PlaceTileEffect(TileType.City),
+        ]);
+
+        // P30: Smelting Plant — +2 oxygen, +5 steel
+        SetEffects(builder, "P30", onPlayEffects:
+        [
+            new RaiseOxygenEffect(2),
+            new ChangeResourceEffect(ResourceType.Steel, 5),
+        ]);
+
+        // P31: Society Support — +1 plant prod, +1 energy prod, +1 heat prod, -1 MC prod
+        SetEffects(builder, "P31", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+            new ChangeProductionEffect(ResourceType.Energy, 1),
+            new ChangeProductionEffect(ResourceType.Heat, 1),
+            new ChangeProductionEffect(ResourceType.MegaCredits, -1),
+        ]);
+
+        // P32: Supplier — +2 energy prod, +4 steel
+        SetEffects(builder, "P32", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, 2),
+            new ChangeResourceEffect(ResourceType.Steel, 4),
+        ]);
+
+        // P33: Supply Drop — +3 titanium, +8 steel, +3 plants
+        SetEffects(builder, "P33", onPlayEffects:
+        [
+            new ChangeResourceEffect(ResourceType.Titanium, 3),
+            new ChangeResourceEffect(ResourceType.Steel, 8),
+            new ChangeResourceEffect(ResourceType.Plants, 3),
+        ]);
+
+        // P34: UNMI Contractor — +3 TR, draw 1 card
+        SetEffects(builder, "P34", onPlayEffects:
+        [
+            new ChangeTREffect(3),
+            new DrawCardsEffect(1),
+        ]);
+
+        // P35: Acquired Space Agency — +6 titanium, reveal cards until 2 space tags found
+        SetEffects(builder, "P35", onPlayEffects:
+        [
+            new ChangeResourceEffect(ResourceType.Titanium, 6),
+            new RevealUntilTagEffect(Tag.Space, 2),
+        ]);
     }
 }

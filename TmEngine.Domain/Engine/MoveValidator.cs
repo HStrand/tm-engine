@@ -548,6 +548,9 @@ public static class MoveValidator
                     ? null
                     : "Card is not one of the available options.",
 
+            (PlayCardFromHandPending pending, PlayCardMove play) =>
+                ValidatePlayCardForPending(state, play, pending),
+
             (ChooseOptionPending pending, ChooseOptionMove choose) =>
                 choose.OptionIndex >= 0 && choose.OptionIndex < pending.Options.Length
                     ? null
@@ -567,4 +570,69 @@ public static class MoveValidator
         };
     }
 
+    /// <summary>
+    /// Validate a PlayCardMove submitted to resolve a PlayCardFromHandPending.
+    /// Applies modified requirement rules (ignore global params, cost discount).
+    /// </summary>
+    private static string? ValidatePlayCardForPending(
+        GameState state, PlayCardMove move, PlayCardFromHandPending pending)
+    {
+        var player = state.GetPlayer(move.PlayerId);
+
+        if (!player.Hand.Contains(move.CardId))
+            return $"Card {move.CardId} is not in player's hand.";
+
+        if (!CardRegistry.TryGet(move.CardId, out var entry))
+            return null; // Unregistered card — accept structurally
+
+        var card = entry.Definition;
+
+        // Check requirements — with possible global requirement waiver
+        if (card.Requirement != null && !pending.IgnoreGlobalRequirements)
+        {
+            var reqError = RequirementChecker.CanPlayCard(state, move.PlayerId, card);
+            if (reqError != null) return reqError;
+        }
+        else if (card.Requirement != null && pending.IgnoreGlobalRequirements)
+        {
+            // Only check non-global requirements (tags, production)
+            var req = card.Requirement;
+            if (req.ScienceTags != null || req.EarthTags != null || req.JovianTags != null
+                || req.PowerProduction != null || req.TitaniumProduction != null
+                || req.PlantProduction != null || req.EnergyProduction != null)
+            {
+                var reqError = RequirementChecker.CanPlayCard(state, move.PlayerId, card);
+                if (reqError != null) return reqError;
+            }
+        }
+
+        // Payment validation with discount
+        var payment = move.Payment;
+        if (payment.Steel > 0 && !card.Tags.Contains(Tag.Building))
+            return "Steel can only be used to pay for cards with a Building tag.";
+        if (payment.Titanium > 0 && !card.Tags.Contains(Tag.Space))
+            return "Titanium can only be used to pay for cards with a Space tag.";
+        if (payment.Heat > 0 && !RequirementChecker.CanUseHeatAsPayment(player))
+            return "Cannot use heat to pay for cards.";
+
+        if (payment.MegaCredits > player.Resources.MegaCredits)
+            return $"Not enough MC.";
+        if (payment.Steel > player.Resources.Steel)
+            return $"Not enough steel.";
+        if (payment.Titanium > player.Resources.Titanium)
+            return $"Not enough titanium.";
+        if (payment.Heat > player.Resources.Heat)
+            return $"Not enough heat.";
+
+        var discount = RequirementChecker.GetCardDiscount(player, card.Tags) + pending.CostDiscount;
+        var effectiveCost = Math.Max(0, card.Cost - discount);
+        var steelValue = RequirementChecker.GetSteelValue(player);
+        var titaniumValue = RequirementChecker.GetTitaniumValue(player);
+        var totalValue = payment.TotalValue(steelValue, titaniumValue);
+
+        if (totalValue < effectiveCost)
+            return $"Payment ({totalValue} MC value) does not cover card cost ({effectiveCost} MC).";
+
+        return null;
+    }
 }

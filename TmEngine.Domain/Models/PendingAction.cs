@@ -60,6 +60,15 @@ public sealed record BuyCardsPending(
     ImmutableArray<string> AvailableCardIds) : PendingAction;
 
 /// <summary>
+/// Player must play a card from their hand with special rules
+/// (e.g., Ecology Experts: ignore global parameter requirements, Eccentric Sponsor: 25 MC discount).
+/// </summary>
+public sealed record PlayCardFromHandPending(
+    string Description,
+    bool IgnoreGlobalRequirements = false,
+    int CostDiscount = 0) : PendingAction;
+
+/// <summary>
 /// Player must choose one card to play from a set of options (e.g., Valley Trust first action).
 /// The chosen card's effects are applied immediately; the rest are discarded.
 /// </summary>

@@ -311,6 +311,21 @@ public sealed record HighCostRebateEffect(int CostThreshold, int Rebate) : Effec
 public sealed record DrawAndPlayOneEffect(int DrawCount, CardType CardTypeToFind) : Effect;
 
 /// <summary>
+/// Reveal cards from the draw pile until N cards with the specified tag are found.
+/// Matching cards go to the player's hand; non-matching are discarded.
+/// All revealed cards are visible to all players (stored in game log).
+/// </summary>
+public sealed record RevealUntilTagEffect(Tag Tag, int Count) : Effect;
+
+/// <summary>
+/// Player must play a card from hand immediately with special rules.
+/// E.g., Ecology Experts (ignore global requirements), Eccentric Sponsor (25 MC discount).
+/// </summary>
+public sealed record PlayCardFromHandEffect(
+    bool IgnoreGlobalRequirements = false,
+    int CostDiscount = 0) : Effect;
+
+/// <summary>
 /// Grants the player one free award funding (Vitor corporation).
 /// The player can use it at any point — it's not tied to a specific generation.
 /// </summary>
