@@ -177,9 +177,9 @@ public static class MapDefinitions
         var layout = new Dictionary<int, int[]>
         {
             [1] = [3, 4, 5, 6, 7],
-            [2] = [2, 3, 4, 5, 6, 7, 8],
-            [3] = [2, 3, 4, 5, 6, 7, 8, 9],
-            [4] = [1, 2, 3, 4, 5, 6, 7, 8, 9],
+            [2] = [3, 4, 5, 6, 7, 8],
+            [3] = [2, 3, 4, 5, 6, 7, 8],
+            [4] = [2, 3, 4, 5, 6, 7, 8, 9],
             [5] = [1, 2, 3, 4, 5, 6, 7, 8, 9],
             [6] = [2, 3, 4, 5, 6, 7, 8, 9],
             [7] = [2, 3, 4, 5, 6, 7, 8],
@@ -192,7 +192,7 @@ public static class MapDefinitions
             ["South Pole"] = new(5, 9),
         };
 
-        // Ocean-reserved hexes on Hellas (9 total, different positions from Tharsis)
+        // Ocean-reserved hexes on Hellas
         var oceans = new HashSet<HexCoord>
         {
             new(3, 1), new(3, 2), new(2, 3), new(2, 4),
@@ -200,59 +200,87 @@ public static class MapDefinitions
             new(7, 4), new(8, 4), new(6, 5), new(7, 5), new(8, 5), new(7, 6), new(8, 6),
         };
 
+        // Placement bonuses per hex (from board image). Every hex listed explicitly.
         var bonuses = new Dictionary<HexCoord, PlacementBonus[]>
         {
-            // Row 1 - plant bonuses near equator
-            [new(3, 1)] = [PlacementBonus.Plants, PlacementBonus.Plants],
-            [new(4, 1)] = [PlacementBonus.Plants],
-            [new(5, 1)] = [PlacementBonus.Plants],
-            [new(6, 1)] = [PlacementBonus.Plants],
-            [new(7, 1)] = [PlacementBonus.Plants, PlacementBonus.Plants],
-            // Row 2
-            [new(2, 2)] = [PlacementBonus.Plants, PlacementBonus.Plants],
-            [new(3, 2)] = [PlacementBonus.Plants],
-            [new(7, 2)] = [],
+            // Row 1
+            [new(3, 1)] = [PlacementBonus.Plants, PlacementBonus.Plants], // ocean
+            [new(4, 1)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(5, 1)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(6, 1)] = [PlacementBonus.Plants, PlacementBonus.Steel],
+            [new(7, 1)] = [PlacementBonus.Plants],
+
+            // Row 2:
+            [new(3, 2)] = [PlacementBonus.Plants, PlacementBonus.Plants],                                  // ocean
+            [new(4, 2)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(5, 2)] = [PlacementBonus.Plants],
+            [new(6, 2)] = [PlacementBonus.Plants, PlacementBonus.Steel],
+            [new(7, 2)] = [PlacementBonus.Plants],
             [new(8, 2)] = [PlacementBonus.Plants],
-            // Row 3
-            [new(2, 3)] = [PlacementBonus.Steel],
-            [new(3, 3)] = [PlacementBonus.Steel, PlacementBonus.Steel],
-            [new(4, 3)] = [],
-            [new(8, 3)] = [PlacementBonus.Steel],
-            [new(9, 3)] = [PlacementBonus.Cards],
-            // Row 4 - Hellas sea (ocean hexes have heat bonuses from thin crust)
-            [new(1, 4)] = [PlacementBonus.Cards, PlacementBonus.Cards],
-            [new(2, 4)] = [],
-            [new(3, 4)] = [],
-            [new(5, 4)] = [PlacementBonus.Heat, PlacementBonus.Heat], // ocean
-            [new(6, 4)] = [PlacementBonus.Heat], // ocean
-            [new(7, 4)] = [], // ocean
-            // Row 5
-            [new(1, 5)] = [PlacementBonus.Steel],
-            [new(4, 5)] = [PlacementBonus.Heat, PlacementBonus.Heat], // ocean
-            [new(5, 5)] = [], // ocean
-            [new(6, 5)] = [], // ocean
-            [new(7, 5)] = [], // ocean
-            // Row 6
-            [new(4, 6)] = [], // ocean
-            [new(5, 6)] = [], // ocean
-            [new(6, 6)] = [PlacementBonus.Titanium],
-            // Row 7
-            [new(2, 7)] = [PlacementBonus.Cards],
-            [new(4, 7)] = [PlacementBonus.Steel],
-            [new(7, 7)] = [PlacementBonus.Titanium],
-            [new(8, 7)] = [PlacementBonus.Cards],
-            // Row 8
-            [new(3, 8)] = [PlacementBonus.Heat, PlacementBonus.Heat],
-            [new(5, 8)] = [],
+
+            // Row 3:
+            [new(2, 3)] = [PlacementBonus.Plants], // ocean
+            [new(3, 3)] = [PlacementBonus.Plants],
+            [new(4, 3)] = [PlacementBonus.Steel],
+            [new(5, 3)] = [PlacementBonus.Steel],
+            [new(6, 3)] = [],
+            [new(7, 3)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(8, 3)] = [PlacementBonus.Cards, PlacementBonus.Plants],
+
+            // Row 4:
+            [new(2, 4)] = [PlacementBonus.Plants], // ocean
+            [new(3, 4)] = [PlacementBonus.Plants],
+            [new(4, 4)] = [PlacementBonus.Steel],
+            [new(5, 4)] = [PlacementBonus.Steel, PlacementBonus.Steel],
+            [new(6, 4)] = [PlacementBonus.Steel],
+            [new(7, 4)] = [PlacementBonus.Plants], // ocean
+            [new(8, 4)] = [PlacementBonus.Plants], // ocean
+            [new(9, 4)] = [PlacementBonus.Plants],
+
+            // Row 5:
+            [new(1, 5)] = [PlacementBonus.Cards],
+            [new(2, 5)] = [],
+            [new(3, 5)] = [],
+            [new(4, 5)] = [PlacementBonus.Steel, PlacementBonus.Steel],
+            [new(5, 5)] = [],
+            [new(6, 5)] = [PlacementBonus.Cards], // ocean
+            [new(7, 5)] = [PlacementBonus.Heat, PlacementBonus.Heat, PlacementBonus.Heat], // ocean
+            [new(8, 5)] = [], // ocean
+            [new(9, 5)] = [PlacementBonus.Plants],
+
+            // Row 6:
+            [new(2, 6)] = [PlacementBonus.Titanium],
+            [new(3, 6)] = [],
+            [new(4, 6)] = [PlacementBonus.Steel],
+            [new(5, 6)] = [],
+            [new(6, 6)] = [],
+            [new(7, 6)] = [], // ocean
+            [new(8, 6)] = [PlacementBonus.Steel], // ocean
+            [new(9, 6)] = [],
+
+            // Row 7:
+            [new(2, 7)] = [PlacementBonus.Titanium, PlacementBonus.Titanium], // ocean
+            [new(3, 7)] = [],
+            [new(4, 7)] = [],
+            [new(5, 7)] = [PlacementBonus.Cards],
+            [new(6, 7)] = [],
+            [new(7, 7)] = [],
+            [new(8, 7)] = [PlacementBonus.Titanium],
+
+            // Row 8:
+            [new(3, 8)] = [PlacementBonus.Steel],
+            [new(4, 8)] = [PlacementBonus.Cards],
+            [new(5, 8)] = [PlacementBonus.Heat, PlacementBonus.Heat],
             [new(6, 8)] = [PlacementBonus.Heat, PlacementBonus.Heat],
-            [new(7, 8)] = [PlacementBonus.Heat, PlacementBonus.Heat],
-            [new(8, 8)] = [PlacementBonus.Heat, PlacementBonus.Heat],
-            // Row 9 - near south pole, heat bonuses from CO2
-            [new(3, 9)] = [PlacementBonus.Heat, PlacementBonus.Heat],
+            [new(7, 8)] = [PlacementBonus.Titanium],
+            [new(8, 8)] = [PlacementBonus.Titanium],
+
+            // Row 9:
+            [new(3, 9)] = [],
             [new(4, 9)] = [PlacementBonus.Heat, PlacementBonus.Heat],
-            [new(5, 9)] = [PlacementBonus.Ocean], // South Pole - pay 6MC to gain ocean
+            [new(5, 9)] = [PlacementBonus.Ocean], // South Pole
             [new(6, 9)] = [PlacementBonus.Heat, PlacementBonus.Heat],
-            [new(7, 9)] = [PlacementBonus.Heat, PlacementBonus.Heat],
+            [new(7, 9)] = [],
         };
 
         // Hellas has no volcanic areas (Lava Flows can go anywhere)
@@ -303,7 +331,7 @@ public static class MapDefinitions
 
         var bonuses = new Dictionary<HexCoord, PlacementBonus[]>
         {
-            // Row 1 - northern lowlands (ocean hexes)
+            // Row 1 
             [new(3, 1)] = [], // ocean
             [new(4, 1)] = [], // ocean
             [new(5, 1)] = [PlacementBonus.Steel], // ocean
