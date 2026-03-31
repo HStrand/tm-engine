@@ -77,4 +77,7 @@ public static class Constants
 
     // Hellas south pole special
     public const int HellasSouthPoleCost = 6;
+
+    // Prelude compensation when player can't afford to play a prelude
+    public const int PreludeCompensation = 15;
 }

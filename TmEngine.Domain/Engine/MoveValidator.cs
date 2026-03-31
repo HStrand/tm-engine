@@ -20,9 +20,17 @@ public static class MoveValidator
         if (state.PendingAction != null)
             return ValidatePendingActionMove(state, move);
 
-        // Check it's the correct player's turn
-        if (move.PlayerId != state.ActivePlayer.PlayerId)
-            return $"It is not player {move.PlayerId}'s turn.";
+        // Simultaneous phases: any player can submit (setup, research, draft)
+        bool isSimultaneousPhase = state.Phase is GamePhase.Setup or GamePhase.Research;
+        if (!isSimultaneousPhase && move is not SetupMove and not BuyCardsMove and not DraftCardMove)
+        {
+            if (move.PlayerId != state.ActivePlayer.PlayerId)
+                return $"It is not player {move.PlayerId}'s turn.";
+        }
+
+        // Verify player exists
+        if (state.Players.All(p => p.PlayerId != move.PlayerId))
+            return $"Unknown player {move.PlayerId}.";
 
         return move switch
         {
@@ -329,6 +337,21 @@ public static class MoveValidator
         if (state.Phase != GamePhase.Research)
             return "Can only buy cards during the research phase.";
 
+        if (state.Research == null)
+            return "No active research phase.";
+
+        var playerIndex = state.GetPlayerIndex(move.PlayerId);
+        if (state.Research.Submitted[playerIndex])
+            return "Player has already submitted buy decision.";
+
+        // Verify all selected cards are in the available set
+        var available = state.Research.AvailableCards[playerIndex];
+        foreach (var cardId in move.CardIds)
+        {
+            if (!available.Contains(cardId))
+                return $"Card {cardId} is not available for purchase.";
+        }
+
         var player = state.GetPlayer(move.PlayerId);
         var cost = move.CardIds.Length * Constants.CardBuyCost;
         if (player.Resources.MegaCredits < cost)
@@ -348,6 +371,12 @@ public static class MoveValidator
         if (state.Draft == null)
             return "No active draft.";
 
+        var playerIndex = state.GetPlayerIndex(move.PlayerId);
+        var draftHand = state.Draft.DraftHands[playerIndex];
+
+        if (!draftHand.Contains(move.CardId))
+            return $"Card {move.CardId} is not in player's draft hand.";
+
         return null;
     }
 
@@ -358,13 +387,45 @@ public static class MoveValidator
         if (state.Phase != GamePhase.Setup)
             return "Can only submit setup during the setup phase.";
 
-        if (state.PreludeExpansion && move.PreludeIds.Length != Constants.PreludesKept)
-            return $"Must select exactly {Constants.PreludesKept} preludes.";
+        if (state.Setup == null)
+            return "No active setup state.";
 
-        if (!state.PreludeExpansion && !move.PreludeIds.IsDefaultOrEmpty && move.PreludeIds.Length > 0)
+        var playerIndex = state.GetPlayerIndex(move.PlayerId);
+
+        if (state.Setup.SubmittedMoves[playerIndex] != null)
+            return "Player has already submitted setup.";
+
+        // Validate corporation is from dealt options
+        var dealtCorps = state.Setup.DealtCorporations[playerIndex];
+        if (!dealtCorps.Contains(move.CorporationId))
+            return $"Corporation {move.CorporationId} was not dealt to this player.";
+
+        // Validate preludes
+        if (state.PreludeExpansion)
+        {
+            if (move.PreludeIds.Length != Constants.PreludesKept)
+                return $"Must select exactly {Constants.PreludesKept} preludes.";
+
+            var dealtPreludes = state.Setup.DealtPreludes[playerIndex];
+            foreach (var preludeId in move.PreludeIds)
+            {
+                if (!dealtPreludes.Contains(preludeId))
+                    return $"Prelude {preludeId} was not dealt to this player.";
+            }
+        }
+        else if (!move.PreludeIds.IsDefaultOrEmpty && move.PreludeIds.Length > 0)
+        {
             return "Prelude expansion is not enabled.";
+        }
 
-        // Card cost validation will be done during application (after corporation starting MC is known)
+        // Validate cards are from dealt options
+        var dealtCards = state.Setup.DealtCards[playerIndex];
+        foreach (var cardId in move.CardIdsToBuy)
+        {
+            if (!dealtCards.Contains(cardId))
+                return $"Card {cardId} was not dealt to this player.";
+        }
+
         return null;
     }
 

@@ -72,8 +72,60 @@ public static class GameEngine
             players.Add(player);
         }
 
-        // TODO: Deck building, shuffling, dealing corporations/preludes/cards (Phase 5)
-        // For now, start directly in Action phase for testing
+        var rng = new Random(seed);
+        var expansions = DeckBuilder.GetEnabledExpansions(options);
+
+        // Build and shuffle decks
+        var projectDeck = DeckBuilder.BuildProjectDeck(expansions, rng);
+        var allCorps = DeckBuilder.GetCorporationIds(expansions);
+        var allPreludes = options.PreludeExpansion ? DeckBuilder.GetPreludeIds() : [];
+
+        // Deal to each player
+        var corpsPerPlayer = options.PreludeExpansion
+            ? Constants.CorporationsDealtWithPrelude
+            : Constants.CorporationsDealt;
+
+        var dealtCorps = ImmutableList.CreateBuilder<ImmutableList<string>>();
+        var dealtPreludes = ImmutableList.CreateBuilder<ImmutableList<string>>();
+        var dealtCards = ImmutableList.CreateBuilder<ImmutableList<string>>();
+        var submittedMoves = ImmutableList.CreateBuilder<SetupMove?>();
+        var deck = projectDeck;
+
+        // Shuffle corporations and preludes for dealing
+        var shuffledCorps = DeckBuilder.Shuffle(allCorps, rng);
+        var shuffledPreludes = options.PreludeExpansion
+            ? DeckBuilder.Shuffle(allPreludes, rng)
+            : ImmutableList<string>.Empty;
+
+        for (int i = 0; i < options.PlayerCount; i++)
+        {
+            // Deal corporations
+            var (playerCorps, remainingCorps) = DeckBuilder.Deal(shuffledCorps, corpsPerPlayer);
+            dealtCorps.Add(playerCorps);
+            shuffledCorps = remainingCorps;
+
+            // Deal preludes
+            if (options.PreludeExpansion)
+            {
+                var (playerPreludes, remainingPreludes) = DeckBuilder.Deal(shuffledPreludes, Constants.PreludesDealt);
+                dealtPreludes.Add(playerPreludes);
+                shuffledPreludes = remainingPreludes;
+            }
+            else
+            {
+                dealtPreludes.Add([]);
+            }
+
+            // Deal project cards
+            var (playerCards, remainingDeck) = DeckBuilder.Deal(deck, Constants.InitialCardsDealt);
+            dealtCards.Add(playerCards);
+            deck = remainingDeck;
+
+            submittedMoves.Add(null);
+        }
+
+        var hasCards = CardRegistry.All.Count > 0;
+
         return new GameState
         {
             GameId = Guid.NewGuid().ToString("N"),
@@ -81,7 +133,8 @@ public static class GameEngine
             CorporateEra = options.CorporateEra,
             DraftVariant = options.DraftVariant,
             PreludeExpansion = options.PreludeExpansion,
-            Phase = GamePhase.Action,
+            // If no cards are registered yet, skip setup and go to Action for testing
+            Phase = hasCards ? GamePhase.Setup : GamePhase.Action,
             Generation = 1,
             ActivePlayerIndex = 0,
             FirstPlayerIndex = 0,
@@ -92,8 +145,15 @@ public static class GameEngine
             PlacedTiles = ImmutableDictionary<HexCoord, PlacedTile>.Empty,
             ClaimedMilestones = [],
             FundedAwards = [],
-            DrawPile = [],
+            DrawPile = deck,
             DiscardPile = [],
+            Setup = hasCards ? new SetupState
+            {
+                DealtCorporations = dealtCorps.ToImmutable(),
+                DealtPreludes = dealtPreludes.ToImmutable(),
+                DealtCards = dealtCards.ToImmutable(),
+                SubmittedMoves = submittedMoves.ToImmutable(),
+            } : null,
             MoveNumber = 0,
             Log = [],
         };
@@ -109,7 +169,6 @@ public static class GameEngine
         UseStandardProjectMove m => ApplyStandardProject(state, m),
         ClaimMilestoneMove m => ApplyClaimMilestone(state, m),
         FundAwardMove m => ApplyFundAward(state, m),
-        BuyCardsMove m => ApplyBuyCards(state, m),
         PlaceTileMove m => ApplyPlaceTile(state, m),
 
         PlayCardMove m => ApplyPlayCard(state, m),
@@ -119,9 +178,9 @@ public static class GameEngine
         ChooseOptionMove m => ApplyChooseOption(state, m),
         DiscardCardsMove m => ApplyDiscardCards(state, m),
 
-        // Stubs for moves that need setup/research system (Phase 5)
-        DraftCardMove => state,
-        SetupMove => state,
+        SetupMove m => ApplySetup(state, m),
+        BuyCardsMove m => ApplyBuyCards(state, m),
+        DraftCardMove m => ApplyDraftCard(state, m),
 
         _ => throw new InvalidOperationException($"Unhandled move type: {move.GetType().Name}"),
     };
@@ -290,9 +349,126 @@ public static class GameEngine
         };
     }
 
+    // ── Setup ───────────────────────────────────────────────────
+
+    private static GameState ApplySetup(GameState state, SetupMove move)
+    {
+        if (state.Setup == null)
+            return state;
+
+        var playerIndex = state.GetPlayerIndex(move.PlayerId);
+
+        // Record the submitted move
+        var setup = state.Setup with
+        {
+            SubmittedMoves = state.Setup.SubmittedMoves.SetItem(playerIndex, move),
+        };
+        state = state with { Setup = setup };
+
+        // Check if all players have submitted
+        if (setup.SubmittedMoves.Any(m => m == null))
+            return state;
+
+        // All players submitted — apply choices in player order
+        return ApplyAllSetupMoves(state);
+    }
+
+    private static GameState ApplyAllSetupMoves(GameState state)
+    {
+        var setup = state.Setup!;
+
+        for (int i = 0; i < state.Players.Count; i++)
+        {
+            var move = setup.SubmittedMoves[i]!;
+            var playerId = state.Players[i].PlayerId;
+
+            // 1. Set corporation and apply starting effects (gives starting MC/resources)
+            state = state.UpdatePlayer(playerId, p => p with { CorporationId = move.CorporationId });
+            if (CardRegistry.TryGet(move.CorporationId, out var corpEntry))
+            {
+                var (newState, _) = EffectExecutor.ExecuteAll(state, playerId, corpEntry.OnPlayEffects);
+                state = newState;
+            }
+
+            // 2. Buy initial project cards (3 MC each — deducted from starting MC)
+            var cardCost = move.CardIdsToBuy.Length * Constants.CardBuyCost;
+            state = state.UpdatePlayer(playerId, p => p with
+            {
+                Resources = p.Resources.Add(ResourceType.MegaCredits, -cardCost),
+                Hand = p.Hand.AddRange(move.CardIdsToBuy),
+            });
+
+            // Discard unselected project cards
+            var dealtCards = setup.DealtCards[i];
+            var unboughtCards = dealtCards.Where(c => !move.CardIdsToBuy.Contains(c));
+            state = state with { DiscardPile = state.DiscardPile.AddRange(unboughtCards) };
+
+            // 3. Apply prelude effects (after card buy, so MC may be depleted)
+            foreach (var preludeId in move.PreludeIds)
+            {
+                if (!CardRegistry.TryGet(preludeId, out var preludeEntry))
+                    continue;
+
+                if (CanAffordPrelude(state, playerId, preludeEntry))
+                {
+                    state = state.UpdatePlayer(playerId, p => p with
+                    {
+                        PlayedCards = p.PlayedCards.Add(preludeId),
+                    });
+                    var (newState, _) = EffectExecutor.ExecuteAll(state, playerId, preludeEntry.OnPlayEffects);
+                    state = newState;
+                }
+                else
+                {
+                    // Can't afford prelude — receive compensation instead
+                    state = state.UpdatePlayer(playerId, p => p with
+                    {
+                        Resources = p.Resources.Add(ResourceType.MegaCredits, Constants.PreludeCompensation),
+                    });
+                    state = state.AppendLog(
+                        $"Player {playerId} cannot afford prelude {preludeEntry.Definition.Name}, receives {Constants.PreludeCompensation} MC");
+                }
+            }
+        }
+
+        // Clear setup state and transition to Action phase (gen 1 skips Research)
+        return PhaseManager.StartActionPhase(state with { Setup = null });
+    }
+
+    /// <summary>
+    /// Check if a player can afford a prelude's mandatory effects.
+    /// Specifically checks that MC-reducing effects won't bring resources below 0,
+    /// and MC production reductions won't go below the minimum (-5).
+    /// </summary>
+    private static bool CanAffordPrelude(GameState state, int playerId, CardEntry prelude)
+    {
+        var player = state.GetPlayer(playerId);
+        int mcCost = 0;
+        int mcProductionCost = 0;
+
+        foreach (var effect in prelude.OnPlayEffects)
+        {
+            if (effect is ChangeResourceEffect { Resource: ResourceType.MegaCredits } res && res.Amount < 0)
+                mcCost += -res.Amount;
+            if (effect is ChangeProductionEffect { Resource: ResourceType.MegaCredits } prod && prod.Amount < 0)
+                mcProductionCost += -prod.Amount;
+        }
+
+        if (mcCost > 0 && player.Resources.MegaCredits < mcCost)
+            return false;
+
+        if (mcProductionCost > 0 && player.Production.MegaCredits - mcProductionCost < Constants.MinMCProduction)
+            return false;
+
+        return true;
+    }
+
+    // ── Research Phase ─────────────────────────────────────────
+
     private static GameState ApplyBuyCards(GameState state, BuyCardsMove move)
     {
         var cost = move.CardIds.Length * Constants.CardBuyCost;
+        var playerIndex = state.GetPlayerIndex(move.PlayerId);
 
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
@@ -300,8 +476,108 @@ public static class GameEngine
             Hand = p.Hand.AddRange(move.CardIds),
         });
 
-        // TODO: Check if all players have bought, then advance phase
+        // Discard unselected cards
+        if (state.Research != null)
+        {
+            var available = state.Research.AvailableCards[playerIndex];
+            var unbought = available.Where(c => !move.CardIds.Contains(c));
+            state = state with { DiscardPile = state.DiscardPile.AddRange(unbought) };
+
+            // Mark player as submitted
+            var research = state.Research with
+            {
+                Submitted = state.Research.Submitted.SetItem(playerIndex, true),
+            };
+            state = state with { Research = research };
+
+            // If all players have bought, advance to Action phase
+            if (research.Submitted.All(s => s))
+            {
+                state = state with { Research = null };
+                return PhaseManager.StartActionPhase(state);
+            }
+        }
+
         return state;
+    }
+
+    private static GameState ApplyDraftCard(GameState state, DraftCardMove move)
+    {
+        if (state.Draft == null)
+            return state;
+
+        var playerIndex = state.GetPlayerIndex(move.PlayerId);
+        var draft = state.Draft;
+
+        // Add picked card to player's drafted cards
+        var draftedCards = draft.DraftedCards.SetItem(playerIndex,
+            draft.DraftedCards[playerIndex].Add(move.CardId));
+
+        // Remove picked card from draft hand
+        var draftHands = draft.DraftHands.SetItem(playerIndex,
+            draft.DraftHands[playerIndex].Remove(move.CardId));
+
+        draft = draft with { DraftedCards = draftedCards, DraftHands = draftHands };
+
+        // Check if all players have picked this round
+        var allPicked = true;
+        for (int i = 0; i < state.Players.Count; i++)
+        {
+            // A player has picked if their drafted cards count > draft round
+            if (draft.DraftedCards[i].Count <= draft.DraftRound)
+            {
+                allPicked = false;
+                break;
+            }
+        }
+
+        if (!allPicked)
+        {
+            return state with { Draft = draft };
+        }
+
+        // All picked — pass remaining hands
+        var playerCount = state.Players.Count;
+        var newHands = ImmutableList.CreateBuilder<ImmutableList<string>>();
+        for (int i = 0; i < playerCount; i++)
+        {
+            // Pass direction alternates: left for even gens, right for odd
+            int sourceIndex = draft.PassLeft
+                ? (i - 1 + playerCount) % playerCount
+                : (i + 1) % playerCount;
+            newHands.Add(draft.DraftHands[sourceIndex]);
+        }
+
+        draft = draft with
+        {
+            DraftHands = newHands.ToImmutable(),
+            DraftRound = draft.DraftRound + 1,
+        };
+
+        // If all 4 rounds complete, transition to buy phase
+        if (draft.DraftRound >= Constants.ResearchCardsDealt)
+        {
+            // Set up research state with drafted cards available for purchase
+            var availableCards = ImmutableList.CreateBuilder<ImmutableList<string>>();
+            var submitted = ImmutableList.CreateBuilder<bool>();
+            for (int i = 0; i < playerCount; i++)
+            {
+                availableCards.Add(draft.DraftedCards[i]);
+                submitted.Add(false);
+            }
+
+            return state with
+            {
+                Draft = null,
+                Research = new ResearchState
+                {
+                    AvailableCards = availableCards.ToImmutable(),
+                    Submitted = submitted.ToImmutable(),
+                },
+            };
+        }
+
+        return state with { Draft = draft };
     }
 
     private static GameState ApplyPlaceTile(GameState state, PlaceTileMove move)

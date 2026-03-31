@@ -120,19 +120,76 @@ public static class PhaseManager
     }
 
     /// <summary>
-    /// Start a new generation: advance first player, increment generation, enter research phase.
+    /// Start a new generation: advance first player, increment generation,
+    /// deal research cards, enter research phase.
     /// </summary>
     public static GameState StartNewGeneration(GameState state)
     {
         var nextFirstPlayer = (state.FirstPlayerIndex + 1) % state.Players.Count;
+        var playerCount = state.Players.Count;
 
-        return state with
+        state = state with
         {
             Generation = state.Generation + 1,
             FirstPlayerIndex = nextFirstPlayer,
             ActivePlayerIndex = nextFirstPlayer,
             Phase = GamePhase.Research,
         };
+
+        // Deal 4 cards to each player
+        var deck = state.DrawPile;
+        var availableCards = ImmutableList.CreateBuilder<ImmutableList<string>>();
+        var submitted = ImmutableList.CreateBuilder<bool>();
+
+        for (int i = 0; i < playerCount; i++)
+        {
+            var (dealt, remaining) = DeckBuilder.Deal(deck, Constants.ResearchCardsDealt);
+            availableCards.Add(dealt);
+            submitted.Add(false);
+            deck = remaining;
+        }
+
+        state = state with { DrawPile = deck };
+
+        if (state.DraftVariant)
+        {
+            // Set up draft: dealt cards become initial draft hands
+            var draftHands = ImmutableList.CreateBuilder<ImmutableList<string>>();
+            var draftedCards = ImmutableList.CreateBuilder<ImmutableList<string>>();
+            for (int i = 0; i < playerCount; i++)
+            {
+                draftHands.Add(availableCards[i]);
+                draftedCards.Add([]);
+            }
+
+            // Pass direction: clockwise for even gens, counter-clockwise for odd
+            bool passLeft = state.Generation % 2 == 0;
+
+            state = state with
+            {
+                Draft = new DraftState
+                {
+                    DraftHands = draftHands.ToImmutable(),
+                    DraftedCards = draftedCards.ToImmutable(),
+                    DraftRound = 0,
+                    PassLeft = passLeft,
+                },
+            };
+        }
+        else
+        {
+            // No draft — cards are directly available for purchase
+            state = state with
+            {
+                Research = new ResearchState
+                {
+                    AvailableCards = availableCards.ToImmutable(),
+                    Submitted = submitted.ToImmutable(),
+                },
+            };
+        }
+
+        return state;
     }
 
     /// <summary>

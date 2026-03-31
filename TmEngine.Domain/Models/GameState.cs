@@ -55,6 +55,14 @@ public sealed record GameState
 
     public required ImmutableList<string> DiscardPile { get; init; }
 
+    // ── Setup State (only during Setup phase) ──
+
+    public SetupState? Setup { get; init; }
+
+    // ── Research State (only during Research phase) ──
+
+    public ResearchState? Research { get; init; }
+
     // ── Draft State (only during Research phase with Draft variant) ──
 
     public DraftState? Draft { get; init; }
@@ -102,6 +110,37 @@ public sealed record GameState
 
     public GameState AppendLog(string message) =>
         this with { Log = Log.Add(message) };
+}
+
+/// <summary>
+/// Tracks the setup phase: what was dealt to each player and what they've chosen.
+/// All players submit simultaneously; once all have submitted, choices are applied in player order.
+/// </summary>
+public sealed record SetupState
+{
+    /// <summary>Corporation IDs dealt to each player. Index = player index.</summary>
+    public required ImmutableList<ImmutableList<string>> DealtCorporations { get; init; }
+
+    /// <summary>Prelude IDs dealt to each player (empty lists if Prelude not enabled).</summary>
+    public required ImmutableList<ImmutableList<string>> DealtPreludes { get; init; }
+
+    /// <summary>Project card IDs dealt to each player (10 cards each).</summary>
+    public required ImmutableList<ImmutableList<string>> DealtCards { get; init; }
+
+    /// <summary>Submitted setup moves per player (null = not yet submitted).</summary>
+    public required ImmutableList<Moves.SetupMove?> SubmittedMoves { get; init; }
+}
+
+/// <summary>
+/// Tracks the research phase: cards dealt to each player, waiting for buy decisions.
+/// </summary>
+public sealed record ResearchState
+{
+    /// <summary>Cards dealt/drafted to each player, available for purchase. Index = player index.</summary>
+    public required ImmutableList<ImmutableList<string>> AvailableCards { get; init; }
+
+    /// <summary>Which players have submitted their buy decision.</summary>
+    public required ImmutableList<bool> Submitted { get; init; }
 }
 
 /// <summary>
