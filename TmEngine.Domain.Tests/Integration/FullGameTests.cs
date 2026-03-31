@@ -773,7 +773,7 @@ public class FullGameTests
         state = state.UpdatePlayer(0, p => p with
         {
             CorporationId = "CORP07",
-            Resources = new ResourceSet(MegaCredits: 50, Steel: 0, Titanium: 10, Plants: 0, Energy: 0, Heat: 0),
+            Resources = new ResourceSet(MegaCredits: 17, Steel: 0, Titanium: 20, Plants: 0, Energy: 0, Heat: 0),
             Hand = p.Hand.Add("175").Add("025"), // Satellites (cost 10) + Space Station (cost 10)
         });
 
@@ -784,8 +784,8 @@ public class FullGameTests
             new PlayCardMove(0, "175", new PaymentInfo(MegaCredits: 2, Titanium: 2)));
 
         Assert.True(r1.IsSuccess, $"Expected exact payment to succeed: {r1}");
-        Assert.Equal(48, s1.Players[0].Resources.MegaCredits); // 50 - 2
-        Assert.Equal(8, s1.Players[0].Resources.Titanium); // 10 - 2
+        Assert.Equal(15, s1.Players[0].Resources.MegaCredits); // 17 - 2
+        Assert.Equal(18, s1.Players[0].Resources.Titanium); // 20 - 2
         Assert.Contains("175", s1.Players[0].PlayedCards);
 
         // Player 1 passes so player 0 can take another action
@@ -796,8 +796,8 @@ public class FullGameTests
             new PlayCardMove(0, "025", new PaymentInfo(Titanium: 3)));
 
         Assert.True(r3.IsSuccess, $"Expected overpay to succeed: {r3}");
-        Assert.Equal(48, s3.Players[0].Resources.MegaCredits); // unchanged
-        Assert.Equal(5, s3.Players[0].Resources.Titanium); // 8 - 3
+        Assert.Equal(15, s3.Players[0].Resources.MegaCredits); // unchanged
+        Assert.Equal(15, s3.Players[0].Resources.Titanium); // 18 - 3
         Assert.Contains("025", s3.Players[0].PlayedCards);
     }
 
