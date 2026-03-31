@@ -1438,6 +1438,296 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Energy, 1),
         ]);
 
-        // Cards 161+ will be implemented in subsequent batches
+        // 161: Convoy from Europa — Place 1 ocean, draw 1 card
+        SetEffects(builder, "161", onPlayEffects:
+            [new PlaceOceanEffect(1), new DrawCardsEffect(1)]);
+
+        // 162: Imported GHG — +1 heat prod, +3 heat
+        SetEffects(builder, "162", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Heat, 1),
+            new ChangeResourceEffect(ResourceType.Heat, 3),
+        ]);
+
+        // 163: Imported Nitrogen — +1 TR, +4 plants, add 3 microbes + 2 animals to other cards
+        SetEffects(builder, "163", onPlayEffects:
+        [
+            new ChangeTREffect(1),
+            new ChangeResourceEffect(ResourceType.Plants, 4),
+            new AddCardResourceEffect(CardResourceType.Microbe, 3),
+            new AddCardResourceEffect(CardResourceType.Animal, 2),
+        ]);
+
+        // 164: Micro-Mills — +1 heat prod
+        SetEffects(builder, "164", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Heat, 1)]);
+
+        // 165: Magnetic Field Generators — -4 energy prod, +2 plant prod, +3 TR
+        SetEffects(builder, "165", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, -4),
+            new ChangeProductionEffect(ResourceType.Plants, 2),
+            new ChangeTREffect(3),
+        ]);
+
+        // 166: Shuttles — Effect: space cards cost 2 less. -1 energy prod, +2 MC prod
+        SetEffects(builder, "166",
+            onPlayEffects:
+            [
+                new ChangeProductionEffect(ResourceType.Energy, -1),
+                new ChangeProductionEffect(ResourceType.MegaCredits, 2),
+            ],
+            ongoingEffects: [new TagDiscountEffect(Tag.Space, 2)]);
+
+        // 167: Import of Advanced GHG — +2 heat prod
+        SetEffects(builder, "167", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Heat, 2)]);
+
+        // 168: Windmills — +1 energy prod
+        SetEffects(builder, "168", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Energy, 1)]);
+
+        // 169: Tundra Farming — +1 plant prod, +2 MC prod, +1 plant
+        SetEffects(builder, "169", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+            new ChangeProductionEffect(ResourceType.MegaCredits, 2),
+            new ChangeResourceEffect(ResourceType.Plants, 1),
+        ]);
+
+        // 170: Aerobraked Ammonia Asteroid — Add 2 microbes to another card, +3 heat prod, +1 plant prod
+        SetEffects(builder, "170", onPlayEffects:
+        [
+            new AddCardResourceEffect(CardResourceType.Microbe, 2),
+            new ChangeProductionEffect(ResourceType.Heat, 3),
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+        ]);
+
+        // 171: Magnetic Field Dome — -2 energy prod, +1 plant prod, +1 TR
+        SetEffects(builder, "171", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, -2),
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+            new ChangeTREffect(1),
+        ]);
+
+        // 172: Pets — Effect: when any city is placed, add animal. +1 animal on play. 1VP/2 animals
+        SetEffects(builder, "172",
+            onPlayEffects: [new AddCardResourceEffect(CardResourceType.Animal, 1, "172")],
+            ongoingEffects:
+                [new WhenAnyoneEffect(TriggerCondition.PlaceAnyCityTile, new AddCardResourceEffect(CardResourceType.Animal, 1, "172"))]);
+
+        // 173: Protected Habitats — Opponents may not remove your animals, plants, or microbes
+        // Passive protection — deferred (needs resource protection mechanic)
+
+        // 174: Protected Valley — +2 MC prod, place greenery on ocean-reserved area
+        SetEffects(builder, "174", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.MegaCredits, 2),
+            new PlaceTileEffect(TileType.Greenery, PlacementConstraint.OnOceanArea),
+        ]);
+
+        // 175: Satellites — +1 MC prod per space tag including this
+        SetEffects(builder, "175", onPlayEffects:
+            [new ChangeProductionPerTagEffect(ResourceType.MegaCredits, Tag.Space, 1)]);
+
+        // 176: Noctis Farming — +1 MC prod, +2 plants
+        SetEffects(builder, "176", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.MegaCredits, 1),
+            new ChangeResourceEffect(ResourceType.Plants, 2),
+        ]);
+
+        // 177: Water Splitting Plant — Action: spend 3 energy, raise O2 1
+        SetEffects(builder, "177",
+            action: new CardAction(new SpendEnergyCost(3), [new RaiseOxygenEffect(1)]));
+
+        // 178: Heat Trappers — Decrease any heat prod 2, +1 energy prod
+        SetEffects(builder, "178", onPlayEffects:
+        [
+            new ReduceAnyProductionEffect(ResourceType.Heat, 2),
+            new ChangeProductionEffect(ResourceType.Energy, 1),
+        ]);
+
+        // 179: Soil Factory — -1 energy prod, +1 plant prod
+        SetEffects(builder, "179", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, -1),
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+        ]);
+
+        // 180: Fuel Factory — -1 energy prod, +1 titanium prod, +1 MC prod
+        SetEffects(builder, "180", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, -1),
+            new ChangeProductionEffect(ResourceType.Titanium, 1),
+            new ChangeProductionEffect(ResourceType.MegaCredits, 1),
+        ]);
+
+        // 181: Ice Cap Melting — Place 1 ocean
+        SetEffects(builder, "181", onPlayEffects: [new PlaceOceanEffect(1)]);
+
+        // 182: Corporate Stronghold — -1 energy prod, +3 MC prod, place city
+        SetEffects(builder, "182", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, -1),
+            new ChangeProductionEffect(ResourceType.MegaCredits, 3),
+            new PlaceTileEffect(TileType.City),
+        ]);
+
+        // 183: Biomass Combustors — Decrease any plant prod 1, +2 energy prod
+        SetEffects(builder, "183", onPlayEffects:
+        [
+            new ReduceAnyProductionEffect(ResourceType.Plants, 1),
+            new ChangeProductionEffect(ResourceType.Energy, 2),
+        ]);
+
+        // 184: Livestock — Action: add 1 animal. -1 plant prod. 1VP/animal
+        SetEffects(builder, "184",
+            onPlayEffects: [new ChangeProductionEffect(ResourceType.Plants, -1)],
+            action: new CardAction(null, [new AddCardResourceEffect(CardResourceType.Animal, 1, "184")]));
+
+        // 185: Olympus Conference — Effect: when you play science tag (including this),
+        // add science resource to this card OR draw a card
+        // Complex triggered choice — deferred
+        SetEffects(builder, "185",
+            onPlayEffects: [new AddCardResourceEffect(CardResourceType.Science, 1, "185")]);
+
+        // 186: Rad-Suits — +1 MC prod
+        SetEffects(builder, "186", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.MegaCredits, 1)]);
+
+        // 187: Aquifer Pumping — Action: spend 8 MC to place ocean (steel usable as building)
+        // Complex action (steel payment) — deferred
+        SetEffects(builder, "187",
+            action: new CardAction(new SpendMCCost(8), [new PlaceOceanEffect(1)]));
+
+        // 188: Flooding — Place ocean. May remove 4 MC from owner of adjacent tile
+        SetEffects(builder, "188", onPlayEffects: [new PlaceOceanEffect(1)]);
+        // MC removal from adjacent tile owner — deferred
+
+        // 189: Energy Saving — +1 energy prod per city in play
+        // Dynamic count — deferred
+
+        // 190: Local Heat Trapping — Spend 5 heat, gain 4 plants or add 2 animals to another
+        SetEffects(builder, "190", onPlayEffects:
+        [
+            new ChangeResourceEffect(ResourceType.Heat, -5),
+            new ChooseEffect([
+                new EffectOption("Gain 4 plants", [new ChangeResourceEffect(ResourceType.Plants, 4)]),
+                new EffectOption("Add 2 animals to another card", [new AddCardResourceEffect(CardResourceType.Animal, 2)]),
+            ]),
+        ]);
+
+        // 191: Permafrost Extraction — Place 1 ocean
+        SetEffects(builder, "191", onPlayEffects: [new PlaceOceanEffect(1)]);
+
+        // 192: Invention Contest — Look at top 3 cards, take 1, discard 2
+        // Complex — deferred
+
+        // 193: Plantation — Place greenery, raise O2
+        SetEffects(builder, "193", onPlayEffects:
+            [new PlaceTileEffect(TileType.Greenery)]);
+
+        // 194: Power Infrastructure — Action: spend any energy, gain that much MC
+        // Variable amount action — deferred
+
+        // 195: Indentured Workers — Next card this generation costs 8 MC less
+        // Temporary discount — deferred
+
+        // 196: Lagrange Observatory — Draw 1 card
+        SetEffects(builder, "196", onPlayEffects: [new DrawCardsEffect(1)]);
+
+        // 197: Terraforming Ganymede — +1 TR per Jovian tag including this
+        SetEffects(builder, "197", onPlayEffects:
+            [new ChangeTRPerTagEffect(Tag.Jovian, 1)]);
+
+        // 198: Immigration Shuttles — +5 MC prod. 1VP/3 cities in play
+        SetEffects(builder, "198", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.MegaCredits, 5)]);
+
+        // 199: Restricted Area — Action: spend 2 MC, draw a card. Place tile
+        SetEffects(builder, "199",
+            onPlayEffects: [new PlaceTileEffect(TileType.RestrictedArea)],
+            action: new CardAction(new SpendMCCost(2), [new DrawCardsEffect(1)]));
+
+        // 200: Immigrant City — Effect: when city is placed (including this), +1 MC prod. -1 energy prod, -2 MC prod. Place city
+        SetEffects(builder, "200",
+            onPlayEffects:
+            [
+                new ChangeProductionEffect(ResourceType.Energy, -1),
+                new ChangeProductionEffect(ResourceType.MegaCredits, -2),
+                new PlaceTileEffect(TileType.City),
+            ],
+            ongoingEffects:
+                [new WhenAnyoneEffect(TriggerCondition.PlaceCityTileOnMars, new ChangeProductionEffect(ResourceType.MegaCredits, 1))]);
+
+        // 201: Energy Tapping — Decrease any energy prod 1, +1 own energy prod
+        SetEffects(builder, "201", onPlayEffects:
+        [
+            new ReduceAnyProductionEffect(ResourceType.Energy, 1),
+            new ChangeProductionEffect(ResourceType.Energy, 1),
+        ]);
+
+        // 202: Underground Detonations — Action: spend 10 MC, +2 heat prod
+        SetEffects(builder, "202",
+            action: new CardAction(new SpendMCCost(10), [new ChangeProductionEffect(ResourceType.Heat, 2)]));
+
+        // 203: Soletta — +7 heat prod
+        SetEffects(builder, "203", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Heat, 7)]);
+
+        // 204: Technology Demonstration — Draw 2 cards
+        SetEffects(builder, "204", onPlayEffects: [new DrawCardsEffect(2)]);
+
+        // 205: Rad-Chem Factory — -1 energy prod, +2 TR
+        SetEffects(builder, "205", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, -1),
+            new ChangeTREffect(2),
+        ]);
+
+        // 206: Special Design — Next card this generation has +/- 2 global requirements
+        // Temporary requirement modifier — deferred
+
+        // 207: Medical Lab — +1 MC prod per 2 building tags including this
+        // Dynamic: floor(building_tags / 2) MC prod
+        // Deferred — needs "per N tags" variant
+
+        // 208: AI Central — Action: draw 2 cards. -1 energy prod
+        SetEffects(builder, "208",
+            onPlayEffects: [new ChangeProductionEffect(ResourceType.Energy, -1)],
+            action: new CardAction(null, [new DrawCardsEffect(2)]));
+
+        // ── Prelude expansion project cards ────────────────────
+
+        // P36: House Printing — +1 steel prod
+        SetEffects(builder, "P36", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Steel, 1)]);
+
+        // P37: Lava Tube Settlement — -1 energy prod, +2 MC prod, place city
+        SetEffects(builder, "P37", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, -1),
+            new ChangeProductionEffect(ResourceType.MegaCredits, 2),
+            new PlaceTileEffect(TileType.City),
+        ]);
+
+        // P38: Martian Survey — Draw 2 cards
+        SetEffects(builder, "P38", onPlayEffects: [new DrawCardsEffect(2)]);
+
+        // P39: Psychrophiles — Action: add 1 microbe. Microbes here can pay for plant cards
+        // Complex payment mechanic — action implemented, payment deferred
+        SetEffects(builder, "P39",
+            action: new CardAction(null, [new AddCardResourceEffect(CardResourceType.Microbe, 1, "P39")]));
+
+        // P40: Research Coordination — no effects (wild tag only)
+
+        // P41: SF Memorial — Draw 1 card
+        SetEffects(builder, "P41", onPlayEffects: [new DrawCardsEffect(1)]);
+
+        // P42: Space Hotels — +4 MC prod
+        SetEffects(builder, "P42", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.MegaCredits, 4)]);
     }
 }

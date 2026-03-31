@@ -117,6 +117,9 @@ public static class GlobalParameters
         // Placement bonuses
         state = BoardLogic.ApplyPlacementBonuses(state, playerId, location);
 
+        // Fire ocean placement trigger (Arctic Algae etc.)
+        state = TriggerSystem.FireTrigger(state, playerId, TriggerCondition.PlaceOceanTile);
+
         return state;
     }
 

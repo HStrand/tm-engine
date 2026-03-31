@@ -340,6 +340,12 @@ public sealed record ChangeProductionPerTagEffect(ResourceType Resource, Tag Tag
 public sealed record ClaimLandEffect : Effect;
 
 /// <summary>
+/// Change TR based on the number of tags the player has.
+/// E.g., Terraforming Ganymede: +1 TR per Jovian tag including this.
+/// </summary>
+public sealed record ChangeTRPerTagEffect(Tag Tag, int AmountPerTag) : Effect;
+
+/// <summary>
 /// Player must play a card from hand immediately with special rules.
 /// E.g., Ecology Experts (ignore global requirements), Eccentric Sponsor (25 MC discount).
 /// </summary>

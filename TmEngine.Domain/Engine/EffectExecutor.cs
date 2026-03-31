@@ -51,6 +51,7 @@ public static class EffectExecutor
             RevealUntilTagEffect e => (ApplyRevealUntilTag(state, playerId, e), null),
             PlaceOffMapCityEffect e => ApplyPlaceOffMapCity(state, playerId, e),
             ChangeProductionPerTagEffect e => (ApplyChangeProductionPerTag(state, playerId, e), null),
+            ChangeTRPerTagEffect e => (ApplyChangeTRPerTag(state, playerId, e), null),
             ClaimLandEffect => ApplyClaimLand(state, playerId),
             PlayCardFromHandEffect e => (state, new PlayCardFromHandPending(
                 e.IgnoreGlobalRequirements ? "Play a card from hand (ignoring global requirements):" : $"Play a card from hand ({e.CostDiscount} MC discount):",
@@ -391,6 +392,22 @@ public static class EffectExecutor
         return state.UpdatePlayer(playerId, p => p with
         {
             Production = p.Production.Add(e.Resource, totalAmount),
+        });
+    }
+
+    private static GameState ApplyChangeTRPerTag(GameState state, int playerId, ChangeTRPerTagEffect e)
+    {
+        var player = state.GetPlayer(playerId);
+        var tagCount = player.CountTag(e.Tag, CardRegistry.GetTags);
+        var totalTR = tagCount * e.AmountPerTag;
+
+        if (totalTR == 0)
+            return state;
+
+        return state.UpdatePlayer(playerId, p => p with
+        {
+            TerraformRating = p.TerraformRating + totalTR,
+            IncreasedTRThisGeneration = totalTR > 0 ? true : p.IncreasedTRThisGeneration,
         });
     }
 

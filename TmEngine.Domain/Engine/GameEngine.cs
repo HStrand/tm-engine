@@ -644,7 +644,15 @@ public static class GameEngine
     {
         if (state.PendingAction is PlaceTilePending pending)
         {
-            state = GlobalParameters.PlaceTileOnBoard(state, pending.TileType, move.PlayerId, move.Location);
+            // Use the appropriate placement method based on tile type
+            // so that greeneries raise oxygen and oceans raise TR
+            state = pending.TileType switch
+            {
+                TileType.Greenery => GlobalParameters.PlaceGreenery(state, move.PlayerId, move.Location),
+                TileType.Ocean => GlobalParameters.PlaceOcean(state, move.PlayerId, move.Location),
+                TileType.City or TileType.Capital => GlobalParameters.PlaceCity(state, move.PlayerId, move.Location),
+                _ => GlobalParameters.PlaceTileOnBoard(state, pending.TileType, move.PlayerId, move.Location),
+            };
             return state with { PendingAction = null };
         }
 
