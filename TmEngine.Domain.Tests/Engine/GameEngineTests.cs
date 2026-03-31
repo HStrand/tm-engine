@@ -9,19 +9,10 @@ public class GameEngineTests
 {
     private static GameState CreateTestGame(int playerCount = 2)
     {
-        var options = new GameSetupOptions(
-            PlayerCount: playerCount,
-            Map: MapName.Tharsis,
-            CorporateEra: true,
-            DraftVariant: false,
-            PreludeExpansion: false);
-
-        var state = GameEngine.Setup(options, seed: 42);
-
-        // Give players some resources for testing
+        var players = ImmutableList.CreateBuilder<PlayerState>();
         for (int i = 0; i < playerCount; i++)
         {
-            state = state.UpdatePlayer(i, p => p with
+            players.Add(PlayerState.CreateInitial(i, 20) with
             {
                 Resources = new ResourceSet(
                     MegaCredits: 100,
@@ -33,7 +24,29 @@ public class GameEngineTests
             });
         }
 
-        return state;
+        return new GameState
+        {
+            GameId = "test",
+            Map = MapName.Tharsis,
+            CorporateEra = true,
+            DraftVariant = false,
+            PreludeExpansion = false,
+            Phase = GamePhase.Action,
+            Generation = 1,
+            ActivePlayerIndex = 0,
+            FirstPlayerIndex = 0,
+            Oxygen = 0,
+            Temperature = Constants.MinTemperature,
+            OceansPlaced = 0,
+            Players = players.ToImmutable(),
+            PlacedTiles = ImmutableDictionary<HexCoord, PlacedTile>.Empty,
+            ClaimedMilestones = [],
+            FundedAwards = [],
+            DrawPile = [],
+            DiscardPile = [],
+            MoveNumber = 0,
+            Log = [],
+        };
     }
 
     // ── Pass & Turn Flow ───────────────────────────────────────

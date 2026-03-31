@@ -97,15 +97,14 @@ public class SetupAndResearchTests
     // ── Game Setup (no cards registered yet — tests use Action phase) ──
 
     [Fact]
-    public void Setup_WithNoRegisteredCards_StartsInActionPhase()
+    public void Setup_WithRegisteredCards_StartsInSetupPhase()
     {
-        // When no cards are in the registry, setup skips to Action for testing
         var options = new GameSetupOptions(2, MapName.Tharsis, CorporateEra: true, DraftVariant: false, PreludeExpansion: false);
         var state = GameEngine.Setup(options, seed: 42);
 
-        Assert.Equal(GamePhase.Action, state.Phase);
+        Assert.Equal(GamePhase.Setup, state.Phase);
         Assert.Equal(2, state.Players.Count);
-        Assert.Null(state.Setup);
+        Assert.NotNull(state.Setup);
     }
 
     [Fact]

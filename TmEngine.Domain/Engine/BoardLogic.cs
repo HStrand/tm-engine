@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using TmEngine.Domain.Cards.Effects;
 using TmEngine.Domain.Models;
 
 namespace TmEngine.Domain.Engine;
@@ -374,6 +375,8 @@ public static class BoardLogic
             return state;
 
         // Hex-printed bonuses
+        bool gainedMineral = false;
+
         foreach (var bonus in hex.Bonuses)
         {
             state = bonus switch
@@ -390,7 +393,14 @@ public static class BoardLogic
                 PlacementBonus.Ocean => state, // Hellas south pole: handled by special logic
                 _ => state,
             };
+
+            if (bonus is PlacementBonus.Steel or PlacementBonus.Titanium)
+                gainedMineral = true;
         }
+
+        // Fire triggered effect once per tile placement if any mineral was gained (Mining Guild)
+        if (gainedMineral)
+            state = TriggerSystem.FireTrigger(state, playerId, TriggerCondition.GainMineralPlacementBonus);
 
         // Ocean adjacency bonus: 2 MC per adjacent ocean tile
         var adjacentOceans = CountAdjacentOceans(state, location);

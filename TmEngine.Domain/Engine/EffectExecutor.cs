@@ -45,6 +45,9 @@ public static class EffectExecutor
             // TR
             ChangeTREffect e => (ApplyChangeTR(state, playerId, e), null),
 
+            // Special
+            IncreaseLowestProductionEffect => ApplyIncreaseLowestProduction(state, playerId),
+
             // Choices
             ChooseEffect e => ApplyChoose(state, e),
 
@@ -55,7 +58,8 @@ public static class EffectExecutor
             // They take effect by being present in OngoingEffects and queried by RequirementChecker.
             RequirementModifierEffect or SteelValueModifierEffect or TitaniumValueModifierEffect
                 or TagDiscountEffect or GlobalDiscountEffect or PlantConversionModifierEffect
-                or HeatAsPaymentEffect => (state, null),
+                or HeatAsPaymentEffect or PowerPlantDiscountEffect
+                or HighCostRebateEffect => (state, null),
 
             // Triggered effects are registered, not executed immediately
             WhenYouEffect or WhenAnyoneEffect => (state, null),
@@ -310,12 +314,54 @@ public static class EffectExecutor
         return false;
     }
 
+    // ── Special ─────────────────────────────────────────────────
+
+    private static (GameState, PendingAction?) ApplyIncreaseLowestProduction(GameState state, int playerId)
+    {
+        var player = state.GetPlayer(playerId);
+        var prod = player.Production;
+
+        var min = Math.Min(prod.MegaCredits,
+            Math.Min(prod.Steel,
+            Math.Min(prod.Titanium,
+            Math.Min(prod.Plants,
+            Math.Min(prod.Energy, prod.Heat)))));
+
+        // Find which resource types are at the minimum
+        var lowestTypes = new List<ResourceType>();
+        if (prod.MegaCredits == min) lowestTypes.Add(ResourceType.MegaCredits);
+        if (prod.Steel == min) lowestTypes.Add(ResourceType.Steel);
+        if (prod.Titanium == min) lowestTypes.Add(ResourceType.Titanium);
+        if (prod.Plants == min) lowestTypes.Add(ResourceType.Plants);
+        if (prod.Energy == min) lowestTypes.Add(ResourceType.Energy);
+        if (prod.Heat == min) lowestTypes.Add(ResourceType.Heat);
+
+        if (lowestTypes.Count == 1)
+        {
+            // Only one lowest — increase it directly
+            return (state.UpdatePlayer(playerId, p => p with
+            {
+                Production = p.Production.Add(lowestTypes[0], 1),
+            }), null);
+        }
+
+        // Multiple tied — player must choose
+        var options = lowestTypes
+            .Select(r => $"{r} production")
+            .ToImmutableArray();
+
+        return (state, new ChooseOptionPending(
+            $"Choose which production to increase (all at {min}):",
+            options));
+    }
+
     // ── TR ──────────────────────────────────────────────────────
 
     private static GameState ApplyChangeTR(GameState state, int playerId, ChangeTREffect e) =>
         state.UpdatePlayer(playerId, p => p with
         {
             TerraformRating = p.TerraformRating + e.Amount,
+            IncreasedTRThisGeneration = e.Amount > 0 ? true : p.IncreasedTRThisGeneration,
         });
 
     // ── Choices ─────────────────────────────────────────────────

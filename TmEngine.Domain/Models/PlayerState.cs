@@ -34,6 +34,9 @@ public sealed record PlayerState
     /// <summary>Number of actions taken in the current turn (0, 1, or 2).</summary>
     public required int ActionsThisTurn { get; init; }
 
+    /// <summary>Whether the player has increased their TR this generation (for UNMI action).</summary>
+    public required bool IncreasedTRThisGeneration { get; init; }
+
     /// <summary>
     /// Creates a fresh player state for game start.
     /// </summary>
@@ -51,6 +54,7 @@ public sealed record PlayerState
         UsedCardActions = [],
         Passed = false,
         ActionsThisTurn = 0,
+        IncreasedTRThisGeneration = false,
     };
 
     /// <summary>

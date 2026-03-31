@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="..\project resources\card metadata\cards.json" LogicalName="cards.json" />
+  </ItemGroup>
+
 </Project>

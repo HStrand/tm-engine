@@ -177,8 +177,9 @@ public enum TriggerCondition
     PlayCityTag,
     PlayEventTag,
 
-    // Tile triggers
-    PlaceCityTile,
+    // Tile triggers (on Mars = placed on the hex grid)
+    PlaceCityTileOnMars,
+    PlaceAnyCityTile, // includes off-map cities (Ganymede, Phobos)
     PlaceGreeneryTile,
     PlaceOceanTile,
     PlaceAnyTile,
@@ -186,6 +187,9 @@ public enum TriggerCondition
     // Parameter triggers
     RaiseTemperature,
     RaiseOxygen,
+
+    // Placement bonus triggers
+    GainMineralPlacementBonus, // steel or titanium (fires once per tile, not per resource)
 
     // Other
     PlayAnyCard,
@@ -203,7 +207,18 @@ public sealed record CardAction(
     /// <summary>Cost to activate (null = free).</summary>
     ActionCost? Cost,
     /// <summary>Effects gained when action is used.</summary>
-    ImmutableArray<Effect> Effects);
+    ImmutableArray<Effect> Effects,
+    /// <summary>Additional precondition (null = none).</summary>
+    ActionPrecondition? Precondition = null);
+
+/// <summary>
+/// Preconditions that must be met before a card action can be used.
+/// </summary>
+public enum ActionPrecondition
+{
+    /// <summary>Player must have increased TR this generation (UNMI).</summary>
+    IncreasedTRThisGeneration,
+}
 
 /// <summary>Cost to use a card action.</summary>
 public abstract record ActionCost;
@@ -271,3 +286,20 @@ public sealed record PlantConversionModifierEffect(int NewCost) : Effect;
 /// Allows using heat to pay for cards (Helion corporation).
 /// </summary>
 public sealed record HeatAsPaymentEffect : Effect;
+
+/// <summary>
+/// Reduces the cost of the Power Plant standard project (Thorgate corporation).
+/// </summary>
+public sealed record PowerPlantDiscountEffect(int Discount) : Effect;
+
+/// <summary>
+/// Increase the player's lowest production by 1 step (Robinson Industries).
+/// If multiple productions are tied for lowest, triggers a choice.
+/// </summary>
+public sealed record IncreaseLowestProductionEffect : Effect;
+
+/// <summary>
+/// Gain MC rebate when playing a card or standard project with printed cost >= threshold (Credicor).
+/// Checks the original/printed cost, not the effective cost after discounts.
+/// </summary>
+public sealed record HighCostRebateEffect(int CostThreshold, int Rebate) : Effect;

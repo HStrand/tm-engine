@@ -262,9 +262,12 @@ public static class GameEngine
 
     private static GameState ApplyPowerPlant(GameState state, UseStandardProjectMove move)
     {
+        var player = state.GetPlayer(move.PlayerId);
+        var cost = RequirementChecker.GetPowerPlantCost(player);
+
         return state.UpdatePlayer(move.PlayerId, p => p with
         {
-            Resources = p.Resources.Add(ResourceType.MegaCredits, -Constants.PowerPlantCost),
+            Resources = p.Resources.Add(ResourceType.MegaCredits, -cost),
             Production = p.Production.Add(ResourceType.Energy, 1),
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
@@ -300,6 +303,9 @@ public static class GameEngine
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
 
+        // Rebate based on printed SP cost (Credicor)
+        state = ApplyStandardProjectRebate(state, move.PlayerId, Constants.GreeneryCost);
+
         return GlobalParameters.PlaceGreenery(state, move.PlayerId, move.Location!.Value);
     }
 
@@ -312,7 +318,24 @@ public static class GameEngine
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
 
+        // Rebate based on printed SP cost (Credicor)
+        state = ApplyStandardProjectRebate(state, move.PlayerId, Constants.CityCost);
+
         return GlobalParameters.PlaceCity(state, move.PlayerId, move.Location!.Value);
+    }
+
+    private static GameState ApplyStandardProjectRebate(GameState state, int playerId, int printedCost)
+    {
+        var player = state.GetPlayer(playerId);
+        var rebate = RequirementChecker.GetHighCostRebate(player, printedCost);
+        if (rebate > 0)
+        {
+            state = state.UpdatePlayer(playerId, p => p with
+            {
+                Resources = p.Resources.Add(ResourceType.MegaCredits, rebate),
+            });
+        }
+        return state;
     }
 
     private static GameState ApplyClaimMilestone(GameState state, ClaimMilestoneMove move)
@@ -638,6 +661,16 @@ public static class GameEngine
                 PlayedCards = p.PlayedCards.Add(move.CardId),
             }),
         };
+
+        // Apply rebate based on printed cost (Credicor)
+        var rebate = RequirementChecker.GetHighCostRebate(state.GetPlayer(move.PlayerId), card.Cost);
+        if (rebate > 0)
+        {
+            state = state.UpdatePlayer(move.PlayerId, p => p with
+            {
+                Resources = p.Resources.Add(ResourceType.MegaCredits, rebate),
+            });
+        }
 
         // Execute on-play effects
         var (newState, pending) = EffectExecutor.ExecuteAll(state, move.PlayerId, entry.OnPlayEffects);

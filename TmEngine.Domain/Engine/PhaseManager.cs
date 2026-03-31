@@ -102,13 +102,14 @@ public static class PhaseManager
                 Heat = resources.Heat + p.Production.Heat,
             };
 
-            // Step 3: Reset card actions and passed state
+            // Step 3: Reset card actions, passed state, and TR tracking
             updatedPlayers = updatedPlayers.SetItem(i, p with
             {
                 Resources = resources,
                 UsedCardActions = [],
                 Passed = false,
                 ActionsThisTurn = 0,
+                IncreasedTRThisGeneration = false,
             });
         }
 

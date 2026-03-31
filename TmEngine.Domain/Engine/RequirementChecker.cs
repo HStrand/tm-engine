@@ -205,6 +205,55 @@ public static class RequirementChecker
     }
 
     /// <summary>
+    /// Get the MC rebate for spending on a card or standard project with the given printed cost.
+    /// Checks HighCostRebateEffect on corporation and played cards (Credicor).
+    /// </summary>
+    public static int GetHighCostRebate(PlayerState player, int printedCost)
+    {
+        int rebate = 0;
+
+        void CheckEntry(CardEntry entry)
+        {
+            foreach (var effect in entry.OngoingEffects)
+                if (effect is HighCostRebateEffect r && printedCost >= r.CostThreshold)
+                    rebate += r.Rebate;
+        }
+
+        if (!string.IsNullOrEmpty(player.CorporationId) && CardRegistry.TryGet(player.CorporationId, out var corp))
+            CheckEntry(corp);
+
+        foreach (var cardId in player.PlayedCards)
+            if (CardRegistry.TryGet(cardId, out var card))
+                CheckEntry(card);
+
+        return rebate;
+    }
+
+    /// <summary>
+    /// Get the effective Power Plant standard project cost for a player.
+    /// Only PowerPlantDiscountEffect applies (Thorgate).
+    /// </summary>
+    public static int GetPowerPlantCost(PlayerState player)
+    {
+        int discount = 0;
+
+        if (!string.IsNullOrEmpty(player.CorporationId) && CardRegistry.TryGet(player.CorporationId, out var corp))
+        {
+            foreach (var effect in corp.OngoingEffects)
+                if (effect is PowerPlantDiscountEffect d) discount += d.Discount;
+        }
+
+        foreach (var cardId in player.PlayedCards)
+        {
+            if (CardRegistry.TryGet(cardId, out var card))
+                foreach (var effect in card.OngoingEffects)
+                    if (effect is PowerPlantDiscountEffect d) discount += d.Discount;
+        }
+
+        return Math.Max(0, Constants.PowerPlantCost - discount);
+    }
+
+    /// <summary>
     /// Get the plant conversion cost for a player (default 8, modified by Ecoline etc.).
     /// </summary>
     public static int GetPlantConversionCost(PlayerState player)

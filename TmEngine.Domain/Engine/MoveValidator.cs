@@ -1,4 +1,5 @@
 using TmEngine.Domain.Cards;
+using TmEngine.Domain.Cards.Effects;
 using TmEngine.Domain.Models;
 using TmEngine.Domain.Moves;
 
@@ -118,7 +119,7 @@ public static class MoveValidator
         return move.Project switch
         {
             StandardProject.SellPatents => ValidateSellPatents(state, move, player),
-            StandardProject.PowerPlant => ValidateResourceCost(player, Constants.PowerPlantCost, "Power Plant"),
+            StandardProject.PowerPlant => ValidateResourceCost(player, RequirementChecker.GetPowerPlantCost(player), "Power Plant"),
             StandardProject.Asteroid => ValidateAsteroidProject(state, player),
             StandardProject.Aquifer => ValidateAquiferProject(state, move, player),
             StandardProject.Greenery => ValidateGreeneryProject(state, move, player),
@@ -325,6 +326,19 @@ public static class MoveValidator
 
         if (player.UsedCardActions.Contains(move.CardId))
             return $"Card {move.CardId} action already used this generation.";
+
+        // Check precondition if the card has one
+        if (CardRegistry.TryGet(move.CardId, out var entry) && entry.Action?.Precondition != null)
+        {
+            var preconditionError = entry.Action.Precondition.Value switch
+            {
+                ActionPrecondition.IncreasedTRThisGeneration when !player.IncreasedTRThisGeneration =>
+                    "Must have increased TR this generation to use this action.",
+                _ => (string?)null,
+            };
+            if (preconditionError != null)
+                return preconditionError;
+        }
 
         return null;
     }

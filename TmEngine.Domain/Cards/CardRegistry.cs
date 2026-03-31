@@ -79,14 +79,202 @@ public static class CardRegistry
 
     private static ImmutableDictionary<string, CardEntry> BuildRegistry()
     {
+        // Load all card definitions from cards.json
+        var definitions = CardDataLoader.LoadAll();
         var builder = ImmutableDictionary.CreateBuilder<string, CardEntry>();
 
-        // Cards will be registered in Phase 7 batches
-        // RegisterBaseCards(builder);
-        // RegisterCorporateEraCards(builder);
-        // RegisterCorporations(builder);
-        // RegisterPreludes(builder);
+        foreach (var (id, def) in definitions)
+        {
+            builder[id] = new CardEntry { Definition = def };
+        }
+
+        // Apply hand-coded effects on top of loaded definitions
+        RegisterCorporationEffects(builder);
+        // RegisterPreludeEffects(builder);
+        // RegisterProjectCardEffects(builder);
 
         return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// Update an existing card entry with effects, preserving the loaded definition.
+    /// </summary>
+    internal static void SetEffects(
+        ImmutableDictionary<string, CardEntry>.Builder builder,
+        string cardId,
+        ImmutableArray<Effect>? onPlayEffects = null,
+        ImmutableArray<Effect>? ongoingEffects = null,
+        CardAction? action = null)
+    {
+        if (!builder.TryGetValue(cardId, out var existing))
+            return;
+
+        builder[cardId] = existing with
+        {
+            OnPlayEffects = onPlayEffects ?? existing.OnPlayEffects,
+            OngoingEffects = ongoingEffects ?? existing.OngoingEffects,
+            Action = action ?? existing.Action,
+        };
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  CORPORATION EFFECTS
+    // ═══════════════════════════════════════════════════════════
+
+    private static void RegisterCorporationEffects(ImmutableDictionary<string, CardEntry>.Builder builder)
+    {
+        // CORP01: Credicor — Start with 57 MC. Effect: 4 MC rebate when playing card or SP with printed cost >= 20.
+        SetEffects(builder, "CORP01",
+            onPlayEffects: [new ChangeResourceEffect(ResourceType.MegaCredits, 57)],
+            ongoingEffects: [new HighCostRebateEffect(CostThreshold: 20, Rebate: 4)]);
+
+        // CORP02: Ecoline — Start with 2 plant prod, 3 plants, 36 MC. Greenery costs 7 plants.
+        SetEffects(builder, "CORP02",
+            onPlayEffects:
+            [
+                new ChangeResourceEffect(ResourceType.MegaCredits, 36),
+                new ChangeProductionEffect(ResourceType.Plants, 2),
+                new ChangeResourceEffect(ResourceType.Plants, 3),
+            ],
+            ongoingEffects: [new PlantConversionModifierEffect(7)]);
+
+        // CORP03: Helion — Start with 3 heat prod, 42 MC. Can use heat as MC.
+        SetEffects(builder, "CORP03",
+            onPlayEffects:
+            [
+                new ChangeResourceEffect(ResourceType.MegaCredits, 42),
+                new ChangeProductionEffect(ResourceType.Heat, 3),
+            ],
+            ongoingEffects: [new HeatAsPaymentEffect()]);
+
+        // CORP04: Mining Guild — Start with 30 MC, 5 steel, 1 steel prod.
+        // Effect: When you get steel/titanium placement bonus, increase steel prod 1 step.
+        SetEffects(builder, "CORP04",
+            onPlayEffects:
+            [
+                new ChangeResourceEffect(ResourceType.MegaCredits, 30),
+                new ChangeResourceEffect(ResourceType.Steel, 5),
+                new ChangeProductionEffect(ResourceType.Steel, 1),
+            ],
+            ongoingEffects:
+            [
+                new WhenYouEffect(TriggerCondition.GainMineralPlacementBonus, new ChangeProductionEffect(ResourceType.Steel, 1)),
+            ]);
+
+        // CORP05: Interplanetary Cinematics — Start with 30 MC, 20 steel. Effect: When you play event, gain 2 MC.
+        SetEffects(builder, "CORP05",
+            onPlayEffects:
+            [
+                new ChangeResourceEffect(ResourceType.MegaCredits, 30),
+                new ChangeResourceEffect(ResourceType.Steel, 20),
+            ],
+            ongoingEffects: [new WhenYouEffect(TriggerCondition.PlayEventTag, new ChangeResourceEffect(ResourceType.MegaCredits, 2))]);
+
+        // CORP06: Inventrix — Start with 45 MC, draw 3 cards. Global requirements +/- 2.
+        SetEffects(builder, "CORP06",
+            onPlayEffects:
+            [
+                new ChangeResourceEffect(ResourceType.MegaCredits, 45),
+                new DrawCardsEffect(3),
+            ],
+            ongoingEffects: [new RequirementModifierEffect(2)]);
+
+        // CORP07: Phobolog — Start with 23 MC, 10 titanium. Titanium worth 1 more.
+        SetEffects(builder, "CORP07",
+            onPlayEffects:
+            [
+                new ChangeResourceEffect(ResourceType.MegaCredits, 23),
+                new ChangeResourceEffect(ResourceType.Titanium, 10),
+            ],
+            ongoingEffects: [new TitaniumValueModifierEffect(1)]);
+
+        // CORP08: Tharsis Republic — Start with 40 MC. First action: place city.
+        // Effect: When any city is placed ON MARS, gain 1 MC prod. When YOU place any city, gain 3 MC.
+        SetEffects(builder, "CORP08",
+            onPlayEffects:
+            [
+                new ChangeResourceEffect(ResourceType.MegaCredits, 40),
+            ],
+            ongoingEffects:
+            [
+                new WhenAnyoneEffect(TriggerCondition.PlaceCityTileOnMars, new ChangeProductionEffect(ResourceType.MegaCredits, 1)),
+                new WhenYouEffect(TriggerCondition.PlaceAnyCityTile, new ChangeResourceEffect(ResourceType.MegaCredits, 3)),
+            ]);
+
+        // CORP09: Thorgate — Start with 48 MC, 1 energy prod. Power cards cost 3 less. Power Plant SP costs 3 less.
+        SetEffects(builder, "CORP09",
+            onPlayEffects:
+            [
+                new ChangeResourceEffect(ResourceType.MegaCredits, 48),
+                new ChangeProductionEffect(ResourceType.Energy, 1),
+            ],
+            ongoingEffects:
+            [
+                new TagDiscountEffect(Tag.Power, 3),
+                new PowerPlantDiscountEffect(3),
+            ]);
+
+        // CORP10: UNMI — Start with 40 MC. Action: Pay 3 MC to gain 1 TR (requires you raised TR this gen).
+        SetEffects(builder, "CORP10",
+            onPlayEffects: [new ChangeResourceEffect(ResourceType.MegaCredits, 40)],
+            action: new CardAction(
+                Cost: new SpendMCCost(3),
+                Effects: [new ChangeTREffect(1)],
+                Precondition: ActionPrecondition.IncreasedTRThisGeneration));
+
+        // CORP11: Teractor — Start with 60 MC. Earth cards cost 3 less.
+        SetEffects(builder, "CORP11",
+            onPlayEffects: [new ChangeResourceEffect(ResourceType.MegaCredits, 60)],
+            ongoingEffects: [new TagDiscountEffect(Tag.Earth, 3)]);
+
+        // CORP12: Saturn Systems — Start with 42 MC, 1 titanium prod. Effect: When anyone plays Jovian tag, gain 1 MC prod.
+        SetEffects(builder, "CORP12",
+            onPlayEffects:
+            [
+                new ChangeResourceEffect(ResourceType.MegaCredits, 42),
+                new ChangeProductionEffect(ResourceType.Titanium, 1),
+            ],
+            ongoingEffects:
+            [
+                new WhenAnyoneEffect(TriggerCondition.PlayJovianTag, new ChangeProductionEffect(ResourceType.MegaCredits, 1)),
+            ]);
+
+        // CORP18: Cheung Shing Mars — Start with 44 MC, 3 MC prod. Building cards cost 2 less.
+        SetEffects(builder, "CORP18",
+            onPlayEffects:
+            [
+                new ChangeResourceEffect(ResourceType.MegaCredits, 44),
+                new ChangeProductionEffect(ResourceType.MegaCredits, 3),
+            ],
+            ongoingEffects: [new TagDiscountEffect(Tag.Building, 2)]);
+
+        // CORP19: Point Luna — Start with 38 MC, 1 titanium prod. Effect: When you play Earth tag, draw card.
+        SetEffects(builder, "CORP19",
+            onPlayEffects:
+            [
+                new ChangeResourceEffect(ResourceType.MegaCredits, 38),
+                new ChangeProductionEffect(ResourceType.Titanium, 1),
+            ],
+            ongoingEffects:
+            [
+                new WhenYouEffect(TriggerCondition.PlayEarthTag, new DrawCardsEffect(1)),
+            ]);
+
+        // CORP20: Robinson Industries — Start with 47 MC. Action: Pay 4 MC to increase your lowest production 1 step.
+        SetEffects(builder, "CORP20",
+            onPlayEffects: [new ChangeResourceEffect(ResourceType.MegaCredits, 47)],
+            action: new CardAction(
+                Cost: new SpendMCCost(4),
+                Effects: [new IncreaseLowestProductionEffect()]));
+
+        // CORP21: Valley Trust — Start with 37 MC, draw 3 prelude cards (keep 1 extra).
+        // Effect: Science cards cost 2 less.
+        SetEffects(builder, "CORP21",
+            onPlayEffects: [new ChangeResourceEffect(ResourceType.MegaCredits, 37)],
+            ongoingEffects: [new TagDiscountEffect(Tag.Science, 2)]);
+
+        // CORP22: Vitor — Start with 45 MC. Effect: When you play card with non-negative VP, gain 3 MC.
+        SetEffects(builder, "CORP22",
+            onPlayEffects: [new ChangeResourceEffect(ResourceType.MegaCredits, 45)]);
     }
 }

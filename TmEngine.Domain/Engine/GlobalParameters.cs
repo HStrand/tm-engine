@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using TmEngine.Domain.Cards.Effects;
 using TmEngine.Domain.Models;
 
 namespace TmEngine.Domain.Engine;
@@ -28,6 +29,7 @@ public static class GlobalParameters
         state = state.UpdatePlayer(playerId, p => p with
         {
             TerraformRating = p.TerraformRating + 1,
+            IncreasedTRThisGeneration = true,
         });
 
         // Bonus: at -24°C and -20°C, gain an ocean placement
@@ -75,6 +77,7 @@ public static class GlobalParameters
         state = state.UpdatePlayer(playerId, p => p with
         {
             TerraformRating = p.TerraformRating + 1,
+            IncreasedTRThisGeneration = true,
         });
 
         // Bonus: at 8%, also raise temperature
@@ -107,6 +110,7 @@ public static class GlobalParameters
             state = state.UpdatePlayer(playerId, p => p with
             {
                 TerraformRating = p.TerraformRating + 1,
+            IncreasedTRThisGeneration = true,
             });
         }
 
@@ -130,17 +134,22 @@ public static class GlobalParameters
     }
 
     /// <summary>
-    /// Place a city tile. Includes:
+    /// Place a city tile on Mars. Includes:
     /// - Ownership marker
     /// - Placement bonuses
+    /// - Triggers: PlaceCityTileOnMars + PlaceAnyCityTile
     /// </summary>
     public static GameState PlaceCity(GameState state, int playerId, HexCoord location)
     {
-        return PlaceTileOnBoard(state, TileType.City, playerId, location);
+        state = PlaceTileOnBoard(state, TileType.City, playerId, location);
+        state = TriggerSystem.FireTrigger(state, playerId, TriggerCondition.PlaceCityTileOnMars);
+        state = TriggerSystem.FireTrigger(state, playerId, TriggerCondition.PlaceAnyCityTile);
+        return state;
     }
 
     /// <summary>
     /// Place any tile type on the board with ownership and placement bonuses.
+    /// Does NOT fire city-specific triggers — callers handle those.
     /// </summary>
     public static GameState PlaceTileOnBoard(GameState state, TileType tileType, int playerId, HexCoord location)
     {
