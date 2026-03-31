@@ -93,9 +93,7 @@ public enum MapName
 /// </summary>
 public enum GamePhase
 {
-    CorporationSelect,
-    PreludeSelect,
-    CardBuy,
+    Setup,
     Research,
     Action,
     Production,

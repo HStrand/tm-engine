@@ -2,15 +2,15 @@ namespace TmEngine.Domain.Models;
 
 public static class Constants
 {
-    // Global parameter limits
+    // Global parameter limits (defaults — maps may override Max values)
     public const int MinOxygen = 0;
-    public const int MaxOxygen = 14;
+    public const int DefaultMaxOxygen = 14;
 
     public const int MinTemperature = -30;
-    public const int MaxTemperature = 8;
+    public const int DefaultMaxTemperature = 8;
     public const int TemperatureStep = 2;
 
-    public const int MaxOceans = 9;
+    public const int DefaultMaxOceans = 9;
 
     // Temperature bonus thresholds (when raising temp TO this value, gain bonus)
     public const int TemperatureOceanBonus1 = -24;

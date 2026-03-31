@@ -60,14 +60,9 @@ public sealed record BuyCardsPending(
     ImmutableArray<string> AvailableCardIds) : PendingAction;
 
 /// <summary>
-/// Player must select a corporation (during setup).
+/// Player must submit their combined setup choices (corporation + preludes + initial cards).
 /// </summary>
-public sealed record SelectCorporationPending(
-    ImmutableArray<string> AvailableCorporationIds) : PendingAction;
-
-/// <summary>
-/// Player must select preludes to keep (during setup).
-/// </summary>
-public sealed record SelectPreludesPending(
+public sealed record SetupPending(
+    ImmutableArray<string> AvailableCorporationIds,
     ImmutableArray<string> AvailablePreludeIds,
-    int KeepCount) : PendingAction;
+    ImmutableArray<string> AvailableProjectCardIds) : PendingAction;

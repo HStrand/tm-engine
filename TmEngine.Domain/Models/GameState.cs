@@ -77,10 +77,16 @@ public sealed record GameState
 
     public bool IsGameOver => Phase == GamePhase.GameEnd;
 
-    public bool AllParametersMaxed =>
-        Oxygen >= Constants.MaxOxygen &&
-        Temperature >= Constants.MaxTemperature &&
-        OceansPlaced >= Constants.MaxOceans;
+    public bool AllParametersMaxed
+    {
+        get
+        {
+            var map = MapDefinitions.GetMap(Map);
+            return Oxygen >= map.MaxOxygen &&
+                   Temperature >= map.MaxTemperature &&
+                   OceansPlaced >= map.MaxOceans;
+        }
+    }
 
     public PlayerState GetPlayer(int playerId) =>
         Players.First(p => p.PlayerId == playerId);

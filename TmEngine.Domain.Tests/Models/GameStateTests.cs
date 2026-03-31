@@ -94,8 +94,8 @@ public class GameStateTests
     public void MapDefinitions_Tharsis_HasCorrectHexCount()
     {
         var map = MapDefinitions.Tharsis;
-        // Tharsis: 6+7+7+8+9+8+7+6+6 = 64 hexes
-        Assert.Equal(64, map.Hexes.Count);
+        // Tharsis: 5+6+7+8+9+8+7+6+5 = 61 hexes
+        Assert.Equal(61, map.Hexes.Count);
     }
 
     [Fact]
@@ -160,9 +160,9 @@ public class GameStateTests
     {
         var state = CreateMinimalGameState() with
         {
-            Oxygen = Constants.MaxOxygen,
-            Temperature = Constants.MaxTemperature,
-            OceansPlaced = Constants.MaxOceans,
+            Oxygen = Constants.DefaultMaxOxygen,
+            Temperature = Constants.DefaultMaxTemperature,
+            OceansPlaced = Constants.DefaultMaxOceans,
         };
 
         Assert.True(state.AllParametersMaxed);
