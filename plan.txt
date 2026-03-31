@@ -1,0 +1,11 @@
+1. Core state model
+2. Move/command model
+3. Board logic & standard projects
+
+4. Card effect system
+
+5. Setup, research & drafting
+6. Production & scoring
+7. Card implementation
+8. Functions API
+9. Integration testing

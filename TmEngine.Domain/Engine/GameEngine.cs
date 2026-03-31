@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using TmEngine.Domain.Cards;
+using TmEngine.Domain.Cards.Effects;
 using TmEngine.Domain.Models;
 using TmEngine.Domain.Moves;
 
@@ -110,15 +112,16 @@ public static class GameEngine
         BuyCardsMove m => ApplyBuyCards(state, m),
         PlaceTileMove m => ApplyPlaceTile(state, m),
 
-        // Stubs for moves that need card system (Phase 4+)
-        PlayCardMove => state,
-        UseCardActionMove => state,
+        PlayCardMove m => ApplyPlayCard(state, m),
+        UseCardActionMove m => ApplyUseCardAction(state, m),
+        ChooseTargetPlayerMove m => ApplyChooseTargetPlayer(state, m),
+        SelectCardMove m => ApplySelectCard(state, m),
+        ChooseOptionMove m => ApplyChooseOption(state, m),
+        DiscardCardsMove m => ApplyDiscardCards(state, m),
+
+        // Stubs for moves that need setup/research system (Phase 5)
         DraftCardMove => state,
-        SetupMove => state, // TODO: Phase 5 — apply corporation, preludes, initial card buy
-        ChooseTargetPlayerMove => state,
-        SelectCardMove => state,
-        ChooseOptionMove => state,
-        DiscardCardsMove => state,
+        SetupMove => state,
 
         _ => throw new InvalidOperationException($"Unhandled move type: {move.GetType().Name}"),
     };
@@ -307,6 +310,168 @@ public static class GameEngine
             return state;
 
         state = GlobalParameters.PlaceTileOnBoard(state, pending.TileType, move.PlayerId, move.Location);
+        return state with { PendingAction = null };
+    }
+
+    // ── Card Playing ─────────────────────────────────────────────
+
+    private static GameState ApplyPlayCard(GameState state, PlayCardMove move)
+    {
+        if (!CardRegistry.TryGet(move.CardId, out var entry))
+            return state;
+
+        var card = entry.Definition;
+        var player = state.GetPlayer(move.PlayerId);
+
+        // Calculate effective cost with discounts
+        var discount = RequirementChecker.GetCardDiscount(player, card.Tags);
+        var effectiveCost = Math.Max(0, card.Cost - discount);
+
+        // Validate and apply payment
+        var steelValue = RequirementChecker.GetSteelValue(player);
+        var titaniumValue = RequirementChecker.GetTitaniumValue(player);
+        var totalPayment = move.Payment.TotalValue(steelValue, titaniumValue);
+
+        // Deduct resources
+        state = state.UpdatePlayer(move.PlayerId, p => p with
+        {
+            Resources = new ResourceSet(
+                MegaCredits: p.Resources.MegaCredits - move.Payment.MegaCredits,
+                Steel: p.Resources.Steel - move.Payment.Steel,
+                Titanium: p.Resources.Titanium - move.Payment.Titanium,
+                Plants: p.Resources.Plants,
+                Energy: p.Resources.Energy,
+                Heat: p.Resources.Heat - move.Payment.Heat),
+            Hand = p.Hand.Remove(move.CardId),
+            ActionsThisTurn = p.ActionsThisTurn + 1,
+        });
+
+        // Place card in appropriate pile
+        state = card.Type switch
+        {
+            CardType.Event => state.UpdatePlayer(move.PlayerId, p => p with
+            {
+                PlayedEvents = p.PlayedEvents.Add(move.CardId),
+            }),
+            _ => state.UpdatePlayer(move.PlayerId, p => p with
+            {
+                PlayedCards = p.PlayedCards.Add(move.CardId),
+            }),
+        };
+
+        // Execute on-play effects
+        var (newState, pending) = EffectExecutor.ExecuteAll(state, move.PlayerId, entry.OnPlayEffects);
+        state = newState;
+
+        if (pending != null)
+            return state with { PendingAction = pending };
+
+        // TODO: Fire triggered effects for other players' cards (TriggerSystem)
+
+        return PhaseManager.AfterAction(state);
+    }
+
+    private static GameState ApplyUseCardAction(GameState state, UseCardActionMove move)
+    {
+        if (!CardRegistry.TryGet(move.CardId, out var entry) || entry.Action == null)
+            return state;
+
+        var action = entry.Action;
+
+        // Pay action cost
+        if (action.Cost != null)
+        {
+            state = action.Cost switch
+            {
+                SpendMCCost c => state.UpdatePlayer(move.PlayerId, p => p with
+                    { Resources = p.Resources.Add(ResourceType.MegaCredits, -c.Amount) }),
+                SpendEnergyCost c => state.UpdatePlayer(move.PlayerId, p => p with
+                    { Resources = p.Resources.Add(ResourceType.Energy, -c.Amount) }),
+                SpendSteelCost c => state.UpdatePlayer(move.PlayerId, p => p with
+                    { Resources = p.Resources.Add(ResourceType.Steel, -c.Amount) }),
+                SpendTitaniumCost c => state.UpdatePlayer(move.PlayerId, p => p with
+                    { Resources = p.Resources.Add(ResourceType.Titanium, -c.Amount) }),
+                SpendHeatCost c => state.UpdatePlayer(move.PlayerId, p => p with
+                    { Resources = p.Resources.Add(ResourceType.Heat, -c.Amount) }),
+                _ => state,
+            };
+        }
+
+        // Mark action as used
+        state = state.UpdatePlayer(move.PlayerId, p => p with
+        {
+            UsedCardActions = p.UsedCardActions.Add(move.CardId),
+            ActionsThisTurn = p.ActionsThisTurn + 1,
+        });
+
+        // Execute action effects
+        var (newState, pending) = EffectExecutor.ExecuteAll(state, move.PlayerId, action.Effects);
+        state = newState;
+
+        if (pending != null)
+            return state with { PendingAction = pending };
+
+        return PhaseManager.AfterAction(state);
+    }
+
+    // ── Sub-Move Resolution ────────────────────────────────────
+
+    private static GameState ApplyChooseTargetPlayer(GameState state, ChooseTargetPlayerMove move)
+    {
+        if (state.PendingAction is RemoveResourcePending removePending)
+        {
+            state = state.UpdatePlayer(move.TargetPlayerId, p => p with
+            {
+                Resources = p.Resources.Add(removePending.Resource,
+                    -Math.Min(removePending.Amount, p.Resources.Get(removePending.Resource))),
+            });
+            return state with { PendingAction = null };
+        }
+
+        if (state.PendingAction is ReduceProductionPending reducePending)
+        {
+            state = state.UpdatePlayer(move.TargetPlayerId, p => p with
+            {
+                Production = p.Production.Add(reducePending.Resource, -reducePending.Amount),
+            });
+            return state with { PendingAction = null };
+        }
+
+        return state;
+    }
+
+    private static GameState ApplySelectCard(GameState state, SelectCardMove move)
+    {
+        if (state.PendingAction is AddCardResourcePending addPending)
+        {
+            state = state.UpdatePlayer(state.ActivePlayer.PlayerId, p =>
+            {
+                var current = p.CardResources.GetValueOrDefault(move.CardId, 0);
+                return p with { CardResources = p.CardResources.SetItem(move.CardId, current + addPending.Amount) };
+            });
+            return state with { PendingAction = null };
+        }
+
+        return state;
+    }
+
+    private static GameState ApplyChooseOption(GameState state, ChooseOptionMove move)
+    {
+        // The ChooseOptionPending was created by a ChooseEffect.
+        // We need to find the original ChooseEffect and execute the chosen option's effects.
+        // For now, clear the pending action — full implementation needs effect queue tracking.
+        return state with { PendingAction = null };
+    }
+
+    private static GameState ApplyDiscardCards(GameState state, DiscardCardsMove move)
+    {
+        state = state.UpdatePlayer(move.PlayerId, p => p with
+        {
+            Hand = p.Hand.RemoveRange(move.CardIds),
+        });
+
+        // Add to discard pile
+        state = state with { DiscardPile = state.DiscardPile.AddRange(move.CardIds) };
         return state with { PendingAction = null };
     }
 

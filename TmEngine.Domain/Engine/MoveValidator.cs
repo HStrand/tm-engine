@@ -1,3 +1,4 @@
+using TmEngine.Domain.Cards;
 using TmEngine.Domain.Models;
 using TmEngine.Domain.Moves;
 
@@ -260,8 +261,46 @@ public static class MoveValidator
         if (!player.Hand.Contains(move.CardId))
             return $"Card {move.CardId} is not in player's hand.";
 
-        // Card-specific validation (cost, requirements, effects) will be done
-        // by the card system in Phase 4. For now, accept structurally valid moves.
+        // Card lookup — if card isn't registered yet, accept structurally valid moves
+        if (!CardRegistry.TryGet(move.CardId, out var entry))
+            return null;
+
+        var card = entry.Definition;
+
+        // Check requirements (with player's requirement modifier)
+        var reqError = RequirementChecker.CanPlayCard(state, move.PlayerId, card);
+        if (reqError != null)
+            return reqError;
+
+        // Validate payment: steel only for Building tags, titanium only for Space tags
+        var payment = move.Payment;
+        if (payment.Steel > 0 && !card.Tags.Contains(Tag.Building))
+            return "Steel can only be used to pay for cards with a Building tag.";
+        if (payment.Titanium > 0 && !card.Tags.Contains(Tag.Space))
+            return "Titanium can only be used to pay for cards with a Space tag.";
+        if (payment.Heat > 0 && !RequirementChecker.CanUseHeatAsPayment(player))
+            return "Cannot use heat to pay for cards (requires Helion corporation).";
+
+        // Check player has the resources they're trying to spend
+        if (payment.MegaCredits > player.Resources.MegaCredits)
+            return $"Not enough MC: have {player.Resources.MegaCredits}, trying to spend {payment.MegaCredits}.";
+        if (payment.Steel > player.Resources.Steel)
+            return $"Not enough steel: have {player.Resources.Steel}, trying to spend {payment.Steel}.";
+        if (payment.Titanium > player.Resources.Titanium)
+            return $"Not enough titanium: have {player.Resources.Titanium}, trying to spend {payment.Titanium}.";
+        if (payment.Heat > player.Resources.Heat)
+            return $"Not enough heat: have {player.Resources.Heat}, trying to spend {payment.Heat}.";
+
+        // Check total payment covers effective cost (after discounts)
+        var discount = RequirementChecker.GetCardDiscount(player, card.Tags);
+        var effectiveCost = Math.Max(0, card.Cost - discount);
+        var steelValue = RequirementChecker.GetSteelValue(player);
+        var titaniumValue = RequirementChecker.GetTitaniumValue(player);
+        var totalValue = payment.TotalValue(steelValue, titaniumValue);
+
+        if (totalValue < effectiveCost)
+            return $"Payment ({totalValue} MC value) does not cover card cost ({effectiveCost} MC).";
+
         return null;
     }
 
