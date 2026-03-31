@@ -427,6 +427,7 @@ public static class GameEngine
 
             // 1. Set corporation and apply starting effects (gives starting MC/resources)
             state = state.UpdatePlayer(playerId, p => p with { CorporationId = move.CorporationId });
+            state = state.AppendLog($"Player {playerId} selects corporation {CardName(move.CorporationId)}");
             if (CardRegistry.TryGet(move.CorporationId, out var corpEntry))
             {
                 var (newState, _) = EffectExecutor.ExecuteAll(state, playerId, corpEntry.OnPlayEffects);
@@ -440,6 +441,11 @@ public static class GameEngine
                 Resources = p.Resources.Add(ResourceType.MegaCredits, -cardCost),
                 Hand = p.Hand.AddRange(move.CardIdsToBuy),
             });
+            if (move.CardIdsToBuy.Length > 0)
+            {
+                var cardNames = string.Join(", ", move.CardIdsToBuy.Select(id => $"{CardName(id)} ({id})"));
+                state = state.AppendLog($"Player {playerId} buys {move.CardIdsToBuy.Length} cards: {cardNames}");
+            }
 
             // Discard unselected project cards
             var dealtCards = setup.DealtCards[i];
@@ -447,6 +453,11 @@ public static class GameEngine
             state = state with { DiscardPile = state.DiscardPile.AddRange(unboughtCards) };
 
             // 3. Apply prelude effects (after card buy, so MC may be depleted)
+            if (move.PreludeIds.Length > 0)
+            {
+                var preludeNames = string.Join(", ", move.PreludeIds.Select(id => $"{CardName(id)} ({id})"));
+                state = state.AppendLog($"Player {playerId} selects preludes: {preludeNames}");
+            }
             foreach (var preludeId in move.PreludeIds)
             {
                 if (!CardRegistry.TryGet(preludeId, out var preludeEntry))
@@ -892,6 +903,9 @@ public static class GameEngine
 
     // ── Formatting ─────────────────────────────────────────────
 
+    private static string CardName(string cardId) =>
+        CardRegistry.TryGet(cardId, out var entry) ? entry.Definition.Name : cardId;
+
     private static string FormatMove(Move move) => move switch
     {
         PassMove m => $"Player {m.PlayerId} passes",
@@ -900,8 +914,8 @@ public static class GameEngine
         UseStandardProjectMove m => $"Player {m.PlayerId} uses {m.Project}",
         ClaimMilestoneMove m => $"Player {m.PlayerId} claims {m.MilestoneName}",
         FundAwardMove m => $"Player {m.PlayerId} funds {m.AwardName}",
-        PlayCardMove m => $"Player {m.PlayerId} plays card {m.CardId}",
-        UseCardActionMove m => $"Player {m.PlayerId} uses action on {m.CardId}",
+        PlayCardMove m => $"Player {m.PlayerId} plays {CardName(m.CardId)} ({m.CardId})",
+        UseCardActionMove m => $"Player {m.PlayerId} uses action on {CardName(m.CardId)} ({m.CardId})",
         BuyCardsMove m => $"Player {m.PlayerId} buys {m.CardIds.Length} cards",
         PerformFirstActionMove m => $"Player {m.PlayerId} performs corporation first action",
         PlaceTileMove m => $"Player {m.PlayerId} places tile at {m.Location}",
