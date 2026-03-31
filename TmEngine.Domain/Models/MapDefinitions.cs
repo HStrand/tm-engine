@@ -301,8 +301,8 @@ public static class MapDefinitions
     {
         var layout = new Dictionary<int, int[]>
         {
-            [1] = [3, 4, 5, 6, 7, 8],
-            [2] = [2, 3, 4, 5, 6, 7, 8],
+            [1] = [3, 4, 5, 6, 7],
+            [2] = [3, 4, 5, 6, 7, 8],
             [3] = [2, 3, 4, 5, 6, 7, 8],
             [4] = [2, 3, 4, 5, 6, 7, 8, 9],
             [5] = [1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -324,71 +324,84 @@ public static class MapDefinitions
         var oceans = new HashSet<HexCoord>
         {
             new(3, 1), new(4, 1), new(5, 1), new(6, 1),
-            new(2, 2), new(7, 2),
-            new(3, 3), new(4, 3),
-            new(2, 4),
-        };
+            new(6, 2), new(7, 2),
+            new(6, 3), new(7, 3),
+            new(5, 4), new(7, 4), new(8, 4),
+			new(4, 5),
+		};
 
         var bonuses = new Dictionary<HexCoord, PlacementBonus[]>
         {
             // Row 1 
             [new(3, 1)] = [], // ocean
-            [new(4, 1)] = [], // ocean
-            [new(5, 1)] = [PlacementBonus.Steel], // ocean
-            [new(6, 1)] = [PlacementBonus.Cards], // ocean
-            [new(7, 1)] = [],
-            [new(8, 1)] = [],
+            [new(4, 1)] = [PlacementBonus.Titanium], // ocean
+            [new(5, 1)] = [PlacementBonus.Cards], // ocean
+            [new(6, 1)] = [PlacementBonus.Steel], // ocean
+            [new(7, 1)] = [PlacementBonus.Cards],
             // Row 2
-            [new(2, 2)] = [], // ocean
-            [new(3, 2)] = [], // Hecates Tholus
+            [new(3, 2)] = [PlacementBonus.Titanium], // Hecates Tholus
             [new(4, 2)] = [],
-            [new(5, 2)] = [PlacementBonus.Cards, PlacementBonus.Cards],
+            [new(5, 2)] = [],
+            [new(6, 2)] = [], // ocean
             [new(7, 2)] = [], // ocean
-            [new(8, 2)] = [],
+            [new(8, 2)] = [PlacementBonus.Steel, PlacementBonus.Steel],
             // Row 3
-            [new(2, 3)] = [], // Elysium Mons
-            [new(3, 3)] = [PlacementBonus.Titanium], // ocean
-            [new(4, 3)] = [], // ocean
+            [new(2, 3)] = [PlacementBonus.Titanium, PlacementBonus.Titanium], // Elysium Mons
+            [new(3, 3)] = [],
+            [new(4, 3)] = [PlacementBonus.Cards],
             [new(5, 3)] = [],
-            [new(6, 3)] = [PlacementBonus.Steel],
-            [new(8, 3)] = [], // Olympus Mons
+			[new(6, 3)] = [PlacementBonus.Plants], // ocean
+            [new(7, 3)] = [], // ocean
+            [new(8, 3)] = [PlacementBonus.Cards, PlacementBonus.Cards, PlacementBonus.Cards], // Olympus Mons
             // Row 4
-            [new(2, 4)] = [], // ocean
-            [new(3, 4)] = [],
-            [new(4, 4)] = [PlacementBonus.Plants],
-            [new(5, 4)] = [PlacementBonus.Plants],
+            [new(2, 4)] = [PlacementBonus.Plants],
+            [new(3, 4)] = [PlacementBonus.Plants],
+            [new(4, 4)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(5, 4)] = [PlacementBonus.Plants], // ocean
             [new(6, 4)] = [PlacementBonus.Plants],
-            [new(8, 4)] = [],
-            // Row 5
-            [new(1, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants],
-            [new(2, 5)] = [PlacementBonus.Plants],
-            [new(3, 5)] = [PlacementBonus.Plants],
-            [new(4, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(7, 4)] = [PlacementBonus.Plants], // ocean
+            [new(8, 4)] = [PlacementBonus.Plants], // ocean
+            [new(9, 4)] = [PlacementBonus.Steel, PlacementBonus.Plants],
+			// Row 5
+			[new(1, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(2, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(3, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(4, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants], // ocean
             [new(5, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants],
-            [new(6, 5)] = [PlacementBonus.Plants],
-            [new(9, 5)] = [], // Arsia Mons
-            // Row 6
-            [new(2, 6)] = [],
+            [new(6, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(7, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants], 
+            [new(8, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(9, 5)] = [PlacementBonus.Plants, PlacementBonus.Titanium], // Arsia Mons
+			// Row 6
+			[new(2, 6)] = [PlacementBonus.Steel],
             [new(3, 6)] = [PlacementBonus.Plants],
             [new(4, 6)] = [PlacementBonus.Plants],
-            [new(5, 6)] = [],
-            [new(7, 6)] = [PlacementBonus.Steel],
+            [new(5, 6)] = [PlacementBonus.Plants],
+            [new(6, 6)] = [PlacementBonus.Plants],
+			[new(7, 6)] = [PlacementBonus.Plants],
+            [new(8, 6)] = [PlacementBonus.Plants],
+            [new(9, 6)] = [],
             // Row 7
-            [new(3, 7)] = [],
-            [new(5, 7)] = [PlacementBonus.Titanium],
+            [new(2, 7)] = [PlacementBonus.Titanium],
+            [new(3, 7)] = [PlacementBonus.Steel],
+            [new(4, 7)] = [],
+            [new(5, 7)] = [],
+            [new(6, 7)] = [PlacementBonus.Steel],
             [new(7, 7)] = [],
-            [new(8, 7)] = [PlacementBonus.Steel, PlacementBonus.Steel],
+            [new(8, 7)] = [],
             // Row 8
-            [new(3, 8)] = [PlacementBonus.Steel],
-            [new(4, 8)] = [PlacementBonus.Titanium],
+            [new(3, 8)] = [PlacementBonus.Steel, PlacementBonus.Steel],
+            [new(4, 8)] = [],
+            [new(5, 8)] = [],
             [new(6, 8)] = [],
-            [new(7, 8)] = [PlacementBonus.Cards, PlacementBonus.Cards],
-            [new(8, 8)] = [PlacementBonus.Steel],
+            [new(7, 8)] = [PlacementBonus.Steel, PlacementBonus.Steel],
+            [new(8, 8)] = [],
             // Row 9
-            [new(3, 9)] = [],
-            [new(5, 9)] = [PlacementBonus.Titanium, PlacementBonus.Titanium],
-            [new(6, 9)] = [],
-            [new(7, 9)] = [],
+            [new(3, 9)] = [PlacementBonus.Steel],
+            [new(4, 9)] = [],
+			[new(5, 9)] = [PlacementBonus.Cards],
+            [new(6, 9)] = [PlacementBonus.Cards],
+            [new(7, 9)] = [PlacementBonus.Steel, PlacementBonus.Steel],
         };
 
         // Elysium volcanic sites where Lava Flows can be placed
