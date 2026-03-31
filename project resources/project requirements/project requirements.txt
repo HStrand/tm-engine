@@ -1,0 +1,51 @@
+PROJECT REQUIREMENTS
+--------------------
+
+This project will create a game engine for the board game Terraforming Mars.
+
+The game engine will run in a serverless Azure Functions project, using C# as the programming language.
+
+The engine should correctly implement the rules of the game as stated in the rulebooks.
+
+The engine shoud support:
+- The base game
+- The Prelude expansion
+- The Hellas & Elysium maps expansion
+
+Variants:
+- The engine should support Corporate Era.
+- The engine should support the Draft variant, with an option to include drafting or not.
+- The engine should *not* support the Solo variant.
+- The engine should *not* support the Venus expansion.
+- The engine should *not* support the Colonies expansion.
+- The engine should *not* support the Turmoil expansion.
+- The engine should *not* support the Prelude 2 expansion.
+- The engine should *not* support promo cards.
+
+The non-supported expansions and variants may be added later. The project will need to keep that in mind.
+
+The game engine should be stateless with a pure C# domain library that has no external concerns. Just pure domain logic.
+
+The solution will store a canonical game state representation between moves, and then the game engine will apply moves submitted as commands to perform an idempotent state transition.
+
+Moves should be:
+- Explicit
+- Auditable
+- Replayable
+- Deterministic
+
+The game engine will not support undo actions.
+
+Some moves may trigger sub-move effects that require further actions from the same player before the turn is handed over to the next player. These should still be idempotent state transitions.
+
+Game states will be stored as JSON documents in Azure Storage.
+
+Game metadata will be stored in an Azure SQL database.
+
+Clients will interact with the engine through Azure Functions API calls.
+
+The eventual GUI for the game engine will be based on the replay viewer in C:\Code\BgaTmScraperRegistry\web\src. Most of the replay page in that web project resides in C:\Code\BgaTmScraperRegistry\web\src\components\replay.
+
+Since the replay GUI only supports watching back replays and not playing games so far, it is missing some features like buttons for actually making moves and decision. Once we adapt this GUI to support our game engine, these will need to be implemented.
+
+The gamelog format used in the existing replay GUI is coming from Board Game Arena's replays and may not be exactly the format we want to go for in this project. We should make a game state representation that best fits the purpose of this project, which is to design a clean game engine. The GUI can always be adapted to support our new format later.
