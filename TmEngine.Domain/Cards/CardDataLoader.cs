@@ -63,7 +63,7 @@ public static class CardDataLoader
         var cost = card.TryGetProperty("cost", out var costProp) ? costProp.GetInt32() : 0;
         var tags = ParseTags(card);
         var expansion = ParseExpansion(card.GetProperty("expansion").GetString()!);
-        var requirement = ParseRequirement(card);
+        var requirements = ParseRequirements(card);
         var vp = ParseVictoryPoints(card, id);
         var description = card.TryGetProperty("description", out var descProp)
             ? descProp.GetString() ?? ""
@@ -77,7 +77,7 @@ public static class CardDataLoader
             Cost = cost,
             Tags = tags,
             Expansion = expansion,
-            Requirement = requirement,
+            Requirements = requirements,
             VictoryPoints = vp,
             Description = description,
         };
@@ -138,32 +138,19 @@ public static class CardDataLoader
             or "earth" or "plant" or "microbe" or "animal" or "city" or "event" or "wild";
     }
 
-    private static Requirement? ParseRequirement(JsonElement card)
+    private static ImmutableArray<CardRequirement> ParseRequirements(JsonElement card)
     {
-        if (!card.TryGetProperty("requirement", out var reqProp))
-            return null;
+        if (!card.TryGetProperty("requirements", out var reqsArray))
+            return [];
 
-        var description = reqProp.GetString() ?? "";
-        var isMax = card.TryGetProperty("requirement_is_max", out var maxProp) && maxProp.GetBoolean();
-
-        int? oxygen = card.TryGetProperty("requirement_oxygen", out var o) ? o.GetInt32() : null;
-        int? temperature = card.TryGetProperty("requirement_temperature", out var t) ? t.GetInt32() : null;
-        int? oceans = card.TryGetProperty("requirement_oceans", out var oc) ? oc.GetInt32() : null;
-        int? science = card.TryGetProperty("requirement_science", out var sc) ? sc.GetInt32() : null;
-        int? earth = card.TryGetProperty("requirement_earth", out var ea) ? ea.GetInt32() : null;
-        int? jovian = card.TryGetProperty("requirement_jovian", out var jo) ? jo.GetInt32() : null;
-
-        return new Requirement
+        var builder = ImmutableArray.CreateBuilder<CardRequirement>();
+        foreach (var req in reqsArray.EnumerateArray())
         {
-            Description = description,
-            IsMax = isMax,
-            Oxygen = oxygen,
-            Temperature = temperature,
-            Oceans = oceans,
-            ScienceTags = science,
-            EarthTags = earth,
-            JovianTags = jovian,
-        };
+            var type = req.GetProperty("type").GetString()!;
+            var count = req.GetProperty("count").GetInt32();
+            builder.Add(new CardRequirement(type, count));
+        }
+        return builder.ToImmutable();
     }
 
     private static VictoryPoints? ParseVictoryPoints(JsonElement card, string cardId)

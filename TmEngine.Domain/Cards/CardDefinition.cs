@@ -21,45 +21,27 @@ public sealed record CardDefinition
     public required ImmutableArray<Tag> Tags { get; init; }
     public required Expansion Expansion { get; init; }
 
-    /// <summary>Requirement that must be met to play this card. Null if no requirement.</summary>
-    public Requirement? Requirement { get; init; }
+    /// <summary>Requirements that must be met to play this card. Empty if none.</summary>
+    public ImmutableArray<CardRequirement> Requirements { get; init; } = [];
 
     /// <summary>Victory point value. Null if the card has no VP.</summary>
     public VictoryPoints? VictoryPoints { get; init; }
 
     /// <summary>Human-readable description of the card's effects.</summary>
     public required string Description { get; init; }
+
+    public bool HasRequirements => !Requirements.IsDefaultOrEmpty && Requirements.Length > 0;
 }
 
 /// <summary>
-/// A requirement that must be met to play a card.
-/// Multiple conditions can be combined (e.g., oxygen AND tag count).
+/// A single requirement: type + threshold. All requirements on a card must be met.
+/// Global parameter types (oxygen, temperature, oceans) are affected by requirement modifiers.
 /// </summary>
-public sealed record Requirement
+public sealed record CardRequirement(string Type, int Count)
 {
-    /// <summary>Human-readable description (e.g., "max 5% O2", "3 Oceans").</summary>
-    public required string Description { get; init; }
-
-    /// <summary>If true, the numeric thresholds are maximums; otherwise minimums.</summary>
-    public bool IsMax { get; init; }
-
-    // Global parameter requirements (null = no requirement for that parameter)
-    public int? Oxygen { get; init; }
-    public int? Temperature { get; init; }
-    public int? Oceans { get; init; }
-
-    // Tag count requirements
-    public int? ScienceTags { get; init; }
-    public int? EarthTags { get; init; }
-    public int? JovianTags { get; init; }
-
-    // Production requirements
-    public int? PowerProduction { get; init; }
-
-    // Other requirements
-    public int? TitaniumProduction { get; init; }
-    public int? PlantProduction { get; init; }
-    public int? EnergyProduction { get; init; }
+    /// <summary>Whether this is a global parameter requirement (affected by Inventrix etc.).</summary>
+    public bool IsGlobalParameter => Type is "oxygen" or "max_oxygen"
+        or "temperature" or "max_temperature" or "oceans" or "max_oceans";
 }
 
 /// <summary>

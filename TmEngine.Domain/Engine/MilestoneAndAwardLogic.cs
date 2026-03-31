@@ -182,7 +182,7 @@ public static class MilestoneAndAwardLogic
         int count = 0;
         foreach (var cardId in player.PlayedCards)
         {
-            if (CardRegistry.TryGet(cardId, out var entry) && entry.Definition.Requirement != null)
+            if (CardRegistry.TryGet(cardId, out var entry) && entry.Definition.HasRequirements)
                 count++;
         }
         return count;

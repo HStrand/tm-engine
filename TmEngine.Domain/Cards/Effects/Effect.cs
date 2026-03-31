@@ -80,6 +80,9 @@ public enum PlacementConstraint
 
     /// <summary>Place on an area reserved for ocean, disregarding normal restrictions (Land Claim etc.).</summary>
     OnOceanArea,
+
+    /// <summary>Place an ocean on a non-ocean land area (Artificial Lake).</summary>
+    OceanOnLand,
 }
 
 // ═══════════════════════════════════════════════════════════

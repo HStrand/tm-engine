@@ -113,9 +113,8 @@ public class CardRegistryTests
         Assert.Equal(8, card.Cost);
         Assert.Contains(Tag.Building, card.Tags);
         Assert.Contains(Tag.Jovian, card.Tags);
-        Assert.NotNull(card.Requirement);
-        Assert.True(card.Requirement!.IsMax);
-        Assert.Equal(5, card.Requirement.Oxygen);
+        Assert.True(card.HasRequirements);
+        Assert.Contains(card.Requirements, r => r.Type == "max_oxygen" && r.Count == 5);
         Assert.NotNull(card.VictoryPoints);
     }
 
@@ -124,7 +123,7 @@ public class CardRegistryTests
     {
         var card = CardRegistry.GetDefinition("003");
         Assert.Equal("Deep Well Heating", card.Name);
-        Assert.Null(card.Requirement);
+        Assert.False(card.HasRequirements);
     }
 
     // ── Corporation Effects ─────────────────────────────────────

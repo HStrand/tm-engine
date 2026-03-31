@@ -598,23 +598,9 @@ public static class MoveValidator
         var card = entry.Definition;
 
         // Check requirements — with possible global requirement waiver
-        if (card.Requirement != null && !pending.IgnoreGlobalRequirements)
-        {
-            var reqError = RequirementChecker.CanPlayCard(state, move.PlayerId, card);
-            if (reqError != null) return reqError;
-        }
-        else if (card.Requirement != null && pending.IgnoreGlobalRequirements)
-        {
-            // Only check non-global requirements (tags, production)
-            var req = card.Requirement;
-            if (req.ScienceTags != null || req.EarthTags != null || req.JovianTags != null
-                || req.PowerProduction != null || req.TitaniumProduction != null
-                || req.PlantProduction != null || req.EnergyProduction != null)
-            {
-                var reqError = RequirementChecker.CanPlayCard(state, move.PlayerId, card);
-                if (reqError != null) return reqError;
-            }
-        }
+        var reqError = RequirementChecker.CanPlayCard(state, move.PlayerId, card,
+            ignoreGlobalRequirements: pending.IgnoreGlobalRequirements);
+        if (reqError != null) return reqError;
 
         // Check that the player can afford mandatory effects
         var affordError = RequirementChecker.CanAffordEffects(state, move.PlayerId, entry);

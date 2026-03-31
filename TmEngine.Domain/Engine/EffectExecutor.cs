@@ -244,6 +244,8 @@ public static class EffectExecutor
 
             PlacementConstraint.OnOceanArea => BoardLogic.GetValidOceanPlacements(state),
 
+            PlacementConstraint.OceanOnLand => BoardLogic.GetValidLandPlacements(state, playerId),
+
             PlacementConstraint.Volcanic =>
                 MapDefinitions.GetMap(state.Map).VolcanicAreas
                     .Where(c => !state.PlacedTiles.ContainsKey(c))

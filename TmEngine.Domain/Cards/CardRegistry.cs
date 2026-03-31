@@ -1003,6 +1003,441 @@ public static class CardRegistry
             new RemoveResourceEffect(ResourceType.Plants, 6),
         ]);
 
-        // Cards 081+ will be implemented in subsequent batches
+        // 081: Ganymede Colony — off-map city. 1VP per Jovian tag
+        SetEffects(builder, "081", onPlayEffects:
+            [new PlaceOffMapCityEffect("Ganymede Colony")]);
+
+        // 082: Callisto Penal Mines — +3 MC prod
+        SetEffects(builder, "082", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.MegaCredits, 3)]);
+
+        // 083: Giant Space Mirror — +3 energy prod
+        SetEffects(builder, "083", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Energy, 3)]);
+
+        // 084: Trans-Neptune Probe — VP only
+
+        // 085: Commercial District — -1 energy prod, +4 MC prod, place special tile
+        SetEffects(builder, "085", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, -1),
+            new ChangeProductionEffect(ResourceType.MegaCredits, 4),
+            new PlaceTileEffect(TileType.CommercialDistrict),
+        ]);
+
+        // 086: Robotic Workforce — Duplicate production box of one of your building cards
+        // Complex — deferred
+
+        // 087: Grass — +1 plant prod, +3 plants
+        SetEffects(builder, "087", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+            new ChangeResourceEffect(ResourceType.Plants, 3),
+        ]);
+
+        // 088: Heather — +1 plant prod, +1 plant
+        SetEffects(builder, "088", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+            new ChangeResourceEffect(ResourceType.Plants, 1),
+        ]);
+
+        // 089: Peroxide Power — -1 MC prod, +2 energy prod
+        SetEffects(builder, "089", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.MegaCredits, -1),
+            new ChangeProductionEffect(ResourceType.Energy, 2),
+        ]);
+
+        // 090: Research — Draw 2 cards (counts as 2 science tags)
+        SetEffects(builder, "090", onPlayEffects: [new DrawCardsEffect(2)]);
+
+        // 091: Gene Repair — +2 MC prod
+        SetEffects(builder, "091", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.MegaCredits, 2)]);
+
+        // 092: Io Mining Industries — +2 titanium prod, +2 MC prod. 1VP/Jovian tag
+        SetEffects(builder, "092", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Titanium, 2),
+            new ChangeProductionEffect(ResourceType.MegaCredits, 2),
+        ]);
+
+        // 093: Bushes — +2 plant prod, +2 plants
+        SetEffects(builder, "093", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Plants, 2),
+            new ChangeResourceEffect(ResourceType.Plants, 2),
+        ]);
+
+        // 094: Mass Converter — Effect: space cards cost 2 less. +6 energy prod (requires 5 science)
+        SetEffects(builder, "094",
+            onPlayEffects: [new ChangeProductionEffect(ResourceType.Energy, 6)],
+            ongoingEffects: [new TagDiscountEffect(Tag.Space, 2)]);
+
+        // 095: Physics Complex — Action: spend 6 energy, add science resource. 2VP/science
+        SetEffects(builder, "095",
+            action: new CardAction(new SpendEnergyCost(6),
+                [new AddCardResourceEffect(CardResourceType.Science, 1, "095")]));
+
+        // 096: Greenhouses — Gain 1 plant per city tile in play
+        // Dynamic count — deferred (needs "count tiles" effect)
+
+        // 097: Nuclear Zone — Place tile, raise temp 2
+        SetEffects(builder, "097", onPlayEffects:
+        [
+            new PlaceTileEffect(TileType.NuclearZone),
+            new RaiseTemperatureEffect(2),
+        ]);
+
+        // 098: Tropical Resort — -2 heat prod, +3 MC prod
+        SetEffects(builder, "098", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Heat, -2),
+            new ChangeProductionEffect(ResourceType.MegaCredits, 3),
+        ]);
+
+        // 099: Toll Station — +1 MC prod per space tag opponents have
+        // Dynamic count of opponents' tags — deferred
+
+        // 100: Fueled Generators — -1 MC prod, +1 energy prod
+        SetEffects(builder, "100", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.MegaCredits, -1),
+            new ChangeProductionEffect(ResourceType.Energy, 1),
+        ]);
+
+        // 101: Ironworks — Action: spend 4 energy, gain 1 steel, raise O2 1
+        SetEffects(builder, "101",
+            action: new CardAction(new SpendEnergyCost(4), [
+                new ChangeResourceEffect(ResourceType.Steel, 1),
+                new RaiseOxygenEffect(1),
+            ]));
+
+        // 102: Power Grid — +1 energy prod per power tag including this
+        SetEffects(builder, "102", onPlayEffects:
+            [new ChangeProductionPerTagEffect(ResourceType.Energy, Tag.Power, 1)]);
+
+        // 103: Steelworks — Action: spend 4 energy, gain 2 steel, raise O2 1
+        SetEffects(builder, "103",
+            action: new CardAction(new SpendEnergyCost(4), [
+                new ChangeResourceEffect(ResourceType.Steel, 2),
+                new RaiseOxygenEffect(1),
+            ]));
+
+        // 104: Ore Processor — Action: spend 4 energy, gain 1 titanium, raise O2 1
+        SetEffects(builder, "104",
+            action: new CardAction(new SpendEnergyCost(4), [
+                new ChangeResourceEffect(ResourceType.Titanium, 1),
+                new RaiseOxygenEffect(1),
+            ]));
+
+        // 105: Earth Office — Effect: Earth cards cost 3 less
+        SetEffects(builder, "105",
+            ongoingEffects: [new TagDiscountEffect(Tag.Earth, 3)]);
+
+        // 106: Acquired Company — +3 MC prod
+        SetEffects(builder, "106", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.MegaCredits, 3)]);
+
+        // 107: Media Archives — Gain 1 MC per event ever played by all players
+        // Dynamic count — deferred
+
+        // 108: Open City — +2 plants, place city, -1 energy prod, +4 MC prod
+        SetEffects(builder, "108", onPlayEffects:
+        [
+            new ChangeResourceEffect(ResourceType.Plants, 2),
+            new PlaceTileEffect(TileType.City),
+            new ChangeProductionEffect(ResourceType.Energy, -1),
+            new ChangeProductionEffect(ResourceType.MegaCredits, 4),
+        ]);
+
+        // 109: Media Group — Effect: after you play event, gain 3 MC
+        SetEffects(builder, "109",
+            ongoingEffects: [new WhenYouEffect(TriggerCondition.PlayEventTag,
+                new ChangeResourceEffect(ResourceType.MegaCredits, 3))]);
+
+        // 110: Business Network — -1 MC prod. Action: look at top card, buy or discard
+        SetEffects(builder, "110",
+            onPlayEffects: [new ChangeProductionEffect(ResourceType.MegaCredits, -1)]);
+        // Action deferred — complex
+
+        // 111: Business Contacts — Look at top 4 cards, keep 2 discard 2
+        // Complex — deferred
+
+        // 112: Bribed Committee — +2 TR
+        SetEffects(builder, "112", onPlayEffects: [new ChangeTREffect(2)]);
+
+        // 113: Solar Power — +1 energy prod
+        SetEffects(builder, "113", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Energy, 1)]);
+
+        // 114: Breathing Filters — VP only
+
+        // 115: Artificial Photosynthesis — +1 plant prod OR +2 energy prod
+        SetEffects(builder, "115", onPlayEffects:
+        [
+            new ChooseEffect(
+            [
+                new EffectOption("Increase plant production 1 step", [new ChangeProductionEffect(ResourceType.Plants, 1)]),
+                new EffectOption("Increase energy production 2 steps", [new ChangeProductionEffect(ResourceType.Energy, 2)]),
+            ]),
+        ]);
+
+        // 116: Artificial Lake — Place ocean on a non-ocean land area
+        SetEffects(builder, "116", onPlayEffects:
+            [new PlaceTileEffect(TileType.Ocean, PlacementConstraint.OceanOnLand)]);
+
+        // 117: Geothermal Power — +2 energy prod
+        SetEffects(builder, "117", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Energy, 2)]);
+
+        // 118: Farming — +2 MC prod, +2 plant prod, +2 plants
+        SetEffects(builder, "118", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.MegaCredits, 2),
+            new ChangeProductionEffect(ResourceType.Plants, 2),
+            new ChangeResourceEffect(ResourceType.Plants, 2),
+        ]);
+
+        // 119: Dust Seals — VP only
+
+        // 120: Urbanized Area — -1 energy prod, +2 MC prod, place city adjacent to 2 cities
+        SetEffects(builder, "120", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, -1),
+            new ChangeProductionEffect(ResourceType.MegaCredits, 2),
+            new PlaceTileEffect(TileType.City, PlacementConstraint.AdjacentTo2Cities),
+        ]);
+
+        // 121: Sabotage — Remove up to 3 titanium OR 4 steel OR 7 MC from any player
+        SetEffects(builder, "121", onPlayEffects:
+        [
+            new ChooseEffect(
+            [
+                new EffectOption("Remove up to 3 titanium", [new RemoveResourceEffect(ResourceType.Titanium, 3)]),
+                new EffectOption("Remove up to 4 steel", [new RemoveResourceEffect(ResourceType.Steel, 4)]),
+                new EffectOption("Remove up to 7 MC", [new RemoveResourceEffect(ResourceType.MegaCredits, 7)]),
+            ]),
+        ]);
+
+        // 122: Moss — Lose 1 plant, +1 plant prod
+        SetEffects(builder, "122", onPlayEffects:
+        [
+            new ChangeResourceEffect(ResourceType.Plants, -1),
+            new ChangeProductionEffect(ResourceType.Plants, 1),
+        ]);
+
+        // 123: Industrial Center — Action: spend 7 MC, +1 steel prod. Place tile adjacent to city
+        SetEffects(builder, "123",
+            onPlayEffects: [new PlaceTileEffect(TileType.IndustrialCenter)],
+            action: new CardAction(new SpendMCCost(7), [new ChangeProductionEffect(ResourceType.Steel, 1)]));
+
+        // 124: Hired Raiders — Steal up to 2 steel or 3 MC from any player
+        SetEffects(builder, "124", onPlayEffects:
+        [
+            new ChooseEffect(
+            [
+                new EffectOption("Steal up to 2 steel", [new RemoveResourceEffect(ResourceType.Steel, 2)]),
+                new EffectOption("Steal up to 3 MC", [new RemoveResourceEffect(ResourceType.MegaCredits, 3)]),
+            ]),
+        ]);
+
+        // 125: Hackers — -1 energy prod, decrease any MC prod 2, +2 MC prod
+        SetEffects(builder, "125", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, -1),
+            new ReduceAnyProductionEffect(ResourceType.MegaCredits, 2),
+            new ChangeProductionEffect(ResourceType.MegaCredits, 2),
+        ]);
+
+        // 126: GHG Factories — -1 energy prod, +4 heat prod
+        SetEffects(builder, "126", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, -1),
+            new ChangeProductionEffect(ResourceType.Heat, 4),
+        ]);
+
+        // 127: Subterranean Reservoir — Place 1 ocean
+        SetEffects(builder, "127", onPlayEffects: [new PlaceOceanEffect(1)]);
+
+        // 128: Ecological Zone — Place tile adjacent to greenery. 1VP/2 animals
+        // Effect: when you play animal/plant tag (including this card's 2 tags), add animal to this
+        SetEffects(builder, "128",
+            onPlayEffects:
+            [
+                new PlaceTileEffect(TileType.EcologicalZone),
+                new AddCardResourceEffect(CardResourceType.Animal, 2, "128"), // self-trigger for plant+animal tags on this card
+            ],
+            ongoingEffects:
+            [
+                new WhenYouEffect(TriggerCondition.PlayAnimalTag, new AddCardResourceEffect(CardResourceType.Animal, 1, "128")),
+                new WhenYouEffect(TriggerCondition.PlayPlantTag, new AddCardResourceEffect(CardResourceType.Animal, 1, "128")),
+            ]);
+
+        // 129: Zeppelins — +1 MC prod per city on Mars
+        // Dynamic count — deferred
+
+        // 130: Worms — +1 plant prod per 2 microbe tags you have
+        // Dynamic count — deferred
+
+        // 131: Decomposers — Effect: when you play animal/plant/microbe tag (including this), add microbe. 1VP/3
+        SetEffects(builder, "131",
+            onPlayEffects: [new AddCardResourceEffect(CardResourceType.Microbe, 1, "131")], // self-trigger for microbe tag
+            ongoingEffects:
+            [
+                new WhenYouEffect(TriggerCondition.PlayAnimalTag, new AddCardResourceEffect(CardResourceType.Microbe, 1, "131")),
+                new WhenYouEffect(TriggerCondition.PlayPlantTag, new AddCardResourceEffect(CardResourceType.Microbe, 1, "131")),
+                new WhenYouEffect(TriggerCondition.PlayMicrobeTag, new AddCardResourceEffect(CardResourceType.Microbe, 1, "131")),
+            ]);
+
+        // 132: Fusion Power — +3 energy prod
+        SetEffects(builder, "132", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Energy, 3)]);
+
+        // 133: Symbiotic Fungus — Action: add microbe to ANOTHER card
+        SetEffects(builder, "133",
+            action: new CardAction(null, [new AddCardResourceEffect(CardResourceType.Microbe, 1)]));
+
+        // 134: Extreme-Cold Fungus — Action: gain 1 plant or add 2 microbes to another card
+        SetEffects(builder, "134",
+            action: new CardAction(null, [
+                new ChooseEffect([
+                    new EffectOption("Gain 1 plant", [new ChangeResourceEffect(ResourceType.Plants, 1)]),
+                    new EffectOption("Add 2 microbes to another card", [new AddCardResourceEffect(CardResourceType.Microbe, 2)]),
+                ]),
+            ]));
+
+        // 135: Advanced Ecosystems — VP only (3 VP, requires plant+microbe+animal tags)
+
+        // 136: Great Dam — +2 energy prod
+        SetEffects(builder, "136", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Energy, 2)]);
+
+        // 137: Cartel — +1 MC prod per Earth tag including this
+        SetEffects(builder, "137", onPlayEffects:
+            [new ChangeProductionPerTagEffect(ResourceType.MegaCredits, Tag.Earth, 1)]);
+
+        // 138: Strip Mine — -2 energy prod, +2 steel prod, +1 titanium prod, raise O2 2
+        SetEffects(builder, "138", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, -2),
+            new ChangeProductionEffect(ResourceType.Steel, 2),
+            new ChangeProductionEffect(ResourceType.Titanium, 1),
+            new RaiseOxygenEffect(2),
+        ]);
+
+        // 139: Wave Power — +1 energy prod
+        SetEffects(builder, "139", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Energy, 1)]);
+
+        // 140: Lava Flows — Raise temp 2, place Lava Flows tile
+        SetEffects(builder, "140", onPlayEffects:
+        [
+            new RaiseTemperatureEffect(2),
+            new PlaceTileEffect(TileType.LavaFlows),
+        ]);
+
+        // 141: Power Plant — +1 energy prod
+        SetEffects(builder, "141", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Energy, 1)]);
+
+        // 142: Mohole Area — +4 heat prod, place on ocean-reserved area
+        SetEffects(builder, "142", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Heat, 4),
+            new PlaceTileEffect(TileType.MoholeArea, PlacementConstraint.OceanReserved),
+        ]);
+
+        // 143: Large Convoy — Place ocean, draw 2 cards, gain 5 plants or add 4 animals to another
+        SetEffects(builder, "143", onPlayEffects:
+        [
+            new PlaceOceanEffect(1),
+            new DrawCardsEffect(2),
+            new ChooseEffect([
+                new EffectOption("Gain 5 plants", [new ChangeResourceEffect(ResourceType.Plants, 5)]),
+                new EffectOption("Add 4 animals to another card", [new AddCardResourceEffect(CardResourceType.Animal, 4)]),
+            ]),
+        ]);
+
+        // 144: Titanium Mine — +1 titanium prod
+        SetEffects(builder, "144", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Titanium, 1)]);
+
+        // 145: Tectonic Stress Power — +3 energy prod
+        SetEffects(builder, "145", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Energy, 3)]);
+
+        // 146: Nitrophilic Moss — Lose 2 plants, +2 plant prod
+        SetEffects(builder, "146", onPlayEffects:
+        [
+            new ChangeResourceEffect(ResourceType.Plants, -2),
+            new ChangeProductionEffect(ResourceType.Plants, 2),
+        ]);
+
+        // 147: Herbivores — Effect: when you place greenery, add animal. -1 plant prod (any). 1VP/2 animals
+        SetEffects(builder, "147",
+            onPlayEffects: [new ReduceAnyProductionEffect(ResourceType.Plants, 1)],
+            ongoingEffects:
+                [new WhenYouEffect(TriggerCondition.PlaceGreeneryTile, new AddCardResourceEffect(CardResourceType.Animal, 1, "147"))]);
+
+        // 148: Insects — +1 plant prod per plant tag you have
+        SetEffects(builder, "148", onPlayEffects:
+            [new ChangeProductionPerTagEffect(ResourceType.Plants, Tag.Plant, 1)]);
+
+        // 149: CEO's Favorite Project — Add 1 resource to any card with resources
+        // Complex — deferred
+
+        // 150: Anti-gravity Technology — Effect: cards cost 2 less
+        SetEffects(builder, "150",
+            ongoingEffects: [new GlobalDiscountEffect(2)]);
+
+        // 151: Investment Loan — -1 MC prod, +10 MC
+        SetEffects(builder, "151", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.MegaCredits, -1),
+            new ChangeResourceEffect(ResourceType.MegaCredits, 10),
+        ]);
+
+        // 152: Insulation — Decrease heat prod any number, increase MC prod same amount
+        // Complex — deferred (variable amount choice)
+
+        // 153: Adaptation Technology — Effect: global requirements +/- 2
+        SetEffects(builder, "153",
+            ongoingEffects: [new RequirementModifierEffect(2)]);
+
+        // 154: Caretaker Contract — Action: spend 8 heat, +1 TR
+        SetEffects(builder, "154",
+            action: new CardAction(new SpendHeatCost(8), [new ChangeTREffect(1)]));
+
+        // 155: Designed Microorganisms — +2 plant prod
+        SetEffects(builder, "155", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Plants, 2)]);
+
+        // 156: Standard Technology — Effect: after paying for standard project (not sell patents), gain 3 MC
+        // Complex triggered effect — deferred
+
+        // 157: Nitrite Reducing Bacteria — Action: add 1 microbe, or remove 3 to +1 TR
+        // Complex action with choice — deferred
+
+        // 158: Industrial Microbes — +1 energy prod, +1 steel prod
+        SetEffects(builder, "158", onPlayEffects:
+        [
+            new ChangeProductionEffect(ResourceType.Energy, 1),
+            new ChangeProductionEffect(ResourceType.Steel, 1),
+        ]);
+
+        // 159: Lichen — +1 plant prod
+        SetEffects(builder, "159", onPlayEffects:
+            [new ChangeProductionEffect(ResourceType.Plants, 1)]);
+
+        // 160: Power Supply Consortium — Decrease any energy prod 1, +1 own energy prod
+        SetEffects(builder, "160", onPlayEffects:
+        [
+            new ReduceAnyProductionEffect(ResourceType.Energy, 1),
+            new ChangeProductionEffect(ResourceType.Energy, 1),
+        ]);
+
+        // Cards 161+ will be implemented in subsequent batches
     }
 }

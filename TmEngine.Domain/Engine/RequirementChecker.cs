@@ -13,86 +13,87 @@ namespace TmEngine.Domain.Engine;
 public static class RequirementChecker
 {
     /// <summary>
-    /// Check if a player can play a card, considering requirements and modifiers.
+    /// Check if a player can play a card, considering all requirements and modifiers.
     /// Returns null if the card can be played, or an error message.
     /// </summary>
-    public static string? CanPlayCard(GameState state, int playerId, CardDefinition card)
+    public static string? CanPlayCard(GameState state, int playerId, CardDefinition card,
+        bool ignoreGlobalRequirements = false)
     {
-        if (card.Requirement == null)
+        if (!card.HasRequirements)
             return null;
 
         var player = state.GetPlayer(playerId);
         var modifier = GetRequirementModifier(player);
-        var req = card.Requirement;
 
-        // Global parameter requirements
-        if (req.Oxygen != null)
+        foreach (var req in card.Requirements)
         {
-            if (req.IsMax)
-            {
-                if (state.Oxygen > req.Oxygen.Value + modifier)
-                    return $"Oxygen must be {req.Oxygen.Value}% or less (adjusted: {req.Oxygen.Value + modifier}%).";
-            }
-            else
-            {
-                if (state.Oxygen < req.Oxygen.Value - modifier)
-                    return $"Oxygen must be at least {req.Oxygen.Value}% (adjusted: {req.Oxygen.Value - modifier}%).";
-            }
+            if (ignoreGlobalRequirements && req.IsGlobalParameter)
+                continue;
+
+            var error = CheckRequirement(state, player, req, modifier);
+            if (error != null)
+                return error;
         }
-
-        if (req.Temperature != null)
-        {
-            if (req.IsMax)
-            {
-                if (state.Temperature > req.Temperature.Value + (modifier * Constants.TemperatureStep))
-                    return $"Temperature must be {req.Temperature.Value}°C or less.";
-            }
-            else
-            {
-                if (state.Temperature < req.Temperature.Value - (modifier * Constants.TemperatureStep))
-                    return $"Temperature must be at least {req.Temperature.Value}°C.";
-            }
-        }
-
-        if (req.Oceans != null)
-        {
-            if (req.IsMax)
-            {
-                if (state.OceansPlaced > req.Oceans.Value + modifier)
-                    return $"Must have {req.Oceans.Value} or fewer oceans.";
-            }
-            else
-            {
-                if (state.OceansPlaced < req.Oceans.Value - modifier)
-                    return $"Must have at least {req.Oceans.Value} oceans.";
-            }
-        }
-
-        // Tag count requirements (these are NOT affected by global requirement modifiers)
-        if (req.ScienceTags != null && CountPlayerTags(player, Tag.Science) < req.ScienceTags.Value)
-            return $"Need {req.ScienceTags.Value} Science tags.";
-
-        if (req.EarthTags != null && CountPlayerTags(player, Tag.Earth) < req.EarthTags.Value)
-            return $"Need {req.EarthTags.Value} Earth tags.";
-
-        if (req.JovianTags != null && CountPlayerTags(player, Tag.Jovian) < req.JovianTags.Value)
-            return $"Need {req.JovianTags.Value} Jovian tags.";
-
-        // Production requirements
-        if (req.PowerProduction != null && player.Production.Energy < req.PowerProduction.Value)
-            return $"Need {req.PowerProduction.Value} energy production.";
-
-        if (req.TitaniumProduction != null && player.Production.Titanium < req.TitaniumProduction.Value)
-            return $"Need {req.TitaniumProduction.Value} titanium production.";
-
-        if (req.PlantProduction != null && player.Production.Plants < req.PlantProduction.Value)
-            return $"Need {req.PlantProduction.Value} plant production.";
-
-        if (req.EnergyProduction != null && player.Production.Energy < req.EnergyProduction.Value)
-            return $"Need {req.EnergyProduction.Value} energy production.";
 
         return null;
     }
+
+    private static string? CheckRequirement(GameState state, PlayerState player, CardRequirement req, int modifier)
+    {
+        return req.Type switch
+        {
+            // Global parameters (affected by requirement modifiers)
+            "oxygen" when state.Oxygen < req.Count - modifier =>
+                $"Oxygen must be at least {req.Count}%.",
+            "max_oxygen" when state.Oxygen > req.Count + modifier =>
+                $"Oxygen must be {req.Count}% or less.",
+            "temperature" when state.Temperature < req.Count - (modifier * Constants.TemperatureStep) =>
+                $"Temperature must be at least {req.Count}°C.",
+            "max_temperature" when state.Temperature > req.Count + (modifier * Constants.TemperatureStep) =>
+                $"Temperature must be {req.Count}°C or less.",
+            "oceans" when state.OceansPlaced < req.Count - modifier =>
+                $"Must have at least {req.Count} oceans.",
+            "max_oceans" when state.OceansPlaced > req.Count + modifier =>
+                $"Must have {req.Count} or fewer oceans.",
+
+            // Tag requirements (NOT affected by global modifiers)
+            "science_tag" when CountPlayerTags(player, Tag.Science) < req.Count =>
+                $"Need {req.Count} Science tags.",
+            "earth_tag" when CountPlayerTags(player, Tag.Earth) < req.Count =>
+                $"Need {req.Count} Earth tags.",
+            "jovian_tag" when CountPlayerTags(player, Tag.Jovian) < req.Count =>
+                $"Need {req.Count} Jovian tags.",
+            "power_tag" when CountPlayerTags(player, Tag.Power) < req.Count =>
+                $"Need {req.Count} Power tags.",
+            "plant_tag" when CountPlayerTags(player, Tag.Plant) < req.Count =>
+                $"Need {req.Count} Plant tags.",
+            "microbe_tag" when CountPlayerTags(player, Tag.Microbe) < req.Count =>
+                $"Need {req.Count} Microbe tags.",
+            "animal_tag" when CountPlayerTags(player, Tag.Animal) < req.Count =>
+                $"Need {req.Count} Animal tags.",
+
+            // Production requirements
+            "titanium_production" when player.Production.Titanium < req.Count =>
+                $"Need {req.Count} titanium production.",
+            "steel_production" when player.Production.Steel < req.Count =>
+                $"Need {req.Count} steel production.",
+
+            // Tile requirements
+            "greeneries" when CountOwnedTilesOfType(state, player.PlayerId, TileType.Greenery) < req.Count =>
+                $"Need {req.Count} greenery tiles.",
+            "cities" when CountOwnedCities(state, player.PlayerId) < req.Count =>
+                $"Need {req.Count} cities in play.",
+
+            _ => null,
+        };
+    }
+
+    private static int CountOwnedTilesOfType(GameState state, int playerId, TileType type) =>
+        state.PlacedTiles.Values.Count(t => t.OwnerId == playerId && t.Type == type);
+
+    private static int CountOwnedCities(GameState state, int playerId) =>
+        state.PlacedTiles.Values.Count(t => t.OwnerId == playerId && (t.Type == TileType.City || t.Type == TileType.Capital))
+        + state.OffMapTiles.Count(t => t.OwnerId == playerId && t.Type == TileType.City);
 
     /// <summary>
     /// Check if a player can perform the mandatory effects of a card.
