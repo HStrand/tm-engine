@@ -303,3 +303,21 @@ public sealed record IncreaseLowestProductionEffect : Effect;
 /// Checks the original/printed cost, not the effective cost after discounts.
 /// </summary>
 public sealed record HighCostRebateEffect(int CostThreshold, int Rebate) : Effect;
+
+/// <summary>
+/// Draw N cards of a specific type, choose one to play immediately, discard the rest.
+/// Used by Valley Trust's first action (draw 3 preludes, play 1).
+/// </summary>
+public sealed record DrawAndPlayOneEffect(int DrawCount, CardType CardTypeToFind) : Effect;
+
+/// <summary>
+/// Grants the player one free award funding (Vitor corporation).
+/// The player can use it at any point — it's not tied to a specific generation.
+/// </summary>
+public sealed record GrantFreeAwardEffect : Effect;
+
+/// <summary>
+/// Gain MC when playing a card that has a non-negative VP value (Vitor corporation).
+/// Includes cards with variable VP (per-resource like animal cards).
+/// </summary>
+public sealed record VPCardRebateEffect(int Rebate) : Effect;

@@ -72,6 +72,12 @@ public sealed record ConvertHeatMove(int PlayerId) : Move(PlayerId);
 /// <summary>Player passes (takes no more actions this generation).</summary>
 public sealed record PassMove(int PlayerId) : Move(PlayerId);
 
+/// <summary>
+/// Player performs their corporation's mandatory first action (gen 1 only).
+/// Counts as 1 of their 2 actions for the turn.
+/// </summary>
+public sealed record PerformFirstActionMove(int PlayerId) : Move(PlayerId);
+
 // ═══════════════════════════════════════════════════════════
 //  SUB-MOVE RESOLUTION MOVES
 // ═══════════════════════════════════════════════════════════

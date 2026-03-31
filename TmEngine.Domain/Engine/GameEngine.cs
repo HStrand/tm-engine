@@ -151,6 +151,7 @@ public static class GameEngine
             FundedAwards = [],
             DrawPile = deck,
             DiscardPile = [],
+            PreludeDeck = shuffledPreludes,
             Setup = hasCards ? new SetupState
             {
                 DealtCorporations = dealtCorps.ToImmutable(),
@@ -180,6 +181,7 @@ public static class GameEngine
         ChooseTargetPlayerMove m => ApplyChooseTargetPlayer(state, m),
         SelectCardMove m => ApplySelectCard(state, m),
         ChooseOptionMove m => ApplyChooseOption(state, m),
+        PerformFirstActionMove m => ApplyPerformFirstAction(state, m),
         DiscardCardsMove m => ApplyDiscardCards(state, m),
 
         SetupMove m => ApplySetup(state, m),
@@ -355,19 +357,33 @@ public static class GameEngine
 
     private static GameState ApplyFundAward(GameState state, FundAwardMove move)
     {
-        var cost = state.FundedAwards.Count switch
-        {
-            0 => Constants.AwardFundCost1,
-            1 => Constants.AwardFundCost2,
-            2 => Constants.AwardFundCost3,
-            _ => 0,
-        };
+        var player = state.GetPlayer(move.PlayerId);
 
-        state = state.UpdatePlayer(move.PlayerId, p => p with
+        if (player.HasFreeAwardFunding)
         {
-            Resources = p.Resources.Add(ResourceType.MegaCredits, -cost),
-            ActionsThisTurn = p.ActionsThisTurn + 1,
-        });
+            // Vitor: free funding, consume the ability
+            state = state.UpdatePlayer(move.PlayerId, p => p with
+            {
+                HasFreeAwardFunding = false,
+                ActionsThisTurn = p.ActionsThisTurn + 1,
+            });
+        }
+        else
+        {
+            var cost = state.FundedAwards.Count switch
+            {
+                0 => Constants.AwardFundCost1,
+                1 => Constants.AwardFundCost2,
+                2 => Constants.AwardFundCost3,
+                _ => 0,
+            };
+
+            state = state.UpdatePlayer(move.PlayerId, p => p with
+            {
+                Resources = p.Resources.Add(ResourceType.MegaCredits, -cost),
+                ActionsThisTurn = p.ActionsThisTurn + 1,
+            });
+        }
 
         return state with
         {
@@ -458,8 +474,25 @@ public static class GameEngine
             }
         }
 
-        // Clear setup state and transition to Action phase (gen 1 skips Research)
-        return PhaseManager.StartActionPhase(state with { Setup = null });
+        // Transition to Action phase
+        state = PhaseManager.StartActionPhase(state with { Setup = null });
+
+        // Mark players whose corporations have first actions
+        for (int i = 0; i < state.Players.Count; i++)
+        {
+            var corpId = state.Players[i].CorporationId;
+            if (!string.IsNullOrEmpty(corpId)
+                && CardRegistry.TryGet(corpId, out var corp)
+                && !corp.FirstActionEffects.IsEmpty)
+            {
+                state = state.UpdatePlayer(state.Players[i].PlayerId, p => p with
+                {
+                    PerformedFirstAction = false,
+                });
+            }
+        }
+
+        return state;
     }
 
     /// <summary>
@@ -662,13 +695,14 @@ public static class GameEngine
             }),
         };
 
-        // Apply rebate based on printed cost (Credicor)
-        var rebate = RequirementChecker.GetHighCostRebate(state.GetPlayer(move.PlayerId), card.Cost);
-        if (rebate > 0)
+        // Apply rebates
+        var totalRebate = RequirementChecker.GetHighCostRebate(state.GetPlayer(move.PlayerId), card.Cost)
+                        + RequirementChecker.GetVPCardRebate(state.GetPlayer(move.PlayerId), card);
+        if (totalRebate > 0)
         {
             state = state.UpdatePlayer(move.PlayerId, p => p with
             {
-                Resources = p.Resources.Add(ResourceType.MegaCredits, rebate),
+                Resources = p.Resources.Add(ResourceType.MegaCredits, totalRebate),
             });
         }
 
@@ -680,6 +714,29 @@ public static class GameEngine
             return state with { PendingAction = pending };
 
         // TODO: Fire triggered effects for other players' cards (TriggerSystem)
+
+        return PhaseManager.AfterAction(state);
+    }
+
+    private static GameState ApplyPerformFirstAction(GameState state, PerformFirstActionMove move)
+    {
+        var player = state.GetPlayer(move.PlayerId);
+        if (!CardRegistry.TryGet(player.CorporationId, out var corp))
+            return state;
+
+        // Mark first action as performed and count as 1 action
+        state = state.UpdatePlayer(move.PlayerId, p => p with
+        {
+            PerformedFirstAction = true,
+            ActionsThisTurn = p.ActionsThisTurn + 1,
+        });
+
+        // Execute the first action effects
+        var (newState, pending) = EffectExecutor.ExecuteAll(state, move.PlayerId, corp.FirstActionEffects);
+        state = newState;
+
+        if (pending != null)
+            return state with { PendingAction = pending };
 
         return PhaseManager.AfterAction(state);
     }
@@ -765,6 +822,23 @@ public static class GameEngine
             return state with { PendingAction = null };
         }
 
+        if (state.PendingAction is ChooseCardToPlayPending choosePending)
+        {
+            // Play the chosen card, discard the rest
+            var (newState, innerPending) = EffectExecutor.PlayCardImmediately(
+                state, move.PlayerId, move.CardId);
+            state = newState;
+
+            // Discard unchosen cards
+            var discarded = choosePending.CardIds.Where(id => id != move.CardId);
+            state = state with { DiscardPile = state.DiscardPile.AddRange(discarded) };
+
+            if (innerPending != null)
+                return state with { PendingAction = innerPending };
+
+            return state with { PendingAction = null };
+        }
+
         return state;
     }
 
@@ -801,6 +875,7 @@ public static class GameEngine
         PlayCardMove m => $"Player {m.PlayerId} plays card {m.CardId}",
         UseCardActionMove m => $"Player {m.PlayerId} uses action on {m.CardId}",
         BuyCardsMove m => $"Player {m.PlayerId} buys {m.CardIds.Length} cards",
+        PerformFirstActionMove m => $"Player {m.PlayerId} performs corporation first action",
         PlaceTileMove m => $"Player {m.PlayerId} places tile at {m.Location}",
         _ => $"Player {move.PlayerId} does {move.GetType().Name}",
     };

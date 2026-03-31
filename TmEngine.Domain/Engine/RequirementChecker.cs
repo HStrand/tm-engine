@@ -230,6 +230,45 @@ public static class RequirementChecker
     }
 
     /// <summary>
+    /// Get the MC rebate for playing a card with non-negative VP (Vitor).
+    /// </summary>
+    public static int GetVPCardRebate(PlayerState player, CardDefinition card)
+    {
+        // Card must have VP and it must be non-negative (fixed > 0, or any variable VP formula)
+        if (card.VictoryPoints == null)
+            return 0;
+
+        bool hasPositiveVP = card.VictoryPoints switch
+        {
+            FixedVictoryPoints f => f.Points > 0,
+            PerResourceVictoryPoints => true, // resource-based VP is always potentially positive
+            PerTagVictoryPoints => true,
+            _ => false,
+        };
+
+        if (!hasPositiveVP)
+            return 0;
+
+        int rebate = 0;
+
+        void CheckEntry(CardEntry entry)
+        {
+            foreach (var effect in entry.OngoingEffects)
+                if (effect is VPCardRebateEffect r)
+                    rebate += r.Rebate;
+        }
+
+        if (!string.IsNullOrEmpty(player.CorporationId) && CardRegistry.TryGet(player.CorporationId, out var corp))
+            CheckEntry(corp);
+
+        foreach (var cardId in player.PlayedCards)
+            if (CardRegistry.TryGet(cardId, out var entry))
+                CheckEntry(entry);
+
+        return rebate;
+    }
+
+    /// <summary>
     /// Get the effective Power Plant standard project cost for a player.
     /// Only PowerPlantDiscountEffect applies (Thorgate).
     /// </summary>

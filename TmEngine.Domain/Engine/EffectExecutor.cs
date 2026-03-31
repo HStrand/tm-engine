@@ -47,6 +47,8 @@ public static class EffectExecutor
 
             // Special
             IncreaseLowestProductionEffect => ApplyIncreaseLowestProduction(state, playerId),
+            DrawAndPlayOneEffect e => ApplyDrawAndPlayOne(state, playerId, e),
+            GrantFreeAwardEffect => (state.UpdatePlayer(playerId, p => p with { HasFreeAwardFunding = true }), null),
 
             // Choices
             ChooseEffect e => ApplyChoose(state, e),
@@ -59,7 +61,7 @@ public static class EffectExecutor
             RequirementModifierEffect or SteelValueModifierEffect or TitaniumValueModifierEffect
                 or TagDiscountEffect or GlobalDiscountEffect or PlantConversionModifierEffect
                 or HeatAsPaymentEffect or PowerPlantDiscountEffect
-                or HighCostRebateEffect => (state, null),
+                or HighCostRebateEffect or VPCardRebateEffect => (state, null),
 
             // Triggered effects are registered, not executed immediately
             WhenYouEffect or WhenAnyoneEffect => (state, null),
@@ -353,6 +355,50 @@ public static class EffectExecutor
         return (state, new ChooseOptionPending(
             $"Choose which production to increase (all at {min}):",
             options));
+    }
+
+    private static (GameState, PendingAction?) ApplyDrawAndPlayOne(
+        GameState state, int playerId, DrawAndPlayOneEffect e)
+    {
+        // Draw from the appropriate deck
+        var deck = e.CardTypeToFind == CardType.Prelude ? state.PreludeDeck : state.DrawPile;
+
+        var (dealt, remaining) = DeckBuilder.Deal(deck, e.DrawCount);
+
+        // Update the deck
+        state = e.CardTypeToFind == CardType.Prelude
+            ? state with { PreludeDeck = remaining }
+            : state with { DrawPile = remaining };
+
+        if (dealt.Count == 0)
+            return (state, null);
+
+        if (dealt.Count == 1)
+        {
+            // Only one option — play it directly
+            return PlayCardImmediately(state, playerId, dealt[0]);
+        }
+
+        // Multiple options — player must choose
+        return (state, new ChooseCardToPlayPending(
+            $"Choose a {e.CardTypeToFind} to play:",
+            [.. dealt]));
+    }
+
+    internal static (GameState, PendingAction?) PlayCardImmediately(
+        GameState state, int playerId, string cardId)
+    {
+        if (!CardRegistry.TryGet(cardId, out var entry))
+            return (state, null);
+
+        // Add to played cards
+        state = state.UpdatePlayer(playerId, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add(cardId),
+        });
+
+        // Execute the card's on-play effects
+        return ExecuteAll(state, playerId, entry.OnPlayEffects);
     }
 
     // ── TR ──────────────────────────────────────────────────────

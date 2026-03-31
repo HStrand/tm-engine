@@ -46,6 +46,7 @@ public static class MoveValidator
             BuyCardsMove m => ValidateBuyCards(state, m),
             DraftCardMove m => ValidateDraftCard(state, m),
             SetupMove m => ValidateSetup(state, m),
+            PerformFirstActionMove m => ValidatePerformFirstAction(state, m),
             // Sub-move types when no PendingAction (invalid)
             PlaceTileMove or ChooseTargetPlayerMove or SelectCardMove
                 or ChooseOptionMove or DiscardCardsMove =>
@@ -56,6 +57,49 @@ public static class MoveValidator
 
     // ── Action Phase ───────────────────────────────────────────
 
+    /// <summary>
+    /// If the player has a mandatory first action that hasn't been performed yet,
+    /// they cannot take other actions. Pass is always allowed (obligation carries over).
+    /// For Vitor, funding an award IS the first action (handled separately in ValidateFundAward).
+    /// </summary>
+    private static string? CheckFirstActionRequired(GameState state, int playerId)
+    {
+        if (state.Phase != GamePhase.Action)
+            return null;
+
+        var player = state.GetPlayer(playerId);
+
+        // Standard first action (Inventrix, Tharsis Republic)
+        if (!player.PerformedFirstAction)
+            return "Must perform corporation's mandatory first action.";
+
+        // Vitor: must fund free award before other actions
+        if (player.HasFreeAwardFunding)
+            return "Must fund an award for free (Vitor) before taking other actions.";
+
+        return null;
+    }
+
+    private static string? ValidatePerformFirstAction(GameState state, PerformFirstActionMove move)
+    {
+        if (state.Phase != GamePhase.Action)
+            return "Can only perform first action during the action phase.";
+
+        var player = state.GetPlayer(move.PlayerId);
+        if (player.PerformedFirstAction)
+            return "First action already performed.";
+
+        if (player.ActionsThisTurn >= 2)
+            return "Already took 2 actions this turn.";
+
+        if (string.IsNullOrEmpty(player.CorporationId)
+            || !CardRegistry.TryGet(player.CorporationId, out var corp)
+            || corp.FirstActionEffects.IsEmpty)
+            return "Corporation has no first action.";
+
+        return null;
+    }
+
     private static string? ValidatePass(GameState state, PassMove move)
     {
         if (state.Phase != GamePhase.Action && state.Phase != GamePhase.FinalGreeneryConversion)
@@ -65,6 +109,8 @@ public static class MoveValidator
         if (player.Passed)
             return "Player has already passed.";
 
+        // Passing is always allowed, even with a pending first action
+        // (the first action obligation carries over to the next generation)
         return null;
     }
 
@@ -72,6 +118,9 @@ public static class MoveValidator
     {
         if (state.Phase != GamePhase.Action)
             return "Can only convert heat during the action phase.";
+
+        var firstActionErr = CheckFirstActionRequired(state, move.PlayerId);
+        if (firstActionErr != null) return firstActionErr;
 
         var map = MapDefinitions.GetMap(state.Map);
         if (state.Temperature >= map.MaxTemperature)
@@ -92,6 +141,9 @@ public static class MoveValidator
         if (state.Phase != GamePhase.Action && state.Phase != GamePhase.FinalGreeneryConversion)
             return "Can only convert plants during the action phase or final greenery conversion.";
 
+        var firstActionErr = CheckFirstActionRequired(state, move.PlayerId);
+        if (firstActionErr != null) return firstActionErr;
+
         var player = state.GetPlayer(move.PlayerId);
         if (player.Resources.Plants < Constants.PlantsPerGreenery)
             return $"Need {Constants.PlantsPerGreenery} plants, have {player.Resources.Plants}.";
@@ -111,6 +163,9 @@ public static class MoveValidator
     {
         if (state.Phase != GamePhase.Action)
             return "Can only use standard projects during the action phase.";
+
+        var firstActionErr = CheckFirstActionRequired(state, move.PlayerId);
+        if (firstActionErr != null) return firstActionErr;
 
         var player = state.GetPlayer(move.PlayerId);
         if (player.ActionsThisTurn >= 2)
@@ -204,6 +259,9 @@ public static class MoveValidator
         if (state.Phase != GamePhase.Action)
             return "Can only claim milestones during the action phase.";
 
+        var firstActionErr = CheckFirstActionRequired(state, move.PlayerId);
+        if (firstActionErr != null) return firstActionErr;
+
         var player = state.GetPlayer(move.PlayerId);
         if (player.ActionsThisTurn >= 2)
             return "Already took 2 actions this turn.";
@@ -230,6 +288,15 @@ public static class MoveValidator
             return "Can only fund awards during the action phase.";
 
         var player = state.GetPlayer(move.PlayerId);
+
+        // If the player has free award funding (Vitor), skip the first-action check
+        // since funding the award IS the first action
+        if (!player.HasFreeAwardFunding)
+        {
+            var firstActionErr = CheckFirstActionRequired(state, move.PlayerId);
+            if (firstActionErr != null) return firstActionErr;
+        }
+
         if (player.ActionsThisTurn >= 2)
             return "Already took 2 actions this turn.";
 
@@ -242,6 +309,10 @@ public static class MoveValidator
         var map = MapDefinitions.GetMap(state.Map);
         if (!map.AwardNames.Contains(move.AwardName))
             return $"Award '{move.AwardName}' does not exist on this map.";
+
+        // Free award funding (Vitor) — skip cost check
+        if (player.HasFreeAwardFunding)
+            return null;
 
         var cost = state.FundedAwards.Count switch
         {
@@ -261,6 +332,9 @@ public static class MoveValidator
     {
         if (state.Phase != GamePhase.Action)
             return "Can only play cards during the action phase.";
+
+        var firstActionErr = CheckFirstActionRequired(state, move.PlayerId);
+        if (firstActionErr != null) return firstActionErr;
 
         var player = state.GetPlayer(move.PlayerId);
         if (player.ActionsThisTurn >= 2)
@@ -316,6 +390,9 @@ public static class MoveValidator
     {
         if (state.Phase != GamePhase.Action)
             return "Can only use card actions during the action phase.";
+
+        var firstActionErr = CheckFirstActionRequired(state, move.PlayerId);
+        if (firstActionErr != null) return firstActionErr;
 
         var player = state.GetPlayer(move.PlayerId);
         if (player.ActionsThisTurn >= 2)
@@ -465,6 +542,11 @@ public static class MoveValidator
                 pending.ValidCardIds.Contains(select.CardId)
                     ? null
                     : "Invalid card selection.",
+
+            (ChooseCardToPlayPending pending, SelectCardMove select) =>
+                pending.CardIds.Contains(select.CardId)
+                    ? null
+                    : "Card is not one of the available options.",
 
             (ChooseOptionPending pending, ChooseOptionMove choose) =>
                 choose.OptionIndex >= 0 && choose.OptionIndex < pending.Options.Length

@@ -60,6 +60,14 @@ public sealed record BuyCardsPending(
     ImmutableArray<string> AvailableCardIds) : PendingAction;
 
 /// <summary>
+/// Player must choose one card to play from a set of options (e.g., Valley Trust first action).
+/// The chosen card's effects are applied immediately; the rest are discarded.
+/// </summary>
+public sealed record ChooseCardToPlayPending(
+    string Description,
+    ImmutableArray<string> CardIds) : PendingAction;
+
+/// <summary>
 /// Player must submit their combined setup choices (corporation + preludes + initial cards).
 /// </summary>
 public sealed record SetupPending(

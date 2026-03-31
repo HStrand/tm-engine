@@ -55,6 +55,9 @@ public sealed record GameState
 
     public required ImmutableList<string> DiscardPile { get; init; }
 
+    /// <summary>Remaining prelude cards not dealt during setup (for Valley Trust first action).</summary>
+    public ImmutableList<string> PreludeDeck { get; init; } = [];
+
     // ── Setup State (only during Setup phase) ──
 
     public SetupState? Setup { get; init; }

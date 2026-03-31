@@ -37,6 +37,12 @@ public sealed record PlayerState
     /// <summary>Whether the player has increased their TR this generation (for UNMI action).</summary>
     public required bool IncreasedTRThisGeneration { get; init; }
 
+    /// <summary>Whether the player has performed their corporation's mandatory first action (gen 1 only).</summary>
+    public required bool PerformedFirstAction { get; init; }
+
+    /// <summary>Whether the player has a free award funding available (Vitor corporation).</summary>
+    public bool HasFreeAwardFunding { get; init; }
+
     /// <summary>
     /// Creates a fresh player state for game start.
     /// </summary>
@@ -55,6 +61,7 @@ public sealed record PlayerState
         Passed = false,
         ActionsThisTurn = 0,
         IncreasedTRThisGeneration = false,
+        PerformedFirstAction = true, // default true — only false for corps with first actions
     };
 
     /// <summary>

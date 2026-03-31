@@ -19,6 +19,12 @@ public sealed record CardEntry
 
     /// <summary>Card action (for blue cards — usable once per generation).</summary>
     public CardAction? Action { get; init; }
+
+    /// <summary>
+    /// Mandatory first action for corporations (e.g., Inventrix draws 3 cards,
+    /// Tharsis Republic places a city). Applied after setup, before normal actions begin.
+    /// </summary>
+    public ImmutableArray<Effect> FirstActionEffects { get; init; } = [];
 }
 
 /// <summary>
@@ -104,7 +110,8 @@ public static class CardRegistry
         string cardId,
         ImmutableArray<Effect>? onPlayEffects = null,
         ImmutableArray<Effect>? ongoingEffects = null,
-        CardAction? action = null)
+        CardAction? action = null,
+        ImmutableArray<Effect>? firstActionEffects = null)
     {
         if (!builder.TryGetValue(cardId, out var existing))
             return;
@@ -114,6 +121,7 @@ public static class CardRegistry
             OnPlayEffects = onPlayEffects ?? existing.OnPlayEffects,
             OngoingEffects = ongoingEffects ?? existing.OngoingEffects,
             Action = action ?? existing.Action,
+            FirstActionEffects = firstActionEffects ?? existing.FirstActionEffects,
         };
     }
 
@@ -170,14 +178,12 @@ public static class CardRegistry
             ],
             ongoingEffects: [new WhenYouEffect(TriggerCondition.PlayEventTag, new ChangeResourceEffect(ResourceType.MegaCredits, 2))]);
 
-        // CORP06: Inventrix — Start with 45 MC, draw 3 cards. Global requirements +/- 2.
+        // CORP06: Inventrix — Start with 45 MC. Global requirements +/- 2.
+        // First action: draw 3 cards.
         SetEffects(builder, "CORP06",
-            onPlayEffects:
-            [
-                new ChangeResourceEffect(ResourceType.MegaCredits, 45),
-                new DrawCardsEffect(3),
-            ],
-            ongoingEffects: [new RequirementModifierEffect(2)]);
+            onPlayEffects: [new ChangeResourceEffect(ResourceType.MegaCredits, 45)],
+            ongoingEffects: [new RequirementModifierEffect(2)],
+            firstActionEffects: [new DrawCardsEffect(3)]);
 
         // CORP07: Phobolog — Start with 23 MC, 10 titanium. Titanium worth 1 more.
         SetEffects(builder, "CORP07",
@@ -188,13 +194,15 @@ public static class CardRegistry
             ],
             ongoingEffects: [new TitaniumValueModifierEffect(1)]);
 
-        // CORP08: Tharsis Republic — Start with 40 MC. First action: place city.
+        // CORP08: Tharsis Republic — Start with 40 MC.
+        // First action: place a city.
         // Effect: When any city is placed ON MARS, gain 1 MC prod. When YOU place any city, gain 3 MC.
         SetEffects(builder, "CORP08",
             onPlayEffects:
             [
                 new ChangeResourceEffect(ResourceType.MegaCredits, 40),
             ],
+            firstActionEffects: [new PlaceTileEffect(TileType.City)],
             ongoingEffects:
             [
                 new WhenAnyoneEffect(TriggerCondition.PlaceCityTileOnMars, new ChangeProductionEffect(ResourceType.MegaCredits, 1)),
@@ -267,14 +275,22 @@ public static class CardRegistry
                 Cost: new SpendMCCost(4),
                 Effects: [new IncreaseLowestProductionEffect()]));
 
-        // CORP21: Valley Trust — Start with 37 MC, draw 3 prelude cards (keep 1 extra).
-        // Effect: Science cards cost 2 less.
+        // CORP21: Valley Trust — Start with 37 MC. Science cards cost 2 less.
+        // First action: draw 3 prelude cards, choose 1 to play immediately.
         SetEffects(builder, "CORP21",
             onPlayEffects: [new ChangeResourceEffect(ResourceType.MegaCredits, 37)],
-            ongoingEffects: [new TagDiscountEffect(Tag.Science, 2)]);
+            ongoingEffects: [new TagDiscountEffect(Tag.Science, 2)],
+            firstActionEffects: [new DrawAndPlayOneEffect(3, CardType.Prelude)]);
 
-        // CORP22: Vitor — Start with 45 MC. Effect: When you play card with non-negative VP, gain 3 MC.
+        // CORP22: Vitor — Start with 45 MC + 3 MC self-rebate (corp has VP icon).
+        // Mandatory first action: fund an award for free.
+        // Effect: When you play card with non-negative VP, gain 3 MC.
         SetEffects(builder, "CORP22",
-            onPlayEffects: [new ChangeResourceEffect(ResourceType.MegaCredits, 45)]);
+            onPlayEffects:
+            [
+                new ChangeResourceEffect(ResourceType.MegaCredits, 48), // 45 base + 3 self-rebate
+                new GrantFreeAwardEffect(),
+            ],
+            ongoingEffects: [new VPCardRebateEffect(3)]);
     }
 }
