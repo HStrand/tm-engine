@@ -1,3 +1,5 @@
 <Solution>
   <Project Path="tm-engine.csproj" />
+  <Project Path="TmEngine.Domain.Tests/TmEngine.Domain.Tests.csproj" />
+  <Project Path="TmEngine.Domain/TmEngine.Domain.csproj" />
 </Solution>
