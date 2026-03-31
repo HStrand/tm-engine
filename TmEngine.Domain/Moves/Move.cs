@@ -78,6 +78,12 @@ public sealed record PassMove(int PlayerId) : Move(PlayerId);
 /// </summary>
 public sealed record PerformFirstActionMove(int PlayerId) : Move(PlayerId);
 
+/// <summary>
+/// Player plays a prelude card during the PreludePlacement phase.
+/// The prelude must be one of the player's remaining preludes.
+/// </summary>
+public sealed record PlayPreludeMove(int PlayerId, string PreludeId) : Move(PlayerId);
+
 // ═══════════════════════════════════════════════════════════
 //  SUB-MOVE RESOLUTION MOVES
 // ═══════════════════════════════════════════════════════════

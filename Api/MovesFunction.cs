@@ -63,7 +63,7 @@ public class MovesFunction
         var (newState, result) = GameEngine.Apply(state, move);
 
         if (result is Error err)
-            return JsonResult(HttpStatusCode.BadRequest, new SubmitMoveResponse(false, err.Message, null));
+            return JsonResult(HttpStatusCode.BadRequest, new SubmitMoveResponse(false, err.Message, null, null));
 
         try
         {
@@ -76,7 +76,8 @@ public class MovesFunction
         }
 
         var filtered = GameStateView.FilterForPlayer(newState, playerId);
-        return JsonResult(HttpStatusCode.OK, new SubmitMoveResponse(true, null, filtered));
+        var cardNames = CardNameResolver.FromGameState(filtered);
+        return JsonResult(HttpStatusCode.OK, new SubmitMoveResponse(true, null, filtered, cardNames));
     }
 
     private ContentResult JsonResult(HttpStatusCode status, object body)

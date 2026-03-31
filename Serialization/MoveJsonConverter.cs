@@ -17,6 +17,9 @@ public class MoveJsonConverter : JsonConverter<Move>
     public override Move? ReadJson(JsonReader reader, Type objectType, Move? existingValue,
         bool hasExistingValue, JsonSerializer serializer)
     {
+        if (reader.TokenType == JsonToken.Null)
+            return null;
+
         var obj = JObject.Load(reader);
         var type = obj["type"]?.Value<string>()
             ?? throw new JsonSerializationException("Move JSON must include a 'type' field.");
@@ -60,6 +63,8 @@ public class MoveJsonConverter : JsonConverter<Move>
 
             "PerformFirstAction" => new PerformFirstActionMove(playerId),
 
+            "PlayPrelude" => new PlayPreludeMove(playerId, obj["preludeId"]!.Value<string>()!),
+
             "PlaceTile" => new PlaceTileMove(playerId, ReadRequiredHexCoord(obj["location"])),
 
             "ChooseTargetPlayer" => new ChooseTargetPlayerMove(
@@ -99,6 +104,7 @@ public class MoveJsonConverter : JsonConverter<Move>
             ConvertHeatMove => "ConvertHeat",
             PassMove => "Pass",
             PerformFirstActionMove => "PerformFirstAction",
+            PlayPreludeMove => "PlayPrelude",
             PlaceTileMove => "PlaceTile",
             ChooseTargetPlayerMove => "ChooseTargetPlayer",
             SelectCardMove => "SelectCard",

@@ -47,6 +47,7 @@ public static class MoveValidator
             DraftCardMove m => ValidateDraftCard(state, m),
             SetupMove m => ValidateSetup(state, m),
             PerformFirstActionMove m => ValidatePerformFirstAction(state, m),
+            PlayPreludeMove m => ValidatePlayPrelude(state, m),
             // Sub-move types when no PendingAction (invalid)
             PlaceTileMove or ChooseTargetPlayerMove or SelectCardMove
                 or ChooseOptionMove or DiscardCardsMove =>
@@ -520,6 +521,28 @@ public static class MoveValidator
             if (!dealtCards.Contains(cardId))
                 return $"Card {cardId} was not dealt to this player.";
         }
+
+        return null;
+    }
+
+    // ── Prelude Placement Phase ──────────────────────────────────
+
+    private static string? ValidatePlayPrelude(GameState state, PlayPreludeMove move)
+    {
+        if (state.Phase != GamePhase.PreludePlacement)
+            return "Can only play preludes during the prelude placement phase.";
+
+        if (state.Prelude == null)
+            return "No active prelude placement state.";
+
+        if (move.PlayerId != state.ActivePlayer.PlayerId)
+            return $"It is not player {move.PlayerId}'s turn.";
+
+        var playerIndex = state.GetPlayerIndex(move.PlayerId);
+        var remaining = state.Prelude.RemainingPreludes[playerIndex];
+
+        if (!remaining.Contains(move.PreludeId))
+            return $"Prelude {move.PreludeId} is not in player's remaining preludes.";
 
         return null;
     }

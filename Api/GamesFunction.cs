@@ -69,7 +69,8 @@ public class GamesFunction
         }
 
         var filtered = GameStateView.FilterForPlayer(state, playerId);
-        return JsonResult(HttpStatusCode.OK, filtered);
+        var cardNames = CardNameResolver.FromGameState(filtered);
+        return JsonResult(HttpStatusCode.OK, new GameStateResponse(filtered, cardNames));
     }
 
     private ContentResult JsonResult(HttpStatusCode status, object body)

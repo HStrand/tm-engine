@@ -6109,33 +6109,33 @@
       "tags": [
         "science"
       ],
-      "expansion": "prelude"
+      "expansion": "promo"
     },
     {
       "type": "prelude",
       "name": "Double Down",
       "number": "X40",
-      "expansion": "prelude"
+      "expansion": "promo"
     },
     {
       "type": "prelude",
       "name": "Merger",
       "number": "X41",
-      "expansion": "prelude",
+      "expansion": "promo",
       "description": "Draw 4 corporation cards. Play one of them and discard the other 3. Then pay 42 MC."
     },
     {
       "type": "prelude",
       "name": "New partner",
       "number": "X42",
-      "expansion": "prelude",
+      "expansion": "promo",
       "description": "Raise your MC production 1 step. Immediately draw 2 prelude cards. Play 1 of them, and discard the other."
     },
     {
       "type": "prelude",
       "name": "Head start",
       "number": "X43",
-      "expansion": "prelude",
+      "expansion": "promo",
       "description": "Gain 2 steel. Gain 2Mc per project card you have in hand. Immediately take two actions."
     }
   ]

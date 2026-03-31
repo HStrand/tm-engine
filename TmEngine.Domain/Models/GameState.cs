@@ -69,6 +69,10 @@ public sealed record GameState
 
     public SetupState? Setup { get; init; }
 
+    // ── Prelude Placement State (only during PreludePlacement phase) ──
+
+    public PreludeState? Prelude { get; init; }
+
     // ── Research State (only during Research phase) ──
 
     public ResearchState? Research { get; init; }
@@ -169,4 +173,13 @@ public sealed record DraftState
 
     /// <summary>True if cards pass left (clockwise) this generation.</summary>
     public required bool PassLeft { get; init; }
+}
+
+/// <summary>
+/// Tracks the prelude placement phase: each player plays their preludes one at a time in player order.
+/// </summary>
+public sealed record PreludeState
+{
+    /// <summary>Remaining prelude IDs each player must play. Index = player index.</summary>
+    public required ImmutableList<ImmutableList<string>> RemainingPreludes { get; init; }
 }

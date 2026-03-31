@@ -12,7 +12,19 @@ public sealed record CreateGameRequest(
 
 public sealed record CreateGameResponse(string GameId);
 
-public sealed record SubmitMoveResponse(bool Success, string? Error, GameState? State);
+public sealed record GameStateResponse(
+    GameState State,
+    ImmutableDictionary<string, string> CardNames);
+
+public sealed record SubmitMoveResponse(
+    bool Success,
+    string? Error,
+    GameState? State,
+    ImmutableDictionary<string, string>? CardNames);
+
+public sealed record LegalMovesResponse(
+    TmEngine.Domain.Engine.AvailableMoves Moves,
+    ImmutableDictionary<string, string> CardNames);
 
 public sealed record HistoryResponse(ImmutableList<string> Log);
 

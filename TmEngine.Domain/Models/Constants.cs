@@ -62,7 +62,6 @@ public static class Constants
 
     // Setup
     public const int CorporationsDealt = 2;
-    public const int CorporationsDealtWithPrelude = 5; // some variants deal more
     public const int InitialCardsDealt = 10;
     public const int PreludesDealt = 4;
     public const int PreludesKept = 2;

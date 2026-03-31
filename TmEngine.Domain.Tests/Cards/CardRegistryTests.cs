@@ -18,10 +18,10 @@ public class CardRegistryTests
     }
 
     [Fact]
-    public void Registry_Has272InScopeCards()
+    public void Registry_Has267InScopeCards()
     {
-        // 147 base + 73 corporate_era + 52 prelude = 272
-        Assert.Equal(272, CardRegistry.All.Count);
+        // 147 base + 73 corporate_era + 47 prelude = 267
+        Assert.Equal(267, CardRegistry.All.Count);
     }
 
     [Fact]
@@ -87,11 +87,11 @@ public class CardRegistryTests
     }
 
     [Fact]
-    public void Registry_Has40Preludes()
+    public void Registry_Has35Preludes()
     {
         var preludes = CardRegistry.All.Values
             .Count(e => e.Definition.Type == CardType.Prelude);
-        Assert.Equal(40, preludes);
+        Assert.Equal(35, preludes);
     }
 
     [Fact]
@@ -228,12 +228,12 @@ public class CardRegistryTests
     }
 
     [Fact]
-    public void Setup_WithPrelude_DealsMoreCorporations()
+    public void Setup_WithPrelude_DealsSameCorporationCount()
     {
         var options = new GameSetupOptions(2, MapName.Tharsis, CorporateEra: true, DraftVariant: false, PreludeExpansion: true);
         var state = GameEngine.Setup(options, seed: 42);
 
-        Assert.Equal(Constants.CorporationsDealtWithPrelude, state.Setup!.DealtCorporations[0].Count);
+        Assert.Equal(Constants.CorporationsDealt, state.Setup!.DealtCorporations[0].Count);
     }
 
     [Fact]

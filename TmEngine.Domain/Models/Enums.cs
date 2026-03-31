@@ -94,6 +94,7 @@ public enum MapName
 public enum GamePhase
 {
     Setup,
+    PreludePlacement,
     Research,
     Action,
     Production,

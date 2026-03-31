@@ -33,7 +33,15 @@ public static class GameEngine
             return (state, new Error(error));
 
         // Apply the move
+        var hadPendingAction = state.PendingAction != null;
         var newState = ApplyMove(state, move);
+
+        // If a pending action was just resolved during PreludePlacement, advance to next prelude
+        if (hadPendingAction && newState.PendingAction == null
+            && newState.Phase == GamePhase.PreludePlacement)
+        {
+            newState = AdvancePreludePlacement(newState);
+        }
 
         // Increment move number and log
         newState = newState with { MoveNumber = newState.MoveNumber + 1 };
@@ -85,9 +93,7 @@ public static class GameEngine
         var allPreludes = options.PreludeExpansion ? DeckBuilder.GetPreludeIds() : [];
 
         // Deal to each player
-        var corpsPerPlayer = options.PreludeExpansion
-            ? Constants.CorporationsDealtWithPrelude
-            : Constants.CorporationsDealt;
+        var corpsPerPlayer = Constants.CorporationsDealt;
 
         var dealtCorps = ImmutableList.CreateBuilder<ImmutableList<string>>();
         var dealtPreludes = ImmutableList.CreateBuilder<ImmutableList<string>>();
@@ -185,6 +191,7 @@ public static class GameEngine
         DiscardCardsMove m => ApplyDiscardCards(state, m),
 
         SetupMove m => ApplySetup(state, m),
+        PlayPreludeMove m => ApplyPlayPrelude(state, m),
         BuyCardsMove m => ApplyBuyCards(state, m),
         DraftCardMove m => ApplyDraftCard(state, m),
 
@@ -451,42 +458,47 @@ public static class GameEngine
             var dealtCards = setup.DealtCards[i];
             var unboughtCards = dealtCards.Where(c => !move.CardIdsToBuy.Contains(c));
             state = state with { DiscardPile = state.DiscardPile.AddRange(unboughtCards) };
-
-            // 3. Apply prelude effects (after card buy, so MC may be depleted)
-            if (move.PreludeIds.Length > 0)
-            {
-                var preludeNames = string.Join(", ", move.PreludeIds.Select(id => $"{CardName(id)} ({id})"));
-                state = state.AppendLog($"Player {playerId} selects preludes: {preludeNames}");
-            }
-            foreach (var preludeId in move.PreludeIds)
-            {
-                if (!CardRegistry.TryGet(preludeId, out var preludeEntry))
-                    continue;
-
-                if (CanAffordPrelude(state, playerId, preludeEntry))
-                {
-                    state = state.UpdatePlayer(playerId, p => p with
-                    {
-                        PlayedCards = p.PlayedCards.Add(preludeId),
-                    });
-                    var (newState, _) = EffectExecutor.ExecuteAll(state, playerId, preludeEntry.OnPlayEffects);
-                    state = newState;
-                }
-                else
-                {
-                    // Can't afford prelude — receive compensation instead
-                    state = state.UpdatePlayer(playerId, p => p with
-                    {
-                        Resources = p.Resources.Add(ResourceType.MegaCredits, Constants.PreludeCompensation),
-                    });
-                    state = state.AppendLog(
-                        $"Player {playerId} cannot afford prelude {preludeEntry.Definition.Name}, receives {Constants.PreludeCompensation} MC");
-                }
-            }
         }
 
-        // Transition to Action phase
-        state = PhaseManager.StartActionPhase(state with { Setup = null });
+        // If prelude expansion is active, transition to PreludePlacement phase
+        if (state.PreludeExpansion)
+        {
+            var remainingPreludes = ImmutableList.CreateBuilder<ImmutableList<string>>();
+            for (int i = 0; i < state.Players.Count; i++)
+            {
+                var move = setup.SubmittedMoves[i]!;
+                var preludeList = move.PreludeIds.ToImmutableList();
+                remainingPreludes.Add(preludeList);
+
+                if (preludeList.Count > 0)
+                {
+                    var preludeNames = string.Join(", ", move.PreludeIds.Select(id => $"{CardName(id)} ({id})"));
+                    state = state.AppendLog($"Player {state.Players[i].PlayerId} selects preludes: {preludeNames}");
+                }
+            }
+
+            return state with
+            {
+                Setup = null,
+                Phase = GamePhase.PreludePlacement,
+                ActivePlayerIndex = 0,
+                Prelude = new PreludeState
+                {
+                    RemainingPreludes = remainingPreludes.ToImmutable(),
+                },
+            };
+        }
+
+        // No preludes — transition directly to Action phase
+        return TransitionToActionPhase(state with { Setup = null });
+    }
+
+    /// <summary>
+    /// Transition from setup/preludes to the Action phase, marking first actions.
+    /// </summary>
+    private static GameState TransitionToActionPhase(GameState state)
+    {
+        state = PhaseManager.StartActionPhase(state);
 
         // Mark players whose corporations have first actions
         for (int i = 0; i < state.Players.Count; i++)
@@ -532,6 +544,87 @@ public static class GameEngine
             return false;
 
         return true;
+    }
+
+    // ── Prelude Placement Phase ──────────────────────────────────
+
+    private static GameState ApplyPlayPrelude(GameState state, PlayPreludeMove move)
+    {
+        if (state.Prelude == null)
+            return state;
+
+        var playerIndex = state.GetPlayerIndex(move.PlayerId);
+        var playerId = move.PlayerId;
+
+        if (!CardRegistry.TryGet(move.PreludeId, out var preludeEntry))
+            return state;
+
+        // Play the prelude
+        if (CanAffordPrelude(state, playerId, preludeEntry))
+        {
+            state = state.UpdatePlayer(playerId, p => p with
+            {
+                PlayedCards = p.PlayedCards.Add(move.PreludeId),
+            });
+            state = state.AppendLog($"Player {playerId} plays prelude {CardName(move.PreludeId)}");
+            var (newState, pending) = EffectExecutor.ExecuteAll(state, playerId, preludeEntry.OnPlayEffects);
+            state = newState;
+
+            if (pending != null)
+            {
+                // Remove this prelude from remaining, then set pending action
+                state = RemovePreludeFromRemaining(state, playerIndex, move.PreludeId);
+                return state with { PendingAction = pending };
+            }
+        }
+        else
+        {
+            // Can't afford prelude — receive compensation instead
+            state = state.UpdatePlayer(playerId, p => p with
+            {
+                Resources = p.Resources.Add(ResourceType.MegaCredits, Constants.PreludeCompensation),
+            });
+            state = state.AppendLog(
+                $"Player {playerId} cannot afford prelude {preludeEntry.Definition.Name}, receives {Constants.PreludeCompensation} MC");
+        }
+
+        // Remove this prelude from remaining and advance
+        state = RemovePreludeFromRemaining(state, playerIndex, move.PreludeId);
+        return AdvancePreludePlacement(state);
+    }
+
+    private static GameState RemovePreludeFromRemaining(GameState state, int playerIndex, string preludeId)
+    {
+        var remaining = state.Prelude!.RemainingPreludes;
+        var playerPreludes = remaining[playerIndex].Remove(preludeId);
+        remaining = remaining.SetItem(playerIndex, playerPreludes);
+        return state with { Prelude = state.Prelude with { RemainingPreludes = remaining } };
+    }
+
+    /// <summary>
+    /// After a prelude is played (and any sub-actions resolved), advance to the next prelude or next player.
+    /// Called after ApplyPlayPrelude and after pending actions from preludes are resolved.
+    /// </summary>
+    private static GameState AdvancePreludePlacement(GameState state)
+    {
+        if (state.Prelude == null)
+            return TransitionToActionPhase(state);
+
+        // Current player still has preludes? Stay on them.
+        var currentPlayerPreludes = state.Prelude.RemainingPreludes[state.ActivePlayerIndex];
+        if (currentPlayerPreludes.Count > 0)
+            return state;
+
+        // Find next player with preludes
+        for (int offset = 1; offset < state.Players.Count; offset++)
+        {
+            var nextIndex = (state.ActivePlayerIndex + offset) % state.Players.Count;
+            if (state.Prelude.RemainingPreludes[nextIndex].Count > 0)
+                return state with { ActivePlayerIndex = nextIndex };
+        }
+
+        // All preludes played — transition to Action phase
+        return TransitionToActionPhase(state with { Prelude = null });
     }
 
     // ── Research Phase ─────────────────────────────────────────
@@ -918,6 +1011,7 @@ public static class GameEngine
         UseCardActionMove m => $"Player {m.PlayerId} uses action on {CardName(m.CardId)} ({m.CardId})",
         BuyCardsMove m => $"Player {m.PlayerId} buys {m.CardIds.Length} cards",
         PerformFirstActionMove m => $"Player {m.PlayerId} performs corporation first action",
+        PlayPreludeMove m => $"Player {m.PlayerId} plays prelude {CardName(m.PreludeId)} ({m.PreludeId})",
         PlaceTileMove m => $"Player {m.PlayerId} places tile at {m.Location}",
         _ => $"Player {move.PlayerId} does {move.GetType().Name}",
     };
