@@ -49,6 +49,9 @@ public static class EffectExecutor
             IncreaseLowestProductionEffect => ApplyIncreaseLowestProduction(state, playerId),
             DrawAndPlayOneEffect e => ApplyDrawAndPlayOne(state, playerId, e),
             RevealUntilTagEffect e => (ApplyRevealUntilTag(state, playerId, e), null),
+            PlaceOffMapCityEffect e => ApplyPlaceOffMapCity(state, playerId, e),
+            ChangeProductionPerTagEffect e => (ApplyChangeProductionPerTag(state, playerId, e), null),
+            ClaimLandEffect => ApplyClaimLand(state, playerId),
             PlayCardFromHandEffect e => (state, new PlayCardFromHandPending(
                 e.IgnoreGlobalRequirements ? "Play a card from hand (ignoring global requirements):" : $"Play a card from hand ({e.CostDiscount} MC discount):",
                 e.IgnoreGlobalRequirements, e.CostDiscount)),
@@ -359,6 +362,56 @@ public static class EffectExecutor
         return (state, new ChooseOptionPending(
             $"Choose which production to increase (all at {min}):",
             options));
+    }
+
+    private static (GameState, PendingAction?) ApplyPlaceOffMapCity(GameState state, int playerId, PlaceOffMapCityEffect e)
+    {
+        state = state with
+        {
+            OffMapTiles = state.OffMapTiles.Add(new OffMapTile(e.CityName, TileType.City, playerId)),
+        };
+
+        // Fire city triggers — off-map cities fire PlaceAnyCityTile but NOT PlaceCityTileOnMars
+        state = TriggerSystem.FireTrigger(state, playerId, TriggerCondition.PlaceAnyCityTile);
+
+        return (state, null);
+    }
+
+    private static GameState ApplyChangeProductionPerTag(GameState state, int playerId, ChangeProductionPerTagEffect e)
+    {
+        var player = state.GetPlayer(playerId);
+        var tagCount = player.CountTag(e.Tag, CardRegistry.GetTags);
+        var totalAmount = tagCount * e.AmountPerTag;
+
+        if (totalAmount == 0)
+            return state;
+
+        return state.UpdatePlayer(playerId, p => p with
+        {
+            Production = p.Production.Add(e.Resource, totalAmount),
+        });
+    }
+
+    private static (GameState, PendingAction?) ApplyClaimLand(GameState state, int playerId)
+    {
+        // Valid hexes: non-ocean, non-reserved, unoccupied, not already claimed
+        var map = MapDefinitions.GetMap(state.Map);
+        var valid = ImmutableArray.CreateBuilder<HexCoord>();
+
+        foreach (var (coord, hex) in map.Hexes)
+        {
+            if (hex.Type == HexType.OceanReserved) continue;
+            if (state.PlacedTiles.ContainsKey(coord)) continue;
+            if (state.ClaimedHexes.ContainsKey(coord)) continue;
+            // Reserved named hexes CAN be claimed (that's the point of Land Claim)
+
+            valid.Add(coord);
+        }
+
+        if (valid.Count == 0)
+            return (state, null);
+
+        return (state, new ClaimLandPending(valid.ToImmutable()));
     }
 
     private static GameState ApplyRevealUntilTag(GameState state, int playerId, RevealUntilTagEffect e)

@@ -47,6 +47,15 @@ public sealed record PlacedTile(
     HexCoord Location);
 
 /// <summary>
+/// An off-map city tile (e.g., Phobos Space Haven, Ganymede Colony).
+/// These count as cities for scoring and tag purposes but are not on the hex grid.
+/// </summary>
+public sealed record OffMapTile(
+    string Name,
+    TileType Type,
+    int OwnerId);
+
+/// <summary>
 /// A claimed milestone.
 /// </summary>
 public sealed record MilestoneClaim(string MilestoneName, int PlayerId);

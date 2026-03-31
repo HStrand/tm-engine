@@ -95,6 +95,66 @@ public static class RequirementChecker
     }
 
     /// <summary>
+    /// Check if a player can perform the mandatory effects of a card.
+    /// Verifies production decreases won't go below minimums and resource costs are affordable.
+    /// Returns null if all effects are affordable, or an error message.
+    /// </summary>
+    public static string? CanAffordEffects(GameState state, int playerId, CardEntry entry)
+    {
+        var player = state.GetPlayer(playerId);
+
+        // Track cumulative changes to detect combined effects
+        int mcProdChange = 0;
+        int steelProdChange = 0;
+        int titaniumProdChange = 0;
+        int plantProdChange = 0;
+        int energyProdChange = 0;
+        int heatProdChange = 0;
+
+        foreach (var effect in entry.OnPlayEffects)
+        {
+            // Self production decreases
+            if (effect is ChangeProductionEffect prod && prod.Amount < 0)
+            {
+                switch (prod.Resource)
+                {
+                    case ResourceType.MegaCredits: mcProdChange += prod.Amount; break;
+                    case ResourceType.Steel: steelProdChange += prod.Amount; break;
+                    case ResourceType.Titanium: titaniumProdChange += prod.Amount; break;
+                    case ResourceType.Plants: plantProdChange += prod.Amount; break;
+                    case ResourceType.Energy: energyProdChange += prod.Amount; break;
+                    case ResourceType.Heat: heatProdChange += prod.Amount; break;
+                }
+            }
+
+            // ReduceAnyProductionEffect — at least one player must have enough
+            if (effect is ReduceAnyProductionEffect reduce)
+            {
+                bool anyoneHasEnough = state.Players.Any(p =>
+                    p.Production.Get(reduce.Resource) >= reduce.Amount);
+                if (!anyoneHasEnough)
+                    return $"No player has {reduce.Amount} {reduce.Resource} production to reduce.";
+            }
+        }
+
+        // Check self production floors
+        if (player.Production.MegaCredits + mcProdChange < Constants.MinMCProduction)
+            return $"Would reduce MC production below {Constants.MinMCProduction}.";
+        if (player.Production.Steel + steelProdChange < 0)
+            return "Would reduce steel production below 0.";
+        if (player.Production.Titanium + titaniumProdChange < 0)
+            return "Would reduce titanium production below 0.";
+        if (player.Production.Plants + plantProdChange < 0)
+            return "Would reduce plant production below 0.";
+        if (player.Production.Energy + energyProdChange < 0)
+            return "Would reduce energy production below 0.";
+        if (player.Production.Heat + heatProdChange < 0)
+            return "Would reduce heat production below 0.";
+
+        return null;
+    }
+
+    /// <summary>
     /// Get the total requirement modifier for a player (sum of all RequirementModifierEffect values).
     /// E.g., Inventrix gives +2, Adaptation Technology gives +2, stacking to +4.
     /// </summary>

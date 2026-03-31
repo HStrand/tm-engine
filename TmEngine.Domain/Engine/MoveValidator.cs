@@ -354,6 +354,11 @@ public static class MoveValidator
         if (reqError != null)
             return reqError;
 
+        // Check that the player can afford mandatory effects (production decreases, etc.)
+        var affordError = RequirementChecker.CanAffordEffects(state, move.PlayerId, entry);
+        if (affordError != null)
+            return affordError;
+
         // Validate payment: steel only for Building tags, titanium only for Space tags
         var payment = move.Payment;
         if (payment.Steel > 0 && !card.Tags.Contains(Tag.Building))
@@ -551,6 +556,11 @@ public static class MoveValidator
             (PlayCardFromHandPending pending, PlayCardMove play) =>
                 ValidatePlayCardForPending(state, play, pending),
 
+            (ClaimLandPending pending, PlaceTileMove place) =>
+                pending.ValidLocations.Contains(place.Location)
+                    ? null
+                    : "Invalid hex for land claim.",
+
             (ChooseOptionPending pending, ChooseOptionMove choose) =>
                 choose.OptionIndex >= 0 && choose.OptionIndex < pending.Options.Length
                     ? null
@@ -605,6 +615,11 @@ public static class MoveValidator
                 if (reqError != null) return reqError;
             }
         }
+
+        // Check that the player can afford mandatory effects
+        var affordError = RequirementChecker.CanAffordEffects(state, move.PlayerId, entry);
+        if (affordError != null)
+            return affordError;
 
         // Payment validation with discount
         var payment = move.Payment;

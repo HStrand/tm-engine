@@ -642,11 +642,23 @@ public static class GameEngine
 
     private static GameState ApplyPlaceTile(GameState state, PlaceTileMove move)
     {
-        if (state.PendingAction is not PlaceTilePending pending)
-            return state;
+        if (state.PendingAction is PlaceTilePending pending)
+        {
+            state = GlobalParameters.PlaceTileOnBoard(state, pending.TileType, move.PlayerId, move.Location);
+            return state with { PendingAction = null };
+        }
 
-        state = GlobalParameters.PlaceTileOnBoard(state, pending.TileType, move.PlayerId, move.Location);
-        return state with { PendingAction = null };
+        if (state.PendingAction is ClaimLandPending)
+        {
+            state = state with
+            {
+                ClaimedHexes = state.ClaimedHexes.Add(move.Location, move.PlayerId),
+                PendingAction = null,
+            };
+            return state;
+        }
+
+        return state;
     }
 
     // ── Card Playing ─────────────────────────────────────────────

@@ -318,6 +318,25 @@ public sealed record DrawAndPlayOneEffect(int DrawCount, CardType CardTypeToFind
 public sealed record RevealUntilTagEffect(Tag Tag, int Count) : Effect;
 
 /// <summary>
+/// Place an off-map city tile (Phobos Space Haven, Ganymede Colony).
+/// Not on the hex grid — counted for city scoring and triggers.
+/// </summary>
+public sealed record PlaceOffMapCityEffect(string CityName) : Effect;
+
+/// <summary>
+/// Change production based on the number of tags the player has.
+/// E.g., Miranda Resort: +1 MC production per Earth tag.
+/// The count is evaluated at the time the card is played.
+/// </summary>
+public sealed record ChangeProductionPerTagEffect(ResourceType Resource, Tag Tag, int AmountPerTag) : Effect;
+
+/// <summary>
+/// Claim a non-reserved land hex — only this player may place tiles there.
+/// The player chooses the hex (triggers a pending action).
+/// </summary>
+public sealed record ClaimLandEffect : Effect;
+
+/// <summary>
 /// Player must play a card from hand immediately with special rules.
 /// E.g., Ecology Experts (ignore global requirements), Eccentric Sponsor (25 MC discount).
 /// </summary>

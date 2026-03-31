@@ -60,6 +60,12 @@ public sealed record BuyCardsPending(
     ImmutableArray<string> AvailableCardIds) : PendingAction;
 
 /// <summary>
+/// Player must choose a hex to claim (Land Claim). Only valid non-reserved, unoccupied, unclaimed land hexes.
+/// </summary>
+public sealed record ClaimLandPending(
+    ImmutableArray<HexCoord> ValidLocations) : PendingAction;
+
+/// <summary>
 /// Player must play a card from their hand with special rules
 /// (e.g., Ecology Experts: ignore global parameter requirements, Eccentric Sponsor: 25 MC discount).
 /// </summary>

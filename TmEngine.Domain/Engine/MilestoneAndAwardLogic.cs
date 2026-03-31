@@ -132,10 +132,12 @@ public static class MilestoneAndAwardLogic
         player.CountTag(tag, CardRegistry.GetTags);
 
     private static int CountOwnedTiles(GameState state, int playerId) =>
-        state.PlacedTiles.Values.Count(t => t.OwnerId == playerId);
+        state.PlacedTiles.Values.Count(t => t.OwnerId == playerId)
+        + state.OffMapTiles.Count(t => t.OwnerId == playerId);
 
     private static int CountOwnedTilesOfType(GameState state, int playerId, TileType type) =>
-        state.PlacedTiles.Values.Count(t => t.OwnerId == playerId && t.Type == type);
+        state.PlacedTiles.Values.Count(t => t.OwnerId == playerId && t.Type == type)
+        + state.OffMapTiles.Count(t => t.OwnerId == playerId && t.Type == type);
 
     private static int CountOwnedTilesInBottomRows(GameState state, int playerId)
     {

@@ -110,8 +110,8 @@ public static class BoardLogic
     }
 
     /// <summary>
-    /// Capital city: must be adjacent to at least 2 ocean tiles (per card text).
-    /// Also follows normal city rules (no adjacent cities).
+    /// Capital city: follows normal city placement rules (no adjacent cities).
+    /// VP for adjacent oceans is handled by scoring, not placement.
     /// </summary>
     private static ImmutableArray<HexCoord> GetValidCapitalPlacements(GameState state)
     {
@@ -286,8 +286,9 @@ public static class BoardLogic
 
     /// <summary>
     /// Returns all valid non-ocean, non-reserved hexes.
+    /// Respects land claims — claimed hexes are only available to their owner.
     /// </summary>
-    public static ImmutableArray<HexCoord> GetValidLandPlacements(GameState state)
+    public static ImmutableArray<HexCoord> GetValidLandPlacements(GameState state, int? playerId = null)
     {
         var map = MapDefinitions.GetMap(state.Map);
         var builder = ImmutableArray.CreateBuilder<HexCoord>();
@@ -298,11 +299,21 @@ public static class BoardLogic
                 continue;
             if (hex.Type == HexType.Named && hex.ReservedFor != null)
                 continue;
+            if (IsClaimedByOther(state, coord, playerId))
+                continue;
 
             builder.Add(coord);
         }
 
         return builder.ToImmutable();
+    }
+
+    /// <summary>
+    /// Check if a hex is claimed by another player (Land Claim card).
+    /// </summary>
+    private static bool IsClaimedByOther(GameState state, HexCoord coord, int? playerId)
+    {
+        return state.ClaimedHexes.TryGetValue(coord, out var claimant) && claimant != playerId;
     }
 
     // ── Adjacency Queries ──────────────────────────────────────

@@ -45,6 +45,13 @@ public sealed record GameState
     // ── Board ──────────────────────────────────────────────────
 
     public required ImmutableDictionary<HexCoord, PlacedTile> PlacedTiles { get; init; }
+
+    /// <summary>Off-map city tiles (Phobos Space Haven, Ganymede Colony). Name → (TileType, OwnerId).</summary>
+    public ImmutableList<OffMapTile> OffMapTiles { get; init; } = [];
+
+    /// <summary>Hexes claimed by a player via Land Claim — only that player may place tiles there.</summary>
+    public ImmutableDictionary<HexCoord, int> ClaimedHexes { get; init; } = ImmutableDictionary<HexCoord, int>.Empty;
+
     public required ImmutableList<MilestoneClaim> ClaimedMilestones { get; init; }
     public required ImmutableList<AwardFunding> FundedAwards { get; init; }
 
