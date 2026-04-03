@@ -1241,8 +1241,8 @@ public static class CardRegistry
         [
             new ChooseEffect(
             [
-                new EffectOption("Steal up to 2 steel", [new RemoveResourceEffect(ResourceType.Steel, 2)]),
-                new EffectOption("Steal up to 3 MC", [new RemoveResourceEffect(ResourceType.MegaCredits, 3)]),
+                new EffectOption("Steal up to 2 steel", [new StealResourceEffect(ResourceType.Steel, 2)]),
+                new EffectOption("Steal up to 3 MC", [new StealResourceEffect(ResourceType.MegaCredits, 3)]),
             ]),
         ]);
 

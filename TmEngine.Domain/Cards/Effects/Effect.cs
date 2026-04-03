@@ -27,6 +27,12 @@ public sealed record ChangeResourceEffect(ResourceType Resource, int Amount) : E
 public sealed record RemoveResourceEffect(ResourceType Resource, int Amount) : Effect;
 
 /// <summary>
+/// Steal resources from any one player — the removed amount is gained by the active player.
+/// Like RemoveResourceEffect but the active player receives what was taken.
+/// </summary>
+public sealed record StealResourceEffect(ResourceType Resource, int Amount) : Effect;
+
+/// <summary>
 /// Reduce any one player's production (red-bordered production icon).
 /// Unlike RemoveResource, this MUST be performed. If no opponent has the production,
 /// the active player must reduce their own or cannot play the card.

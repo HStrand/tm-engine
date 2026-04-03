@@ -36,11 +36,13 @@ public static class GameEngine
         var hadPendingAction = state.PendingAction != null;
         var newState = ApplyMove(state, move);
 
-        // If a pending action was just resolved during PreludePlacement, advance to next prelude
-        if (hadPendingAction && newState.PendingAction == null
-            && newState.Phase == GamePhase.PreludePlacement)
+        // If a pending action was just resolved, handle phase-specific advancement
+        if (hadPendingAction && newState.PendingAction == null)
         {
-            newState = AdvancePreludePlacement(newState);
+            if (newState.Phase == GamePhase.PreludePlacement)
+                newState = AdvancePreludePlacement(newState);
+            else if (newState.Phase == GamePhase.Action)
+                newState = PhaseManager.AfterAction(newState);
         }
 
         // Increment move number and log
@@ -226,6 +228,8 @@ public static class GameEngine
         // Raise temperature (includes TR increase and bonus effects)
         state = GlobalParameters.RaiseTemperature(state, move.PlayerId);
 
+        // Don't advance turn if a pending action was created (e.g., ocean bonus)
+        if (state.PendingAction != null) return state;
         return PhaseManager.AfterAction(state);
     }
 
@@ -244,6 +248,7 @@ public static class GameEngine
         if (state.Phase == GamePhase.FinalGreeneryConversion)
             return PhaseManager.AdvanceFinalGreeneryConversion(state);
 
+        if (state.PendingAction != null) return state;
         return PhaseManager.AfterAction(state);
     }
 
@@ -260,6 +265,7 @@ public static class GameEngine
             _ => state,
         };
 
+        if (state.PendingAction != null) return state;
         return PhaseManager.AfterAction(state);
     }
 
@@ -447,7 +453,7 @@ public static class GameEngine
             state = state.AppendLog($"Player {playerId} selects corporation {CardName(move.CorporationId)}");
             if (CardRegistry.TryGet(move.CorporationId, out var corpEntry))
             {
-                var (newState, _) = EffectExecutor.ExecuteAll(state, playerId, corpEntry.OnPlayEffects);
+                var (newState, _) = EffectExecutor.ExecuteAll(state, playerId, corpEntry.OnPlayEffects, move.CorporationId);
                 state = newState;
             }
 
@@ -577,7 +583,7 @@ public static class GameEngine
                 PlayedCards = p.PlayedCards.Add(move.PreludeId),
             });
             state = state.AppendLog($"Player {playerId} plays prelude {CardName(move.PreludeId)}");
-            var (newState, pending) = EffectExecutor.ExecuteAll(state, playerId, preludeEntry.OnPlayEffects);
+            var (newState, pending) = EffectExecutor.ExecuteAll(state, playerId, preludeEntry.OnPlayEffects, move.PreludeId);
             state = newState;
 
             if (pending != null)
@@ -845,7 +851,7 @@ public static class GameEngine
         }
 
         // Execute on-play effects
-        var (newState, pending) = EffectExecutor.ExecuteAll(state, move.PlayerId, entry.OnPlayEffects);
+        var (newState, pending) = EffectExecutor.ExecuteAll(state, move.PlayerId, entry.OnPlayEffects, move.CardId);
         state = newState;
 
         if (pending != null)
@@ -874,7 +880,7 @@ public static class GameEngine
         });
 
         // Execute the first action effects
-        var (newState, pending) = EffectExecutor.ExecuteAll(state, move.PlayerId, corp.FirstActionEffects);
+        var (newState, pending) = EffectExecutor.ExecuteAll(state, move.PlayerId, corp.FirstActionEffects, player.CorporationId);
         state = newState;
 
         if (pending != null)
@@ -917,7 +923,7 @@ public static class GameEngine
         });
 
         // Execute action effects
-        var (newState, pending) = EffectExecutor.ExecuteAll(state, move.PlayerId, action.Effects);
+        var (newState, pending) = EffectExecutor.ExecuteAll(state, move.PlayerId, action.Effects, move.CardId);
         state = newState;
 
         if (pending != null)
@@ -986,10 +992,54 @@ public static class GameEngine
 
     private static GameState ApplyChooseOption(GameState state, ChooseOptionMove move)
     {
-        // The ChooseOptionPending was created by a ChooseEffect.
-        // We need to find the original ChooseEffect and execute the chosen option's effects.
-        // For now, clear the pending action — full implementation needs effect queue tracking.
-        return state with { PendingAction = null };
+        if (state.PendingAction is not ChooseOptionPending pending)
+            return state;
+
+        state = state with { PendingAction = null };
+
+        // Look up the ChooseEffect from the source card to get the actual effects
+        if (pending.SourceCardId != null && CardRegistry.TryGet(pending.SourceCardId, out var entry))
+        {
+            var chooseEffect = FindChooseEffect(entry);
+            if (chooseEffect != null && move.OptionIndex < chooseEffect.Options.Length)
+            {
+                var chosenEffects = chooseEffect.Options[move.OptionIndex].Effects;
+                var (newState, newPending) = EffectExecutor.ExecuteAll(
+                    state, move.PlayerId, chosenEffects, pending.SourceCardId);
+                state = newState;
+
+                if (newPending != null)
+                    return state with { PendingAction = newPending };
+            }
+        }
+
+        return state;
+    }
+
+    private static Cards.Effects.ChooseEffect? FindChooseEffect(Cards.CardEntry entry)
+    {
+        // Search OnPlayEffects, FirstActionEffects, and Action effects for a ChooseEffect
+        foreach (var effect in entry.OnPlayEffects)
+        {
+            if (effect is Cards.Effects.ChooseEffect ce) return ce;
+            if (effect is Cards.Effects.CompoundEffect comp)
+            {
+                foreach (var inner in comp.Effects)
+                    if (inner is Cards.Effects.ChooseEffect innerCe) return innerCe;
+            }
+        }
+        foreach (var effect in entry.FirstActionEffects)
+        {
+            if (effect is Cards.Effects.ChooseEffect ce) return ce;
+        }
+        if (entry.Action != null)
+        {
+            foreach (var effect in entry.Action.Effects)
+            {
+                if (effect is Cards.Effects.ChooseEffect ce) return ce;
+            }
+        }
+        return null;
     }
 
     private static GameState ApplyDiscardCards(GameState state, DiscardCardsMove move)

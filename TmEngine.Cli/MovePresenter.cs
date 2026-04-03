@@ -291,7 +291,7 @@ public class MovePresenter
         foreach (var sp in actions.StandardProjects.Where(s => s.Available))
         {
             var s = sp;
-            if (s.Project == "SellPatents")
+            if (s.Project.Equals("SellPatents", StringComparison.OrdinalIgnoreCase))
             {
                 options.Add(($"[SP] Sell Patents", () =>
                 {
@@ -310,7 +310,9 @@ public class MovePresenter
             }
             else
             {
-                var needsLoc = s.Project is "Aquifer" or "Greenery" or "City";
+                var needsLoc = s.Project.Equals("Aquifer", StringComparison.OrdinalIgnoreCase)
+                    || s.Project.Equals("Greenery", StringComparison.OrdinalIgnoreCase)
+                    || s.Project.Equals("City", StringComparison.OrdinalIgnoreCase);
                 options.Add(($"[SP] {s.Project} ({s.Cost} MC)", () =>
                 {
                     var move = MakeMove("UseStandardProject");

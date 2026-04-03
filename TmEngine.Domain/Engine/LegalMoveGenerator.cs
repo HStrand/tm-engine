@@ -167,6 +167,11 @@ public static class LegalMoveGenerator
         // Draft sub-phase
         if (state.DraftVariant && state.Draft != null)
         {
+            // Check if this player has already picked this round
+            var alreadyPicked = state.Draft.DraftedCards[playerIndex].Count > state.Draft.DraftRound;
+            if (alreadyPicked)
+                return new AvailableMoves { WaitingForOtherPlayer = true };
+
             var draftHand = state.Draft.DraftHands[playerIndex];
             if (draftHand.Count > 0)
                 return new AvailableMoves { Draft = new DraftOptions(draftHand) };

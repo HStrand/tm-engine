@@ -542,4 +542,240 @@ public class GameEngineTests
         Assert.Contains("converts heat", s2.Log[0]);
         Assert.Contains("passes", s2.Log[1]);
     }
+
+    [Fact]
+    public void BothPlayersTake2Actions_ActivePlayerCyclesCorrectly()
+    {
+        var state = CreateTestGame();
+
+        // Start temperature past the ocean bonus thresholds to avoid pending actions
+        state = state with { Temperature = -20 };
+
+        // Player 0 action 1: convert heat
+        var (s1, r1) = GameEngine.Apply(state, new ConvertHeatMove(0));
+        Assert.True(r1.IsSuccess);
+        Assert.Equal(0, s1.ActivePlayerIndex); // still player 0's turn
+        Assert.Equal(1, s1.Players[0].ActionsThisTurn);
+
+        // Player 0 action 2: convert heat
+        var (s2, r2) = GameEngine.Apply(s1, new ConvertHeatMove(0));
+        Assert.True(r2.IsSuccess);
+        Assert.Equal(1, s2.ActivePlayerIndex); // should advance to player 1
+        Assert.Equal(0, s2.Players[1].ActionsThisTurn); // player 1 reset
+
+        // Player 1 action 1: convert heat
+        var (s3, r3) = GameEngine.Apply(s2, new ConvertHeatMove(1));
+        Assert.True(r3.IsSuccess);
+        Assert.Equal(1, s3.ActivePlayerIndex);
+        Assert.Equal(1, s3.Players[1].ActionsThisTurn);
+
+        // Player 1 action 2: convert heat
+        var (s4, r4) = GameEngine.Apply(s3, new ConvertHeatMove(1));
+        Assert.True(r4.IsSuccess);
+        Assert.Equal(0, s4.ActivePlayerIndex); // should advance back to player 0
+        Assert.Equal(0, s4.Players[0].ActionsThisTurn); // player 0 reset
+
+        // Player 0 should now have legal moves
+        var moves = LegalMoveGenerator.GetLegalMoves(s4, 0);
+        Assert.False(moves.WaitingForOtherPlayer);
+        Assert.NotNull(moves.Actions);
+        Assert.True(moves.Actions!.CanPass);
+    }
+
+    [Fact]
+    public void PendingActionAfter2ndAction_AdvancesPlayerWhenResolved()
+    {
+        var state = CreateTestGame();
+
+        // Set temp at -26 so converting heat twice hits -24 (ocean bonus) then -22
+        state = state with { Temperature = -26 };
+
+        // Player 0 action 1: convert heat (-26 -> -24, triggers ocean bonus pending)
+        var (s1, r1) = GameEngine.Apply(state, new ConvertHeatMove(0));
+        Assert.True(r1.IsSuccess);
+        Assert.Equal(1, s1.Players[0].ActionsThisTurn);
+        // -24 triggers an ocean placement bonus
+        Assert.NotNull(s1.PendingAction);
+        Assert.IsType<PlaceTilePending>(s1.PendingAction);
+
+        // Resolve the ocean placement
+        var oceanPending = (PlaceTilePending)s1.PendingAction;
+        var (s1b, r1b) = GameEngine.Apply(s1, new PlaceTileMove(0, oceanPending.ValidLocations[0]));
+        Assert.True(r1b.IsSuccess);
+        Assert.Null(s1b.PendingAction);
+        // Still player 0's turn (only 1 action taken)
+        Assert.Equal(0, s1b.ActivePlayerIndex);
+
+        // Player 0 action 2: convert heat (-24 -> -22)
+        var (s2, r2) = GameEngine.Apply(s1b, new ConvertHeatMove(0));
+        Assert.True(r2.IsSuccess);
+        // Should advance to player 1 (2 actions taken)
+        Assert.Equal(1, s2.ActivePlayerIndex);
+
+        // Player 1 should have moves
+        var moves = LegalMoveGenerator.GetLegalMoves(s2, 1);
+        Assert.False(moves.WaitingForOtherPlayer);
+    }
+
+    [Fact]
+    public void PendingActionOn2ndAction_AdvancesAfterResolution()
+    {
+        var state = CreateTestGame();
+
+        // Set temp at -26 so first heat converts to -24 (no bonus), second to -22
+        // But we want the SECOND action to trigger a pending action
+        // Let's use temp -28: action 1 -> -26 (no bonus), action 2 -> -24 (ocean bonus!)
+        state = state with { Temperature = -28 };
+
+        // Player 0 action 1: convert heat (-28 -> -26, no bonus)
+        var (s1, r1) = GameEngine.Apply(state, new ConvertHeatMove(0));
+        Assert.True(r1.IsSuccess);
+        Assert.Null(s1.PendingAction);
+        Assert.Equal(0, s1.ActivePlayerIndex);
+
+        // Player 0 action 2: convert heat (-26 -> -24, triggers ocean bonus)
+        var (s2, r2) = GameEngine.Apply(s1, new ConvertHeatMove(0));
+        Assert.True(r2.IsSuccess);
+        Assert.NotNull(s2.PendingAction);
+        Assert.IsType<PlaceTilePending>(s2.PendingAction);
+        // Active player should still be 0 until pending resolved
+        Assert.Equal(0, s2.ActivePlayerIndex);
+
+        // Resolve ocean placement
+        var pending = (PlaceTilePending)s2.PendingAction;
+        var (s3, r3) = GameEngine.Apply(s2, new PlaceTileMove(0, pending.ValidLocations[0]));
+        Assert.True(r3.IsSuccess);
+        Assert.Null(s3.PendingAction);
+        // NOW should advance to player 1 (2 actions completed + pending resolved)
+        Assert.Equal(1, s3.ActivePlayerIndex);
+        Assert.Equal(0, s3.Players[1].ActionsThisTurn);
+
+        // Player 1 should have legal moves
+        var moves = LegalMoveGenerator.GetLegalMoves(s3, 1);
+        Assert.False(moves.WaitingForOtherPlayer);
+        Assert.NotNull(moves.Actions);
+    }
+
+    // ── ChooseEffect / Hired Raiders ──────────────────────────
+
+    [Fact]
+    public void HiredRaiders_StealMC_RemovesFromOpponent()
+    {
+        // Card 124: Hired Raiders — ChooseEffect with two options:
+        //   0: Steal up to 2 steel from any player
+        //   1: Steal up to 3 MC from any player
+
+        var state = CreateTestGame();
+
+        // Give player 0 the card and set up known resources
+        state = state with
+        {
+            Players = state.Players
+                .SetItem(0, state.Players[0] with
+                {
+                    Hand = state.Players[0].Hand.Add("124"),
+                    Resources = new ResourceSet(MegaCredits: 50, Steel: 5, Titanium: 5, Plants: 5, Energy: 5, Heat: 5),
+                })
+                .SetItem(1, state.Players[1] with
+                {
+                    Resources = new ResourceSet(MegaCredits: 30, Steel: 5, Titanium: 5, Plants: 5, Energy: 5, Heat: 5),
+                }),
+        };
+
+        // Play Hired Raiders (cost 1, event tag)
+        var (s1, r1) = GameEngine.Apply(state, new PlayCardMove(0, "124", new PaymentInfo(MegaCredits: 1)));
+        Assert.IsType<Success>(r1);
+
+        // Should have a ChooseOptionPending
+        Assert.NotNull(s1.PendingAction);
+        Assert.IsType<ChooseOptionPending>(s1.PendingAction);
+        var choosePending = (ChooseOptionPending)s1.PendingAction;
+        Assert.Equal(2, choosePending.Options.Length);
+
+        // Choose option 1: "Steal up to 3 MC"
+        var (s2, r2) = GameEngine.Apply(s1, new ChooseOptionMove(0, 1));
+        Assert.IsType<Success>(r2);
+
+        // In a 2-player game, only one valid target (player 1), so steal is auto-applied
+        // Player 1 should have lost 3 MC: 30 - 3 = 27
+        var opponent = s2.GetPlayer(1);
+        Assert.Equal(27, opponent.Resources.MegaCredits);
+
+        // Player 0 should have gained 3 MC: 50 - 1 (card cost) + 3 (stolen) = 52
+        var player = s2.GetPlayer(0);
+        Assert.Equal(52, player.Resources.MegaCredits);
+
+        // Pending action should be cleared
+        Assert.Null(s2.PendingAction);
+    }
+
+    [Fact]
+    public void HiredRaiders_StealSteel_RemovesFromOpponent()
+    {
+        var state = CreateTestGame();
+
+        state = state with
+        {
+            Players = state.Players
+                .SetItem(0, state.Players[0] with
+                {
+                    Hand = state.Players[0].Hand.Add("124"),
+                    Resources = new ResourceSet(MegaCredits: 50, Steel: 5, Titanium: 5, Plants: 5, Energy: 5, Heat: 5),
+                })
+                .SetItem(1, state.Players[1] with
+                {
+                    Resources = new ResourceSet(MegaCredits: 30, Steel: 5, Titanium: 5, Plants: 5, Energy: 5, Heat: 5),
+                }),
+        };
+
+        var (s1, r1) = GameEngine.Apply(state, new PlayCardMove(0, "124", new PaymentInfo(MegaCredits: 1)));
+        Assert.IsType<Success>(r1);
+        Assert.IsType<ChooseOptionPending>(s1.PendingAction);
+
+        // Choose option 0: "Steal up to 2 steel"
+        var (s2, r2) = GameEngine.Apply(s1, new ChooseOptionMove(0, 0));
+        Assert.IsType<Success>(r2);
+
+        // Player 1 should have lost 2 steel: 5 - 2 = 3
+        var opponent = s2.GetPlayer(1);
+        Assert.Equal(3, opponent.Resources.Steel);
+
+        // Player 0 should have gained 2 steel: 5 + 2 = 7
+        var player = s2.GetPlayer(0);
+        Assert.Equal(7, player.Resources.Steel);
+
+        Assert.Null(s2.PendingAction);
+    }
+
+    [Fact]
+    public void HiredRaiders_StealMC_CappedAtOpponentAmount()
+    {
+        var state = CreateTestGame();
+
+        // Opponent only has 1 MC
+        state = state with
+        {
+            Players = state.Players
+                .SetItem(0, state.Players[0] with
+                {
+                    Hand = state.Players[0].Hand.Add("124"),
+                    Resources = new ResourceSet(MegaCredits: 50, Steel: 5, Titanium: 5, Plants: 5, Energy: 5, Heat: 5),
+                })
+                .SetItem(1, state.Players[1] with
+                {
+                    Resources = new ResourceSet(MegaCredits: 1, Steel: 0, Titanium: 0, Plants: 0, Energy: 0, Heat: 0),
+                }),
+        };
+
+        var (s1, _) = GameEngine.Apply(state, new PlayCardMove(0, "124", new PaymentInfo(MegaCredits: 1)));
+        var (s2, _) = GameEngine.Apply(s1, new ChooseOptionMove(0, 1)); // Steal up to 3 MC
+
+        // Should only remove 1 MC (capped at what opponent has)
+        Assert.Equal(0, s2.GetPlayer(1).Resources.MegaCredits);
+
+        // Player 0 should gain only 1 MC (what was actually stolen): 50 - 1 (cost) + 1 = 50
+        Assert.Equal(50, s2.GetPlayer(0).Resources.MegaCredits);
+
+        Assert.Null(s2.PendingAction);
+    }
 }

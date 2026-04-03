@@ -127,7 +127,7 @@ public class BotPlayer
                 var move = MakeMove("UseStandardProject");
                 move["project"] = s.Project;
 
-                if (s.Project == "SellPatents" && botState.Hand.Count > 0)
+                if (s.Project.Equals("SellPatents", StringComparison.OrdinalIgnoreCase) && botState.Hand.Count > 0)
                 {
                     var discard = PickRandomN(botState.Hand, _rng.Next(1, botState.Hand.Count + 1));
                     move["cardsToDiscard"] = new JArray(discard.ToArray());

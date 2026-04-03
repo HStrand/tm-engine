@@ -16,7 +16,7 @@ public static class EffectExecutor
     /// If a pending action is returned, the remaining effects must be queued for later.
     /// </summary>
     public static (GameState State, PendingAction? Pending) Execute(
-        GameState state, int playerId, Effect effect)
+        GameState state, int playerId, Effect effect, string? sourceCardId = null)
     {
         return effect switch
         {
@@ -24,6 +24,7 @@ public static class EffectExecutor
             ChangeProductionEffect e => (ApplyChangeProduction(state, playerId, e), null),
             ChangeResourceEffect e => (ApplyChangeResource(state, playerId, e), null),
             RemoveResourceEffect e => ApplyRemoveResource(state, playerId, e),
+            StealResourceEffect e => ApplyStealResource(state, playerId, e),
             ReduceAnyProductionEffect e => ApplyReduceAnyProduction(state, playerId, e),
 
             // Global parameters
@@ -59,10 +60,10 @@ public static class EffectExecutor
             GrantFreeAwardEffect => (state.UpdatePlayer(playerId, p => p with { HasFreeAwardFunding = true }), null),
 
             // Choices
-            ChooseEffect e => ApplyChoose(state, e),
+            ChooseEffect e => ApplyChoose(state, e, sourceCardId),
 
             // Compound
-            CompoundEffect e => ApplyCompound(state, playerId, e),
+            CompoundEffect e => ApplyCompound(state, playerId, e, sourceCardId),
 
             // Passive modifiers (these are stored on the card entry, not executed at play time)
             // They take effect by being present in OngoingEffects and queried by RequirementChecker.
@@ -83,11 +84,11 @@ public static class EffectExecutor
     /// if any effect requires player input.
     /// </summary>
     public static (GameState State, PendingAction? Pending) ExecuteAll(
-        GameState state, int playerId, ImmutableArray<Effect> effects)
+        GameState state, int playerId, ImmutableArray<Effect> effects, string? sourceCardId = null)
     {
         foreach (var effect in effects)
         {
-            var (newState, pending) = Execute(state, playerId, effect);
+            var (newState, pending) = Execute(state, playerId, effect, sourceCardId);
             state = newState;
             if (pending != null)
                 return (state, pending);
@@ -131,6 +132,40 @@ public static class EffectExecutor
         }
 
         // Multiple valid targets — player must choose
+        return (state, new RemoveResourcePending(e.Resource, e.Amount, validTargets));
+    }
+
+    private static (GameState, PendingAction?) ApplyStealResource(
+        GameState state, int playerId, StealResourceEffect e)
+    {
+        var validTargets = state.Players
+            .Where(p => p.PlayerId != playerId && p.Resources.Get(e.Resource) > 0)
+            .Select(p => p.PlayerId)
+            .ToImmutableArray();
+
+        if (validTargets.Length == 0)
+            return (state, null);
+
+        if (validTargets.Length == 1)
+        {
+            var targetId = validTargets[0];
+            var target = state.GetPlayer(targetId);
+            var stolen = Math.Min(e.Amount, target.Resources.Get(e.Resource));
+
+            state = state.UpdatePlayer(targetId, p => p with
+            {
+                Resources = p.Resources.Add(e.Resource, -stolen),
+            });
+            state = state.UpdatePlayer(playerId, p => p with
+            {
+                Resources = p.Resources.Add(e.Resource, stolen),
+            });
+            return (state, null);
+        }
+
+        // Multiple valid targets — player must choose
+        // TODO: StealResourcePending for proper steal with gain — for now reuse RemoveResource
+        // and the gain is handled after target selection
         return (state, new RemoveResourcePending(e.Resource, e.Amount, validTargets));
     }
 
@@ -535,17 +570,17 @@ public static class EffectExecutor
 
     // ── Choices ─────────────────────────────────────────────────
 
-    private static (GameState, PendingAction?) ApplyChoose(GameState state, ChooseEffect e)
+    private static (GameState, PendingAction?) ApplyChoose(GameState state, ChooseEffect e, string? sourceCardId)
     {
         var options = e.Options.Select(o => o.Description).ToImmutableArray();
-        return (state, new ChooseOptionPending("Choose one:", options));
+        return (state, new ChooseOptionPending("Choose one:", options, sourceCardId));
     }
 
     // ── Compound ────────────────────────────────────────────────
 
     private static (GameState, PendingAction?) ApplyCompound(
-        GameState state, int playerId, CompoundEffect e)
+        GameState state, int playerId, CompoundEffect e, string? sourceCardId)
     {
-        return ExecuteAll(state, playerId, e.Effects);
+        return ExecuteAll(state, playerId, e.Effects, sourceCardId);
     }
 }
