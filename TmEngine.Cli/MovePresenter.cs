@@ -584,6 +584,13 @@ public class MovePresenter
             player.Resources.MegaCredits, player.Resources.Steel,
             player.Resources.Titanium, player.Resources.Heat);
 
+        // Auto-pay without prompting if there's no alternative resource to use
+        bool hasAlternative = (card.CanUseSteel && player.Resources.Steel > 0)
+            || (card.CanUseTitanium && player.Resources.Titanium > 0)
+            || (card.CanUseHeat && player.Resources.Heat > 0);
+        if (!hasAlternative)
+            return auto;
+
         Console.Write($"  Payment for {CardName(card.CardId)} (cost {card.EffectiveCost}): ");
         Console.Write($"{auto.MegaCredits} MC");
         if (auto.Steel > 0) Console.Write($", {auto.Steel} steel");
