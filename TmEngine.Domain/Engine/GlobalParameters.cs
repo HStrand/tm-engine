@@ -13,8 +13,8 @@ public static class GlobalParameters
     /// <summary>
     /// Raise temperature by 1 step (+2°C). Includes:
     /// - TR increase (+1)
-    /// - Bonus at -24°C and -20°C: gain an ocean tile placement
-    /// - Bonus at 0°C: gain 1 heat production
+    /// - Bonus at -24°C and -20°C: gain 1 heat production
+    /// - Bonus at 0°C: place 1 ocean tile
     /// </summary>
     public static GameState RaiseTemperature(GameState state, int playerId)
     {
@@ -32,8 +32,18 @@ public static class GlobalParameters
             IncreasedTRThisGeneration = true,
         });
 
-        // Bonus: at -24°C and -20°C, gain an ocean placement
-        if (newTemp == Constants.TemperatureOceanBonus1 || newTemp == Constants.TemperatureOceanBonus2)
+        // Bonus: at -24°C and -20°C, gain 1 heat production
+        if (newTemp == Constants.TemperatureHeatProductionBonus1
+            || newTemp == Constants.TemperatureHeatProductionBonus2)
+        {
+            state = state.UpdatePlayer(playerId, p => p with
+            {
+                Production = p.Production.Add(ResourceType.Heat, 1),
+            });
+        }
+
+        // Bonus: at 0°C, place an ocean tile
+        if (newTemp == Constants.TemperatureOceanBonus)
         {
             if (state.OceansPlaced < map.MaxOceans)
             {
@@ -46,15 +56,6 @@ public static class GlobalParameters
                     };
                 }
             }
-        }
-
-        // Bonus: at 0°C, gain 1 heat production
-        if (newTemp == Constants.TemperatureHeatProductionBonus)
-        {
-            state = state.UpdatePlayer(playerId, p => p with
-            {
-                Production = p.Production.Add(ResourceType.Heat, 1),
-            });
         }
 
         return state;

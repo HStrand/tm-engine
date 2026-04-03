@@ -356,29 +356,41 @@ public class GameEngineTests
     // ── Temperature Bonus Effects ──────────────────────────────
 
     [Fact]
-    public void Temperature_At0C_GainsHeatProduction()
+    public void Temperature_At0C_TriggersOceanBonus()
     {
         var state = CreateTestGame() with { Temperature = -2 };
-        var initialHeatProd = state.Players[0].Production.Heat;
 
         var (newState, _) = GameEngine.Apply(state, new ConvertHeatMove(0));
 
-        // Temperature goes from -2 to 0, bonus heat production
+        // Temperature goes from -2 to 0, triggers ocean placement
         Assert.Equal(0, newState.Temperature);
-        Assert.Equal(initialHeatProd + 1, newState.Players[0].Production.Heat);
+        Assert.NotNull(newState.PendingAction);
+        Assert.IsType<PlaceTilePending>(newState.PendingAction);
+        Assert.Equal(TileType.Ocean, ((PlaceTilePending)newState.PendingAction).TileType);
     }
 
     [Fact]
-    public void Temperature_AtMinus24_TriggersOceanPending()
+    public void Temperature_AtMinus24_GrantsHeatProduction()
     {
         var state = CreateTestGame() with { Temperature = -26 };
 
         var (newState, _) = GameEngine.Apply(state, new ConvertHeatMove(0));
 
         Assert.Equal(-24, newState.Temperature);
-        Assert.IsType<PlaceTilePending>(newState.PendingAction);
-        var pending = (PlaceTilePending)newState.PendingAction;
-        Assert.Equal(TileType.Ocean, pending.TileType);
+        Assert.Equal(state.Players[0].Production.Heat + 1, newState.Players[0].Production.Heat);
+        Assert.Null(newState.PendingAction);
+    }
+
+    [Fact]
+    public void Temperature_AtMinus20_GrantsHeatProduction()
+    {
+        var state = CreateTestGame() with { Temperature = -22 };
+
+        var (newState, _) = GameEngine.Apply(state, new ConvertHeatMove(0));
+
+        Assert.Equal(-20, newState.Temperature);
+        Assert.Equal(state.Players[0].Production.Heat + 1, newState.Players[0].Production.Heat);
+        Assert.Null(newState.PendingAction);
     }
 
     // ── Oxygen Bonus ───────────────────────────────────────────
@@ -583,18 +595,17 @@ public class GameEngineTests
     }
 
     [Fact]
-    public void PendingActionAfter2ndAction_AdvancesPlayerWhenResolved()
+    public void PendingActionAfter1stAction_ResolvesAndContinuesTurn()
     {
         var state = CreateTestGame();
 
-        // Set temp at -26 so converting heat twice hits -24 (ocean bonus) then -22
-        state = state with { Temperature = -26 };
+        // Set temp at -2 so converting heat hits 0°C (ocean bonus pending)
+        state = state with { Temperature = -2 };
 
-        // Player 0 action 1: convert heat (-26 -> -24, triggers ocean bonus pending)
+        // Player 0 action 1: convert heat (-2 -> 0, triggers ocean bonus pending)
         var (s1, r1) = GameEngine.Apply(state, new ConvertHeatMove(0));
         Assert.True(r1.IsSuccess);
         Assert.Equal(1, s1.Players[0].ActionsThisTurn);
-        // -24 triggers an ocean placement bonus
         Assert.NotNull(s1.PendingAction);
         Assert.IsType<PlaceTilePending>(s1.PendingAction);
 
@@ -605,16 +616,7 @@ public class GameEngineTests
         Assert.Null(s1b.PendingAction);
         // Still player 0's turn (only 1 action taken)
         Assert.Equal(0, s1b.ActivePlayerIndex);
-
-        // Player 0 action 2: convert heat (-24 -> -22)
-        var (s2, r2) = GameEngine.Apply(s1b, new ConvertHeatMove(0));
-        Assert.True(r2.IsSuccess);
-        // Should advance to player 1 (2 actions taken)
-        Assert.Equal(1, s2.ActivePlayerIndex);
-
-        // Player 1 should have moves
-        var moves = LegalMoveGenerator.GetLegalMoves(s2, 1);
-        Assert.False(moves.WaitingForOtherPlayer);
+        Assert.Equal(1, s1b.Players[0].ActionsThisTurn);
     }
 
     [Fact]
@@ -622,18 +624,16 @@ public class GameEngineTests
     {
         var state = CreateTestGame();
 
-        // Set temp at -26 so first heat converts to -24 (no bonus), second to -22
-        // But we want the SECOND action to trigger a pending action
-        // Let's use temp -28: action 1 -> -26 (no bonus), action 2 -> -24 (ocean bonus!)
-        state = state with { Temperature = -28 };
+        // Set temp at -4: action 1 -> -2 (no bonus), action 2 -> 0 (ocean bonus!)
+        state = state with { Temperature = -4 };
 
-        // Player 0 action 1: convert heat (-28 -> -26, no bonus)
+        // Player 0 action 1: convert heat (-4 -> -2, no bonus)
         var (s1, r1) = GameEngine.Apply(state, new ConvertHeatMove(0));
         Assert.True(r1.IsSuccess);
         Assert.Null(s1.PendingAction);
         Assert.Equal(0, s1.ActivePlayerIndex);
 
-        // Player 0 action 2: convert heat (-26 -> -24, triggers ocean bonus)
+        // Player 0 action 2: convert heat (-2 -> 0, triggers ocean bonus)
         var (s2, r2) = GameEngine.Apply(s1, new ConvertHeatMove(0));
         Assert.True(r2.IsSuccess);
         Assert.NotNull(s2.PendingAction);

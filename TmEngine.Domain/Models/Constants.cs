@@ -13,9 +13,9 @@ public static class Constants
     public const int DefaultMaxOceans = 9;
 
     // Temperature bonus thresholds (when raising temp TO this value, gain bonus)
-    public const int TemperatureOceanBonus1 = -24;
-    public const int TemperatureOceanBonus2 = -20;
-    public const int TemperatureHeatProductionBonus = 0;
+    public const int TemperatureHeatProductionBonus1 = -24; // +1 heat production at -24°C
+    public const int TemperatureHeatProductionBonus2 = -20; // +1 heat production at -20°C
+    public const int TemperatureOceanBonus = 0;             // Place 1 ocean at 0°C
 
     // Oxygen bonus threshold
     public const int OxygenTemperatureBonus = 8; // At 8% O2, also raise temperature

@@ -12,30 +12,33 @@ Console.WriteLine("╚═══════════════════�
 Console.ResetColor();
 Console.WriteLine();
 
-// Game options
-Console.Write("Map (1=Tharsis, 2=Hellas, 3=Elysium) [1]: ");
-var mapInput = Console.ReadLine()?.Trim();
-var map = mapInput switch { "2" => "Hellas", "3" => "Elysium", _ => "Tharsis" };
+//// Game options
+//Console.Write("Map (1=Tharsis, 2=Hellas, 3=Elysium) [1]: ");
+//var mapInput = Console.ReadLine()?.Trim();
+//var map = mapInput switch { "2" => "Hellas", "3" => "Elysium", _ => "Tharsis" };
 
-Console.Write("Corporate Era? (Y/n) [Y]: ");
-var ceInput = Console.ReadLine()?.Trim();
-bool corporateEra = !ceInput?.Equals("n", StringComparison.OrdinalIgnoreCase) ?? true;
+var map = "Tharsis";
 
-Console.Write("Draft variant? (y/N) [N]: ");
-var draftInput = Console.ReadLine()?.Trim();
-bool draft = draftInput?.Equals("y", StringComparison.OrdinalIgnoreCase) ?? false;
 
-Console.Write("Prelude expansion? (y/N) [N]: ");
-var preludeInput = Console.ReadLine()?.Trim();
-bool prelude = preludeInput?.Equals("y", StringComparison.OrdinalIgnoreCase) ?? false;
+//Console.Write("Corporate Era? (Y/n) [Y]: ");
+//var ceInput = Console.ReadLine()?.Trim();
+bool corporateEra = true;
+
+//Console.Write("Draft variant? (y/N) [N]: ");
+//var draftInput = Console.ReadLine()?.Trim();
+//bool draft = draftInput?.Equals("y", StringComparison.OrdinalIgnoreCase) ?? false;
+bool draft = true;
+
+//Console.Write("Prelude expansion? (y/N) [N]: ");
+//var preludeInput = Console.ReadLine()?.Trim();
+//bool prelude = preludeInput?.Equals("y", StringComparison.OrdinalIgnoreCase) ?? false;
+bool prelude = true;
 
 Console.Write("RNG seed (Enter for random): ");
 var seedInput = Console.ReadLine()?.Trim();
 int? seed = int.TryParse(seedInput, out int parsedSeed) ? parsedSeed : null;
 
-Console.Write("API base URL [http://localhost:7102/api]: ");
-var urlInput = Console.ReadLine()?.Trim();
-var baseUrl = string.IsNullOrEmpty(urlInput) ? "http://localhost:7102/api" : urlInput;
+var baseUrl = "http://localhost:7102/api";
 
 var api = new ApiClient(baseUrl);
 var display = new GameDisplay();
