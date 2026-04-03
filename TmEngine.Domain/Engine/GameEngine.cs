@@ -36,13 +36,23 @@ public static class GameEngine
         var hadPendingAction = state.PendingAction != null;
         var newState = ApplyMove(state, move);
 
-        // If a pending action was just resolved, handle phase-specific advancement
+        // If a pending action was just resolved, resume queued effects or advance phase
         if (hadPendingAction && newState.PendingAction == null)
         {
-            if (newState.Phase == GamePhase.PreludePlacement)
-                newState = AdvancePreludePlacement(newState);
-            else if (newState.Phase == GamePhase.Action)
-                newState = PhaseManager.AfterAction(newState);
+            // Resume remaining effects from the queue
+            if (newState.EffectQueue != null)
+            {
+                newState = ResumeEffectQueue(newState, move.PlayerId);
+            }
+
+            // If still no pending action after resuming, advance phase
+            if (newState.PendingAction == null)
+            {
+                if (newState.Phase == GamePhase.PreludePlacement)
+                    newState = AdvancePreludePlacement(newState);
+                else if (newState.Phase == GamePhase.Action)
+                    newState = PhaseManager.AfterAction(newState);
+            }
         }
 
         // Increment move number and log
@@ -190,6 +200,7 @@ public static class GameEngine
         ChooseTargetPlayerMove m => ApplyChooseTargetPlayer(state, m),
         SelectCardMove m => ApplySelectCard(state, m),
         ChooseOptionMove m => ApplyChooseOption(state, m),
+        ChooseEffectOrderMove m => ApplyChooseEffectOrder(state, m),
         PerformFirstActionMove m => ApplyPerformFirstAction(state, m),
         DiscardCardsMove m => ApplyDiscardCards(state, m),
 
@@ -453,7 +464,7 @@ public static class GameEngine
             state = state.AppendLog($"Player {playerId} selects corporation {CardName(move.CorporationId)}");
             if (CardRegistry.TryGet(move.CorporationId, out var corpEntry))
             {
-                var (newState, _) = EffectExecutor.ExecuteAll(state, playerId, corpEntry.OnPlayEffects, move.CorporationId);
+                var (newState, _) = EffectExecutor.ExecuteWithOrdering(state, playerId, corpEntry.OnPlayEffects, move.CorporationId);
                 state = newState;
             }
 
@@ -583,7 +594,7 @@ public static class GameEngine
                 PlayedCards = p.PlayedCards.Add(move.PreludeId),
             });
             state = state.AppendLog($"Player {playerId} plays prelude {CardName(move.PreludeId)}");
-            var (newState, pending) = EffectExecutor.ExecuteAll(state, playerId, preludeEntry.OnPlayEffects, move.PreludeId);
+            var (newState, pending) = EffectExecutor.ExecuteWithOrdering(state, playerId, preludeEntry.OnPlayEffects, move.PreludeId);
             state = newState;
 
             if (pending != null)
@@ -851,7 +862,7 @@ public static class GameEngine
         }
 
         // Execute on-play effects
-        var (newState, pending) = EffectExecutor.ExecuteAll(state, move.PlayerId, entry.OnPlayEffects, move.CardId);
+        var (newState, pending) = EffectExecutor.ExecuteWithOrdering(state, move.PlayerId, entry.OnPlayEffects, move.CardId);
         state = newState;
 
         if (pending != null)
@@ -880,7 +891,7 @@ public static class GameEngine
         });
 
         // Execute the first action effects
-        var (newState, pending) = EffectExecutor.ExecuteAll(state, move.PlayerId, corp.FirstActionEffects, player.CorporationId);
+        var (newState, pending) = EffectExecutor.ExecuteWithOrdering(state, move.PlayerId, corp.FirstActionEffects, player.CorporationId, effectSource: "firstAction");
         state = newState;
 
         if (pending != null)
@@ -923,7 +934,7 @@ public static class GameEngine
         });
 
         // Execute action effects
-        var (newState, pending) = EffectExecutor.ExecuteAll(state, move.PlayerId, action.Effects, move.CardId);
+        var (newState, pending) = EffectExecutor.ExecuteWithOrdering(state, move.PlayerId, action.Effects, move.CardId, effectSource: "action");
         state = newState;
 
         if (pending != null)
@@ -1004,7 +1015,7 @@ public static class GameEngine
             if (chooseEffect != null && move.OptionIndex < chooseEffect.Options.Length)
             {
                 var chosenEffects = chooseEffect.Options[move.OptionIndex].Effects;
-                var (newState, newPending) = EffectExecutor.ExecuteAll(
+                var (newState, newPending) = EffectExecutor.ExecuteWithOrdering(
                     state, move.PlayerId, chosenEffects, pending.SourceCardId);
                 state = newState;
 
@@ -1054,7 +1065,115 @@ public static class GameEngine
         return state with { PendingAction = null };
     }
 
+    private static GameState ApplyChooseEffectOrder(GameState state, ChooseEffectOrderMove move)
+    {
+        if (state.PendingAction is not ChooseEffectOrderPending pending)
+            return state;
+
+        if (!CardRegistry.TryGet(pending.SourceCardId, out var entry))
+            return state with { PendingAction = null };
+
+        var effects = GetEffectsFromSource(entry, pending.EffectSource);
+        state = state with { PendingAction = null };
+
+        // Auto mode: execute all remaining sequentially
+        if (move.EffectIndex == -1)
+        {
+            var (newState, subPending) = EffectExecutor.ExecuteSequential(
+                state, move.PlayerId, effects, pending.RemainingEffectIndices,
+                pending.SourceCardId, pending.EffectSource);
+
+            if (subPending != null)
+                return newState with { PendingAction = subPending };
+            return newState;
+        }
+
+        // Execute the chosen effect
+        var chosenEffect = effects[move.EffectIndex];
+        var remaining = pending.RemainingEffectIndices.Remove(move.EffectIndex);
+
+        var (resultState, resultPending) = EffectExecutor.Execute(
+            state, move.PlayerId, chosenEffect, pending.SourceCardId);
+        state = resultState;
+
+        if (resultPending != null)
+        {
+            // Sub-pending (e.g., ocean placement) — store remaining for after resolution
+            if (remaining.Length > 0)
+            {
+                state = state with
+                {
+                    EffectQueue = new PendingEffectQueue(pending.SourceCardId, remaining, pending.EffectSource),
+                };
+            }
+            return state with { PendingAction = resultPending };
+        }
+
+        // Effect resolved immediately — present remaining
+        if (remaining.Length == 0)
+            return state;
+
+        if (remaining.Length == 1)
+        {
+            // Auto-execute the last one
+            var (finalState, finalPending) = EffectExecutor.Execute(
+                state, move.PlayerId, effects[remaining[0]], pending.SourceCardId);
+            if (finalPending != null)
+                return finalState with { PendingAction = finalPending };
+            return finalState;
+        }
+
+        // 2+ remain — present another choice
+        var descriptions = remaining.Select(i => EffectExecutor.DescribeEffect(effects[i])).ToImmutableArray();
+        return state with
+        {
+            PendingAction = new ChooseEffectOrderPending(
+                pending.SourceCardId, pending.EffectSource, remaining, descriptions),
+        };
+    }
+
     // ── Formatting ─────────────────────────────────────────────
+
+    private static GameState ResumeEffectQueue(GameState state, int playerId)
+    {
+        var queue = state.EffectQueue!;
+        state = state with { EffectQueue = null };
+
+        if (!CardRegistry.TryGet(queue.SourceCardId, out var entry))
+            return state;
+
+        var effects = GetEffectsFromSource(entry, queue.EffectSource);
+        var remaining = queue.RemainingEffectIndices;
+
+        if (remaining.IsDefaultOrEmpty)
+            return state;
+
+        if (remaining.Length == 1)
+        {
+            // Auto-execute the last remaining effect
+            var (newState, pending) = EffectExecutor.Execute(state, playerId, effects[remaining[0]], queue.SourceCardId);
+            if (pending != null)
+                return newState with { PendingAction = pending };
+            return newState;
+        }
+
+        // 2+ remaining — present ordering choice
+        var descriptions = remaining.Select(i => EffectExecutor.DescribeEffect(effects[i])).ToImmutableArray();
+        return state with
+        {
+            PendingAction = new ChooseEffectOrderPending(
+                queue.SourceCardId, queue.EffectSource, remaining, descriptions),
+        };
+    }
+
+    private static ImmutableArray<Effect> GetEffectsFromSource(Cards.CardEntry entry, string effectSource) =>
+        effectSource switch
+        {
+            "onPlay" => entry.OnPlayEffects,
+            "firstAction" => entry.FirstActionEffects,
+            "action" => entry.Action?.Effects ?? [],
+            _ => [],
+        };
 
     private static string CardName(string cardId) =>
         CardRegistry.TryGet(cardId, out var entry) ? entry.Definition.Name : cardId;
@@ -1074,6 +1193,9 @@ public static class GameEngine
         PerformFirstActionMove m => $"Player {m.PlayerId} performs corporation first action",
         PlayPreludeMove m => $"Player {m.PlayerId} plays prelude {CardName(m.PreludeId)} ({m.PreludeId})",
         PlaceTileMove m => $"Player {m.PlayerId} places tile at {m.Location}",
+        ChooseEffectOrderMove m => m.EffectIndex == -1
+            ? $"Player {m.PlayerId} auto-resolves remaining effects"
+            : $"Player {m.PlayerId} chooses to resolve effect {m.EffectIndex}",
         _ => $"Player {move.PlayerId} does {move.GetType().Name}",
     };
 }

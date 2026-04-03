@@ -90,3 +90,21 @@ public sealed record SetupPending(
     ImmutableArray<string> AvailableCorporationIds,
     ImmutableArray<string> AvailablePreludeIds,
     ImmutableArray<string> AvailableProjectCardIds) : PendingAction;
+
+/// <summary>
+/// Player must choose which effect to resolve next from a card's remaining effects.
+/// </summary>
+public sealed record ChooseEffectOrderPending(
+    string SourceCardId,
+    string EffectSource,
+    ImmutableArray<int> RemainingEffectIndices,
+    ImmutableArray<string> EffectDescriptions) : PendingAction;
+
+/// <summary>
+/// Tracks remaining card effects that need to execute after the current PendingAction resolves.
+/// Uses card ID + effect indices so it survives serialization without storing abstract Effect objects.
+/// </summary>
+public sealed record PendingEffectQueue(
+    string SourceCardId,
+    ImmutableArray<int> RemainingEffectIndices,
+    string EffectSource);

@@ -393,6 +393,38 @@ public class GameEngineTests
         Assert.Null(newState.PendingAction);
     }
 
+    [Fact]
+    public void Temperature_MultiStep_HitsBothHeatProductionBonuses()
+    {
+        // Huge Asteroid raises temp 3 steps: -30 -> -28 -> -26 -> -24
+        // Should hit the -24 bonus
+        var state = CreateTestGame() with { Temperature = -30 };
+        var initialHeatProd = state.Players[0].Production.Heat;
+
+        // Give player card "P15" (Huge Asteroid prelude: +3 temp, -5 MC)
+        // Simulate by directly calling RaiseTemperature 3 times
+        for (int i = 0; i < 3; i++)
+            state = GlobalParameters.RaiseTemperature(state, 0);
+
+        Assert.Equal(-24, state.Temperature);
+        Assert.Equal(initialHeatProd + 1, state.GetPlayer(0).Production.Heat);
+    }
+
+    [Fact]
+    public void Temperature_MultiStep_PassingThroughBothBonuses()
+    {
+        // Starting at -26, raise 4 steps: -26 -> -24 -> -22 -> -20 -> -18
+        // Should hit both -24 and -20 bonuses = +2 heat production
+        var state = CreateTestGame() with { Temperature = -26 };
+        var initialHeatProd = state.Players[0].Production.Heat;
+
+        for (int i = 0; i < 4; i++)
+            state = GlobalParameters.RaiseTemperature(state, 0);
+
+        Assert.Equal(-18, state.Temperature);
+        Assert.Equal(initialHeatProd + 2, state.GetPlayer(0).Production.Heat);
+    }
+
     // ── Oxygen Bonus ───────────────────────────────────────────
 
     [Fact]
@@ -777,5 +809,130 @@ public class GameEngineTests
         Assert.Equal(50, s2.GetPlayer(0).Resources.MegaCredits);
 
         Assert.Null(s2.PendingAction);
+    }
+
+    // ── Effect Queue (Comet etc.) ─────────────────────────────
+
+    [Fact]
+    public void Comet_PresentsEffectOrderChoice()
+    {
+        // Card 010: Comet — Raise temp 1, place ocean, remove up to 3 plants from any
+        // RaiseTemp is auto-executed. PlaceOcean and RemovePlants are orderable.
+        var state = CreateTestGame();
+        state = state with
+        {
+            Players = state.Players
+                .SetItem(0, state.Players[0] with
+                {
+                    Hand = state.Players[0].Hand.Add("010"),
+                    Resources = new ResourceSet(MegaCredits: 50, Steel: 5, Titanium: 5, Plants: 5, Energy: 5, Heat: 5),
+                })
+                .SetItem(1, state.Players[1] with
+                {
+                    Resources = new ResourceSet(MegaCredits: 30, Steel: 5, Titanium: 5, Plants: 10, Energy: 5, Heat: 5),
+                }),
+        };
+
+        // Play Comet (cost 23, space tag)
+        var (s1, r1) = GameEngine.Apply(state, new PlayCardMove(0, "010", new PaymentInfo(MegaCredits: 23)));
+        Assert.IsType<Success>(r1);
+
+        // Temperature should have been auto-raised (not orderable)
+        Assert.Equal(state.Temperature + Constants.TemperatureStep, s1.Temperature);
+
+        // Should have a ChooseEffectOrderPending with 2 orderable effects
+        Assert.NotNull(s1.PendingAction);
+        Assert.IsType<ChooseEffectOrderPending>(s1.PendingAction);
+        var orderPending = (ChooseEffectOrderPending)s1.PendingAction;
+        Assert.Equal(2, orderPending.RemainingEffectIndices.Length);
+        Assert.Equal(2, orderPending.EffectDescriptions.Length);
+    }
+
+    [Fact]
+    public void Comet_RemovePlantsFirst_ThenOcean()
+    {
+        var state = CreateTestGame();
+        state = state with
+        {
+            Players = state.Players
+                .SetItem(0, state.Players[0] with
+                {
+                    Hand = state.Players[0].Hand.Add("010"),
+                    Resources = new ResourceSet(MegaCredits: 50, Steel: 5, Titanium: 5, Plants: 5, Energy: 5, Heat: 5),
+                })
+                .SetItem(1, state.Players[1] with
+                {
+                    Resources = new ResourceSet(MegaCredits: 30, Steel: 5, Titanium: 5, Plants: 10, Energy: 5, Heat: 5),
+                }),
+        };
+
+        var (s1, _) = GameEngine.Apply(state, new PlayCardMove(0, "010", new PaymentInfo(MegaCredits: 23)));
+        var orderPending = (ChooseEffectOrderPending)s1.PendingAction!;
+
+        // Find the RemoveResource effect index (the one that describes plants)
+        int removeIdx = -1, oceanIdx = -1;
+        for (int i = 0; i < orderPending.EffectDescriptions.Length; i++)
+        {
+            if (orderPending.EffectDescriptions[i].Contains("Plants", StringComparison.OrdinalIgnoreCase))
+                removeIdx = orderPending.RemainingEffectIndices[i];
+            if (orderPending.EffectDescriptions[i].Contains("ocean", StringComparison.OrdinalIgnoreCase))
+                oceanIdx = orderPending.RemainingEffectIndices[i];
+        }
+        Assert.NotEqual(-1, removeIdx);
+        Assert.NotEqual(-1, oceanIdx);
+
+        // Choose to remove plants first
+        var (s2, r2) = GameEngine.Apply(s1, new ChooseEffectOrderMove(0, removeIdx));
+        Assert.IsType<Success>(r2);
+
+        // Plants removed (auto-applied to only opponent)
+        Assert.Equal(7, s2.GetPlayer(1).Resources.Plants);
+
+        // Last remaining effect (ocean) auto-executes → PlaceTilePending
+        Assert.NotNull(s2.PendingAction);
+        Assert.IsType<PlaceTilePending>(s2.PendingAction);
+
+        // Place the ocean
+        var oceanPending = (PlaceTilePending)s2.PendingAction;
+        var (s3, _) = GameEngine.Apply(s2, new PlaceTileMove(0, oceanPending.ValidLocations[0]));
+        Assert.Null(s3.PendingAction);
+        Assert.Equal(1, s3.OceansPlaced);
+    }
+
+    [Fact]
+    public void Comet_AutoResolve_ExecutesAllEffects()
+    {
+        var state = CreateTestGame();
+        state = state with
+        {
+            Players = state.Players
+                .SetItem(0, state.Players[0] with
+                {
+                    Hand = state.Players[0].Hand.Add("010"),
+                    Resources = new ResourceSet(MegaCredits: 50, Steel: 5, Titanium: 5, Plants: 5, Energy: 5, Heat: 5),
+                })
+                .SetItem(1, state.Players[1] with
+                {
+                    Resources = new ResourceSet(MegaCredits: 30, Steel: 5, Titanium: 5, Plants: 10, Energy: 5, Heat: 5),
+                }),
+        };
+
+        var (s1, _) = GameEngine.Apply(state, new PlayCardMove(0, "010", new PaymentInfo(MegaCredits: 23)));
+        Assert.IsType<ChooseEffectOrderPending>(s1.PendingAction);
+
+        // Choose auto-resolve (-1)
+        var (s2, r2) = GameEngine.Apply(s1, new ChooseEffectOrderMove(0, -1));
+        Assert.IsType<Success>(r2);
+
+        // Ocean placement should be pending (first orderable effect in default order)
+        Assert.IsType<PlaceTilePending>(s2.PendingAction);
+        var oceanPending = (PlaceTilePending)s2.PendingAction;
+
+        // Place ocean
+        var (s3, _) = GameEngine.Apply(s2, new PlaceTileMove(0, oceanPending.ValidLocations[0]));
+
+        // Plants should have been removed after ocean
+        Assert.Equal(7, s3.GetPlayer(1).Resources.Plants);
+        Assert.Null(s3.PendingAction);
     }
 }

@@ -32,6 +32,7 @@ public class PendingActionJsonConverter : JsonConverter<PendingAction>
             "PlayCardFromHand" => obj.ToObject<PlayCardFromHandPending>(CreateInnerSerializer(serializer)),
             "ChooseCardToPlay" => obj.ToObject<ChooseCardToPlayPending>(CreateInnerSerializer(serializer)),
             "Setup" => obj.ToObject<SetupPending>(CreateInnerSerializer(serializer)),
+            "ChooseEffectOrder" => obj.ToObject<ChooseEffectOrderPending>(CreateInnerSerializer(serializer)),
             _ => null,
         };
     }
@@ -57,6 +58,7 @@ public class PendingActionJsonConverter : JsonConverter<PendingAction>
             PlayCardFromHandPending => "PlayCardFromHand",
             ChooseCardToPlayPending => "ChooseCardToPlay",
             SetupPending => "Setup",
+            ChooseEffectOrderPending => "ChooseEffectOrder",
             _ => value.GetType().Name,
         };
 

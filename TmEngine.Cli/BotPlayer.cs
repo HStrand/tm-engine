@@ -322,6 +322,13 @@ public class BotPlayer
                 var move = MakeMove("Pass");
                 return (move, "passes on playing from hand");
             }
+            case "ChooseEffectOrder":
+            {
+                // Bot auto-resolves all remaining effects
+                var move = MakeMove("ChooseEffectOrder");
+                move["effectIndex"] = -1;
+                return (move, "auto-resolves remaining effects");
+            }
         }
 
         return (MakeMove("Pass"), "passes (unhandled pending action)");

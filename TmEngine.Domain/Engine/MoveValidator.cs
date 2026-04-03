@@ -51,7 +51,7 @@ public static class MoveValidator
             PlayPreludeMove m => ValidatePlayPrelude(state, m),
             // Sub-move types when no PendingAction (invalid)
             PlaceTileMove or ChooseTargetPlayerMove or SelectCardMove
-                or ChooseOptionMove or DiscardCardsMove =>
+                or ChooseOptionMove or DiscardCardsMove or ChooseEffectOrderMove =>
                 "No pending action to resolve.",
             _ => $"Unknown move type: {move.GetType().Name}",
         };
@@ -613,6 +613,11 @@ public static class MoveValidator
                 discard.CardIds.Length == pending.Count
                     ? null
                     : $"Must discard exactly {pending.Count} cards.",
+
+            (ChooseEffectOrderPending pending, ChooseEffectOrderMove choose) =>
+                choose.EffectIndex == -1 || pending.RemainingEffectIndices.Contains(choose.EffectIndex)
+                    ? null
+                    : "Invalid effect index.",
 
             _ => $"Expected resolution for {state.PendingAction!.GetType().Name}, got {move.GetType().Name}.",
         };

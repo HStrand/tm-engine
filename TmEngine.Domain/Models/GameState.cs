@@ -88,6 +88,12 @@ public sealed record GameState
     /// </summary>
     public PendingAction? PendingAction { get; init; }
 
+    /// <summary>
+    /// If non-null, remaining effects to execute after the current PendingAction resolves.
+    /// Stores the source card ID and the index of the next effect to resume from.
+    /// </summary>
+    public PendingEffectQueue? EffectQueue { get; init; }
+
     // ── Audit ──────────────────────────────────────────────────
 
     public required int MoveNumber { get; init; }

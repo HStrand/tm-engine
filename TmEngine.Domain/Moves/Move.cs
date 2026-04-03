@@ -105,3 +105,9 @@ public sealed record ChooseOptionMove(int PlayerId, int OptionIndex) : Move(Play
 
 /// <summary>Player discards cards from hand to resolve a DiscardCardsPending.</summary>
 public sealed record DiscardCardsMove(int PlayerId, ImmutableArray<string> CardIds) : Move(PlayerId);
+
+/// <summary>
+/// Player chooses which effect to resolve next from a ChooseEffectOrderPending.
+/// EffectIndex is the original index into the card's effect array, or -1 to auto-execute all remaining.
+/// </summary>
+public sealed record ChooseEffectOrderMove(int PlayerId, int EffectIndex) : Move(PlayerId);

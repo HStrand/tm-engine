@@ -80,21 +80,134 @@ public static class EffectExecutor
     }
 
     /// <summary>
-    /// Execute a list of effects sequentially. Stops and returns a PendingAction
-    /// if any effect requires player input.
+    /// Execute a list of effects sequentially by index. Stops and returns a PendingAction
+    /// if any effect requires player input. Stores remaining indices in EffectQueue.
     /// </summary>
-    public static (GameState State, PendingAction? Pending) ExecuteAll(
-        GameState state, int playerId, ImmutableArray<Effect> effects, string? sourceCardId = null)
+    public static (GameState State, PendingAction? Pending) ExecuteSequential(
+        GameState state, int playerId, ImmutableArray<Effect> effects,
+        ImmutableArray<int> indices, string? sourceCardId = null, string effectSource = "onPlay")
     {
-        foreach (var effect in effects)
+        for (int pos = 0; pos < indices.Length; pos++)
         {
-            var (newState, pending) = Execute(state, playerId, effect, sourceCardId);
+            int i = indices[pos];
+            var (newState, pending) = Execute(state, playerId, effects[i], sourceCardId);
             state = newState;
             if (pending != null)
+            {
+                // Store remaining indices (after this one) in the queue
+                if (sourceCardId != null && pos + 1 < indices.Length)
+                {
+                    var remaining = indices.RemoveRange(0, pos + 1);
+                    state = state with
+                    {
+                        EffectQueue = new PendingEffectQueue(sourceCardId, remaining, effectSource),
+                    };
+                }
                 return (state, pending);
+            }
         }
         return (state, null);
     }
+
+    /// <summary>
+    /// Execute effects with player-ordered execution. Auto-executes immediate effects,
+    /// then presents orderable effects for the player to choose the order.
+    /// </summary>
+    public static (GameState State, PendingAction? Pending) ExecuteWithOrdering(
+        GameState state, int playerId, ImmutableArray<Effect> effects,
+        string? sourceCardId = null, string effectSource = "onPlay")
+    {
+        // Phase 1: Auto-execute all non-orderable effects
+        var orderableIndices = ImmutableArray.CreateBuilder<int>();
+        for (int i = 0; i < effects.Length; i++)
+        {
+            if (IsOrderable(effects[i]))
+            {
+                orderableIndices.Add(i);
+            }
+            else
+            {
+                var (newState, pending) = Execute(state, playerId, effects[i], sourceCardId);
+                state = newState;
+                // Auto-execute effects shouldn't create pending actions, but handle it just in case
+                if (pending != null)
+                {
+                    // Store remaining effects (orderable + remaining auto) in queue
+                    var remaining = orderableIndices.ToImmutable();
+                    for (int j = i + 1; j < effects.Length; j++)
+                        remaining = remaining.Add(j);
+                    if (sourceCardId != null && remaining.Length > 0)
+                        state = state with { EffectQueue = new PendingEffectQueue(sourceCardId, remaining, effectSource) };
+                    return (state, pending);
+                }
+            }
+        }
+
+        var orderable = orderableIndices.ToImmutable();
+
+        // Phase 2: Handle orderable effects
+        if (orderable.Length == 0)
+            return (state, null);
+
+        if (orderable.Length == 1)
+        {
+            // Only one orderable effect — execute directly
+            return ExecuteSequential(state, playerId, effects, orderable, sourceCardId, effectSource);
+        }
+
+        // 2+ orderable effects — let the player choose the order
+        var descriptions = orderable.Select(i => DescribeEffect(effects[i])).ToImmutableArray();
+        return (state, new ChooseEffectOrderPending(
+            sourceCardId ?? "", effectSource, orderable, descriptions));
+    }
+
+    /// <summary>
+    /// Returns true if this effect type should be player-ordered (strategically meaningful).
+    /// </summary>
+    public static bool IsOrderable(Effect effect) => effect switch
+    {
+        PlaceOceanEffect => true,
+        PlaceTileEffect => true,
+        ClaimLandEffect => true,
+        RemoveResourceEffect => true,
+        StealResourceEffect => true,
+        DrawCardsEffect => true,
+        DrawAndPlayOneEffect => true,
+        RevealUntilTagEffect => true,
+        ChooseEffect => true,
+        AddCardResourceEffect e => e.TargetCardId == null, // only if target not specified
+        PlayCardFromHandEffect => true,
+        DiscardCardsEffect => true,
+        CompoundEffect => true,
+        _ => false,
+    };
+
+    /// <summary>
+    /// Returns a human-readable description of an effect for the ordering UI.
+    /// </summary>
+    public static string DescribeEffect(Effect effect) => effect switch
+    {
+        RaiseTemperatureEffect e => e.Steps == 1 ? "Raise temperature 1 step" : $"Raise temperature {e.Steps} steps",
+        RaiseOxygenEffect e => e.Steps == 1 ? "Raise oxygen 1 step" : $"Raise oxygen {e.Steps} steps",
+        PlaceOceanEffect e => e.Count == 1 ? "Place an ocean tile" : $"Place {e.Count} ocean tiles",
+        PlaceTileEffect e => $"Place a {e.TileType} tile",
+        ClaimLandEffect => "Claim a land hex",
+        RemoveResourceEffect e => $"Remove up to {e.Amount} {e.Resource} from any player",
+        StealResourceEffect e => $"Steal up to {e.Amount} {e.Resource} from any player",
+        ReduceAnyProductionEffect e => $"Reduce any player's {e.Resource} production by {e.Amount}",
+        ChangeProductionEffect e => e.Amount >= 0 ? $"+{e.Amount} {e.Resource} production" : $"{e.Amount} {e.Resource} production",
+        ChangeResourceEffect e => e.Amount >= 0 ? $"Gain {e.Amount} {e.Resource}" : $"Lose {-e.Amount} {e.Resource}",
+        DrawCardsEffect e => e.Count == 1 ? "Draw 1 card" : $"Draw {e.Count} cards",
+        DrawAndPlayOneEffect e => $"Draw {e.DrawCount} cards and play 1",
+        RevealUntilTagEffect e => $"Reveal cards until {e.Count} {e.Tag} tag(s) found",
+        ChooseEffect => "Choose one option",
+        AddCardResourceEffect e => $"Add {e.Amount} {e.ResourceType} to a card",
+        PlayCardFromHandEffect => "Play a card from hand",
+        DiscardCardsEffect e => $"Discard {e.Count} card(s)",
+        ChangeTREffect e => $"{(e.Amount >= 0 ? "+" : "")}{e.Amount} TR",
+        CompoundEffect e => string.Join("; ", e.Effects.Select(DescribeEffect)),
+        _ => effect.GetType().Name,
+    };
 
     // ── Resource & Production ──────────────────────────────────
 
@@ -556,7 +669,7 @@ public static class EffectExecutor
         });
 
         // Execute the card's on-play effects
-        return ExecuteAll(state, playerId, entry.OnPlayEffects);
+        return ExecuteWithOrdering(state, playerId, entry.OnPlayEffects, cardId);
     }
 
     // ── TR ──────────────────────────────────────────────────────
@@ -581,6 +694,8 @@ public static class EffectExecutor
     private static (GameState, PendingAction?) ApplyCompound(
         GameState state, int playerId, CompoundEffect e, string? sourceCardId)
     {
-        return ExecuteAll(state, playerId, e.Effects, sourceCardId);
+        // CompoundEffect is treated as a single unit — sub-effects execute sequentially
+        var indices = Enumerable.Range(0, e.Effects.Length).ToImmutableArray();
+        return ExecuteSequential(state, playerId, e.Effects, indices, sourceCardId);
     }
 }

@@ -544,6 +544,31 @@ public class MovePresenter
                 }
                 return MakeMove("Pass");
             }
+            case "ChooseEffectOrder":
+            {
+                var sourceCard = pending["sourceCardId"]?.Value<string>() ?? "";
+                var indices = pending["remainingEffectIndices"]?.ToObject<List<int>>() ?? new();
+                var descriptions = pending["effectDescriptions"]?.ToObject<List<string>>() ?? new();
+
+                Console.WriteLine($"Choose which effect of {CardName(sourceCard)} to resolve next:");
+                for (int i = 0; i < descriptions.Count; i++)
+                    Console.WriteLine($"  {i + 1}. {descriptions[i]}");
+                Console.WriteLine($"  {descriptions.Count + 1}. [AUTO] Resolve all remaining in default order");
+
+                int choice = ReadChoice(descriptions.Count + 1);
+                if (choice == descriptions.Count + 1)
+                {
+                    var move = MakeMove("ChooseEffectOrder");
+                    move["effectIndex"] = -1;
+                    return move;
+                }
+                else
+                {
+                    var move = MakeMove("ChooseEffectOrder");
+                    move["effectIndex"] = indices[choice - 1];
+                    return move;
+                }
+            }
         }
 
         Console.WriteLine("Unknown pending action type. Passing.");

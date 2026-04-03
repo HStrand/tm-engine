@@ -78,6 +78,8 @@ public class MoveJsonConverter : JsonConverter<Move>
 
             "DiscardCards" => new DiscardCardsMove(playerId, ReadStringArray(obj, "cardIds")),
 
+            "ChooseEffectOrder" => new ChooseEffectOrderMove(playerId, obj["effectIndex"]!.Value<int>()),
+
             _ => throw new JsonSerializationException($"Unknown move type: '{type}'"),
         };
     }
@@ -113,6 +115,7 @@ public class MoveJsonConverter : JsonConverter<Move>
             SelectCardMove => "SelectCard",
             ChooseOptionMove => "ChooseOption",
             DiscardCardsMove => "DiscardCards",
+            ChooseEffectOrderMove => "ChooseEffectOrder",
             _ => value.GetType().Name,
         };
 
