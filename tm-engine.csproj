@@ -3,7 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
     <RootNamespace>tm_engine</RootNamespace>
-    <DefaultItemExcludes>$(DefaultItemExcludes);TmEngine.Domain/**;TmEngine.Domain.Tests/**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);TmEngine.Domain/**;TmEngine.Domain.Tests/**;TmEngine.Cli/**</DefaultItemExcludes>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Blobs" Version="12.27.0" />

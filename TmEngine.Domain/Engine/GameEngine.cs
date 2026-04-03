@@ -361,11 +361,13 @@ public static class GameEngine
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
 
-        return state with
+        state = state with
         {
             ClaimedMilestones = state.ClaimedMilestones.Add(
                 new MilestoneClaim(move.MilestoneName, move.PlayerId)),
         };
+
+        return PhaseManager.AfterAction(state);
     }
 
     private static GameState ApplyFundAward(GameState state, FundAwardMove move)
@@ -398,11 +400,13 @@ public static class GameEngine
             });
         }
 
-        return state with
+        state = state with
         {
             FundedAwards = state.FundedAwards.Add(
                 new AwardFunding(move.AwardName, move.PlayerId)),
         };
+
+        return PhaseManager.AfterAction(state);
     }
 
     // ── Setup ───────────────────────────────────────────────────
