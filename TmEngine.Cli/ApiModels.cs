@@ -53,7 +53,8 @@ public record CreateGameRequest(
     string Map,
     bool CorporateEra,
     bool DraftVariant,
-    bool PreludeExpansion);
+    bool PreludeExpansion,
+    int? Seed = null);
 
 // ── Responses ──
 

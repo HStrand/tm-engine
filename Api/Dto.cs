@@ -8,7 +8,8 @@ public sealed record CreateGameRequest(
     MapName Map,
     bool CorporateEra,
     bool DraftVariant,
-    bool PreludeExpansion);
+    bool PreludeExpansion,
+    int? Seed = null);
 
 public sealed record CreateGameResponse(string GameId);
 

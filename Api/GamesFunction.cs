@@ -36,7 +36,7 @@ public class GamesFunction
         if (request == null)
             return JsonResult(HttpStatusCode.BadRequest, new ErrorResponse("Invalid request body."));
 
-        var seed = Random.Shared.Next();
+        var seed = request.Seed ?? Random.Shared.Next();
         var options = new GameSetupOptions(
             request.PlayerCount,
             request.Map,

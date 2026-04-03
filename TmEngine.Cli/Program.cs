@@ -29,6 +29,10 @@ Console.Write("Prelude expansion? (y/N) [N]: ");
 var preludeInput = Console.ReadLine()?.Trim();
 bool prelude = preludeInput?.Equals("y", StringComparison.OrdinalIgnoreCase) ?? false;
 
+Console.Write("RNG seed (Enter for random): ");
+var seedInput = Console.ReadLine()?.Trim();
+int? seed = int.TryParse(seedInput, out int parsedSeed) ? parsedSeed : null;
+
 Console.Write("API base URL [http://localhost:7102/api]: ");
 var urlInput = Console.ReadLine()?.Trim();
 var baseUrl = string.IsNullOrEmpty(urlInput) ? "http://localhost:7102/api" : urlInput;
@@ -40,12 +44,13 @@ var bot = new BotPlayer(BotPlayerId);
 
 // Create game
 Console.WriteLine();
-Console.WriteLine($"Creating game: {map}, CE={corporateEra}, Draft={draft}, Prelude={prelude}...");
+var seedInfo = seed.HasValue ? $", Seed={seed}" : "";
+Console.WriteLine($"Creating game: {map}, CE={corporateEra}, Draft={draft}, Prelude={prelude}{seedInfo}...");
 
 string gameId;
 try
 {
-    gameId = await api.CreateGameAsync(new CreateGameRequest(2, map, corporateEra, draft, prelude));
+    gameId = await api.CreateGameAsync(new CreateGameRequest(2, map, corporateEra, draft, prelude, seed));
 }
 catch (Exception ex)
 {
