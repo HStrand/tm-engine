@@ -61,6 +61,8 @@ public class MoveJsonConverter : JsonConverter<Move>
 
             "Pass" => new PassMove(playerId),
 
+            "EndTurn" => new EndTurnMove(playerId),
+
             "PerformFirstAction" => new PerformFirstActionMove(playerId),
 
             "PlayPrelude" => new PlayPreludeMove(playerId, obj["preludeId"]!.Value<string>()!),
@@ -103,6 +105,7 @@ public class MoveJsonConverter : JsonConverter<Move>
             ConvertPlantsMove => "ConvertPlants",
             ConvertHeatMove => "ConvertHeat",
             PassMove => "Pass",
+            EndTurnMove => "EndTurn",
             PerformFirstActionMove => "PerformFirstAction",
             PlayPreludeMove => "PlayPrelude",
             PlaceTileMove => "PlaceTile",

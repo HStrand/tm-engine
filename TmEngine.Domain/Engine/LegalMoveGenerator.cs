@@ -65,7 +65,8 @@ public sealed record PlayableCard(
 public sealed record StandardProjectOption(
     StandardProject Project,
     bool Available,
-    int Cost);
+    int Cost,
+    ImmutableArray<HexCoord>? ValidLocations = null);
 
 public sealed record ClaimableMilestone(string Name);
 
@@ -76,8 +77,10 @@ public sealed record UsableCardAction(string CardId);
 public sealed record ActionPhaseOptions
 {
     public bool CanPass { get; init; }
+    public bool CanEndTurn { get; init; }
     public bool CanConvertHeat { get; init; }
     public bool CanConvertPlants { get; init; }
+    public ImmutableArray<HexCoord> ValidGreeneryLocations { get; init; } = [];
     public bool CanPerformFirstAction { get; init; }
     public ImmutableList<PlayableCard> PlayableCards { get; init; } = [];
     public ImmutableList<StandardProjectOption> StandardProjects { get; init; } = [];
@@ -88,7 +91,8 @@ public sealed record ActionPhaseOptions
 
 public sealed record FinalGreeneryOptions(
     bool CanConvert,
-    bool CanPass);
+    bool CanPass,
+    ImmutableArray<HexCoord> ValidGreeneryLocations = default);
 
 /// <summary>
 /// Generates the set of legal moves available to a player in the current game state.
@@ -203,20 +207,21 @@ public static class LegalMoveGenerator
         bool mustPerformFirstAction = !player.PerformedFirstAction;
         bool mustFundFreeAward = player.HasFreeAwardFunding;
 
-        // If first action is required, only that + pass are available
+        // If first action is required, only that + pass/end turn are available
         if (mustPerformFirstAction)
         {
             return new AvailableMoves
             {
                 Actions = new ActionPhaseOptions
                 {
-                    CanPass = true,
+                    CanPass = player.ActionsThisTurn == 0,
+                    CanEndTurn = player.ActionsThisTurn >= 1,
                     CanPerformFirstAction = true,
                 }
             };
         }
 
-        // If Vitor must fund free award, only awards + pass
+        // If Vitor must fund free award, only awards + pass/end turn
         if (mustFundFreeAward)
         {
             var freeAwards = GetFundableAwards(state, player, map, isFree: true);
@@ -224,7 +229,8 @@ public static class LegalMoveGenerator
             {
                 Actions = new ActionPhaseOptions
                 {
-                    CanPass = true,
+                    CanPass = player.ActionsThisTurn == 0,
+                    CanEndTurn = player.ActionsThisTurn >= 1,
                     FundableAwards = freeAwards,
                 }
             };
@@ -235,11 +241,14 @@ public static class LegalMoveGenerator
         {
             Actions = new ActionPhaseOptions
             {
-                CanPass = true,
+                CanPass = player.ActionsThisTurn == 0,
+                CanEndTurn = player.ActionsThisTurn >= 1,
                 CanConvertHeat = player.Resources.Heat >= Constants.HeatPerTemperature
                                  && state.Temperature < map.MaxTemperature,
                 CanConvertPlants = player.Resources.Plants >= Constants.PlantsPerGreenery
                                    && BoardLogic.GetValidGreeneryPlacements(state, playerId).Length > 0,
+                ValidGreeneryLocations = player.Resources.Plants >= Constants.PlantsPerGreenery
+                    ? BoardLogic.GetValidGreeneryPlacements(state, playerId) : [],
                 CanPerformFirstAction = false,
                 PlayableCards = GetPlayableCards(state, player),
                 StandardProjects = GetStandardProjects(state, player, map),
@@ -256,12 +265,13 @@ public static class LegalMoveGenerator
             return new AvailableMoves { WaitingForOtherPlayer = true };
 
         var player = state.GetPlayer(playerId);
-        bool canConvert = player.Resources.Plants >= Constants.PlantsPerGreenery
-                          && BoardLogic.GetValidGreeneryPlacements(state, playerId).Length > 0;
+        var greeneryLocations = player.Resources.Plants >= Constants.PlantsPerGreenery
+            ? BoardLogic.GetValidGreeneryPlacements(state, playerId) : [];
+        bool canConvert = greeneryLocations.Length > 0;
 
         return new AvailableMoves
         {
-            FinalGreenery = new FinalGreeneryOptions(canConvert, CanPass: true)
+            FinalGreenery = new FinalGreeneryOptions(canConvert, CanPass: true, greeneryLocations)
         };
     }
 
@@ -328,19 +338,19 @@ public static class LegalMoveGenerator
 
         // Aquifer
         bool oceansAvailable = state.OceansPlaced < map.MaxOceans;
-        bool aquiferHasLocations = oceansAvailable && BoardLogic.GetValidOceanPlacements(state).Length > 0;
+        var oceanLocations = oceansAvailable ? BoardLogic.GetValidOceanPlacements(state) : [];
         result.Add(new StandardProjectOption(StandardProject.Aquifer,
-            mc >= Constants.AquiferCost && aquiferHasLocations, Constants.AquiferCost));
+            mc >= Constants.AquiferCost && oceanLocations.Length > 0, Constants.AquiferCost, oceanLocations));
 
         // Greenery
-        bool greeneryHasLocations = BoardLogic.GetValidGreeneryPlacements(state, player.PlayerId).Length > 0;
+        var greeneryLocations = BoardLogic.GetValidGreeneryPlacements(state, player.PlayerId);
         result.Add(new StandardProjectOption(StandardProject.Greenery,
-            mc >= Constants.GreeneryCost && greeneryHasLocations, Constants.GreeneryCost));
+            mc >= Constants.GreeneryCost && greeneryLocations.Length > 0, Constants.GreeneryCost, greeneryLocations));
 
         // City
-        bool cityHasLocations = BoardLogic.GetValidCityPlacements(state).Length > 0;
+        var cityLocations = BoardLogic.GetValidCityPlacements(state);
         result.Add(new StandardProjectOption(StandardProject.City,
-            mc >= Constants.CityCost && cityHasLocations, Constants.CityCost));
+            mc >= Constants.CityCost && cityLocations.Length > 0, Constants.CityCost, cityLocations));
 
         return result.ToImmutable();
     }

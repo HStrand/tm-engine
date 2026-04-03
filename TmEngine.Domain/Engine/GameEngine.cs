@@ -175,6 +175,7 @@ public static class GameEngine
     private static GameState ApplyMove(GameState state, Move move) => move switch
     {
         PassMove m => ApplyPass(state, m),
+        EndTurnMove m => ApplyEndTurn(state, m),
         ConvertHeatMove m => ApplyConvertHeat(state, m),
         ConvertPlantsMove m => ApplyConvertPlants(state, m),
         UseStandardProjectMove m => ApplyStandardProject(state, m),
@@ -205,6 +206,11 @@ public static class GameEngine
         if (state.Phase == GamePhase.FinalGreeneryConversion)
             return PhaseManager.AdvanceFinalGreeneryConversion(state);
 
+        return PhaseManager.AdvanceActivePlayer(state);
+    }
+
+    private static GameState ApplyEndTurn(GameState state, EndTurnMove move)
+    {
         return PhaseManager.AdvanceActivePlayer(state);
     }
 
@@ -1002,6 +1008,7 @@ public static class GameEngine
     private static string FormatMove(Move move) => move switch
     {
         PassMove m => $"Player {m.PlayerId} passes",
+        EndTurnMove m => $"Player {m.PlayerId} ends turn",
         ConvertHeatMove m => $"Player {m.PlayerId} converts heat to temperature",
         ConvertPlantsMove m => $"Player {m.PlayerId} converts plants to greenery at {m.Location}",
         UseStandardProjectMove m => $"Player {m.PlayerId} uses {m.Project}",

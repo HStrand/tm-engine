@@ -36,6 +36,7 @@ public static class MoveValidator
         return move switch
         {
             PassMove m => ValidatePass(state, m),
+            EndTurnMove m => ValidateEndTurn(state, m),
             ConvertHeatMove m => ValidateConvertHeat(state, m),
             ConvertPlantsMove m => ValidateConvertPlants(state, m),
             UseStandardProjectMove m => ValidateStandardProject(state, m),
@@ -112,6 +113,20 @@ public static class MoveValidator
 
         // Passing is always allowed, even with a pending first action
         // (the first action obligation carries over to the next generation)
+        return null;
+    }
+
+    private static string? ValidateEndTurn(GameState state, EndTurnMove move)
+    {
+        if (state.Phase != GamePhase.Action)
+            return "Can only end turn during the action phase.";
+
+        var player = state.GetPlayer(move.PlayerId);
+        if (player.Passed)
+            return "Player has already passed.";
+        if (player.ActionsThisTurn < 1)
+            return "Must take at least one action before ending turn.";
+
         return null;
     }
 

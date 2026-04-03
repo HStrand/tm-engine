@@ -94,6 +94,22 @@ public static class CardNameResolver
                 ids.Add(action.CardId);
         }
 
+        if (moves.PendingAction != null)
+        {
+            switch (moves.PendingAction)
+            {
+                case AddCardResourcePending p:
+                    ids.UnionWith(p.ValidCardIds);
+                    break;
+                case ChooseCardToPlayPending p:
+                    ids.UnionWith(p.CardIds);
+                    break;
+                case BuyCardsPending p:
+                    ids.UnionWith(p.AvailableCardIds);
+                    break;
+            }
+        }
+
         return Resolve(ids);
     }
 

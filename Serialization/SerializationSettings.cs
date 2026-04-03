@@ -11,9 +11,12 @@ public static class SerializationSettings
 {
     public static JsonSerializerSettings Create()
     {
+        var resolver = new CamelCasePropertyNamesContractResolver();
+        resolver.NamingStrategy!.ProcessDictionaryKeys = false;
+
         var settings = new JsonSerializerSettings
         {
-            ContractResolver = new CamelCasePropertyNamesContractResolver(),
+            ContractResolver = resolver,
             NullValueHandling = NullValueHandling.Ignore,
             Formatting = Formatting.Indented,
             ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
