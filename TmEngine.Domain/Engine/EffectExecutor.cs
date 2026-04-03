@@ -47,7 +47,7 @@ public static class EffectExecutor
             ChangeTREffect e => (ApplyChangeTR(state, playerId, e), null),
 
             // Special
-            IncreaseLowestProductionEffect => ApplyIncreaseLowestProduction(state, playerId),
+            IncreaseLowestProductionEffect => ApplyIncreaseLowestProduction(state, playerId, sourceCardId),
             DrawAndPlayOneEffect e => ApplyDrawAndPlayOne(state, playerId, e),
             RevealUntilTagEffect e => (ApplyRevealUntilTag(state, playerId, e), null),
             PlaceOffMapCityEffect e => ApplyPlaceOffMapCity(state, playerId, e),
@@ -476,7 +476,7 @@ public static class EffectExecutor
 
     // ── Special ─────────────────────────────────────────────────
 
-    private static (GameState, PendingAction?) ApplyIncreaseLowestProduction(GameState state, int playerId)
+    private static (GameState, PendingAction?) ApplyIncreaseLowestProduction(GameState state, int playerId, string? sourceCardId)
     {
         var player = state.GetPlayer(playerId);
         var prod = player.Production;
@@ -512,7 +512,7 @@ public static class EffectExecutor
 
         return (state, new ChooseOptionPending(
             $"Choose which production to increase (all at {min}):",
-            options));
+            options, sourceCardId));
     }
 
     private static (GameState, PendingAction?) ApplyPlaceOffMapCity(GameState state, int playerId, PlaceOffMapCityEffect e)

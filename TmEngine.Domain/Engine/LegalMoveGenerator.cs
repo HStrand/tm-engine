@@ -438,6 +438,10 @@ public static class LegalMoveGenerator
                 if (!preconditionMet) continue;
             }
 
+            // Check affordability
+            if (!CanAffordActionCost(player, entry.Action))
+                continue;
+
             result.Add(new UsableCardAction(cardId));
         }
 
@@ -456,10 +460,26 @@ public static class LegalMoveGenerator
                     _ => true,
                 };
             }
-            if (preconditionMet)
+            if (preconditionMet && CanAffordActionCost(player, corpEntry.Action))
                 result.Add(new UsableCardAction(player.CorporationId));
         }
 
         return result.ToImmutable();
+    }
+
+    private static bool CanAffordActionCost(PlayerState player, CardAction action)
+    {
+        if (action.Cost == null) return true;
+
+        return action.Cost switch
+        {
+            SpendMCCost c => player.Resources.MegaCredits >= c.Amount,
+            SpendEnergyCost c => player.Resources.Energy >= c.Amount,
+            SpendSteelCost c => player.Resources.Steel >= c.Amount,
+            SpendTitaniumCost c => player.Resources.Titanium >= c.Amount,
+            SpendHeatCost c => player.Resources.Heat >= c.Amount,
+            SpendCardResourceCost c => player.CardResources.Values.Any(v => v >= c.Amount),
+            _ => true,
+        };
     }
 }

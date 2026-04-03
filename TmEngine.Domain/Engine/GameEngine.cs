@@ -1008,7 +1008,10 @@ public static class GameEngine
 
         state = state with { PendingAction = null };
 
-        // Look up the ChooseEffect from the source card to get the actual effects
+        if (move.OptionIndex < 0 || move.OptionIndex >= pending.Options.Length)
+            return state;
+
+        // Try to find a ChooseEffect on the source card
         if (pending.SourceCardId != null && CardRegistry.TryGet(pending.SourceCardId, out var entry))
         {
             var chooseEffect = FindChooseEffect(entry);
@@ -1021,6 +1024,22 @@ public static class GameEngine
 
                 if (newPending != null)
                     return state with { PendingAction = newPending };
+
+                return state;
+            }
+        }
+
+        // Fallback: handle production increase choice (from IncreaseLowestProductionEffect)
+        var chosenOption = pending.Options[move.OptionIndex];
+        if (chosenOption.EndsWith(" production", StringComparison.OrdinalIgnoreCase))
+        {
+            var resourceName = chosenOption.Replace(" production", "", StringComparison.OrdinalIgnoreCase);
+            if (Enum.TryParse<ResourceType>(resourceName, ignoreCase: true, out var resourceType))
+            {
+                state = state.UpdatePlayer(move.PlayerId, p => p with
+                {
+                    Production = p.Production.Add(resourceType, 1),
+                });
             }
         }
 
