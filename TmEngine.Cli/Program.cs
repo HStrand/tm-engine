@@ -34,9 +34,38 @@ bool draft = true;
 //bool prelude = preludeInput?.Equals("y", StringComparison.OrdinalIgnoreCase) ?? false;
 bool prelude = true;
 
-Console.Write("RNG seed (Enter for random): ");
-var seedInput = Console.ReadLine()?.Trim();
-int? seed = int.TryParse(seedInput, out int parsedSeed) ? parsedSeed : null;
+Console.Write("Search for a card? (Enter card name, or leave blank for seed/random): ");
+var cardInput = Console.ReadLine()?.Trim();
+
+int? seed = null;
+if (!string.IsNullOrEmpty(cardInput))
+{
+    var cardId = CardSearcher.ResolveCardName(cardInput);
+    while (cardId == null)
+    {
+        Console.Write("Search for a card? (Enter card name, or leave blank for seed/random): ");
+        cardInput = Console.ReadLine()?.Trim();
+        if (string.IsNullOrEmpty(cardInput))
+            break;
+        cardId = CardSearcher.ResolveCardName(cardInput);
+    }
+
+    if (cardId != null)
+    {
+        Console.WriteLine("  Searching for a matching seed...");
+        seed = CardSearcher.SearchForCard(cardId, corporateEra, prelude);
+        Console.ForegroundColor = ConsoleColor.Green;
+        Console.WriteLine($"  Found seed: {seed}");
+        Console.ResetColor();
+    }
+}
+
+if (seed == null)
+{
+    Console.Write("RNG seed (Enter for random): ");
+    var seedInput = Console.ReadLine()?.Trim();
+    seed = int.TryParse(seedInput, out int parsedSeed) ? parsedSeed : null;
+}
 
 var baseUrl = "http://localhost:7102/api";
 
