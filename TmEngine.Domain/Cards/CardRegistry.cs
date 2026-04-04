@@ -1175,7 +1175,8 @@ public static class CardRegistry
         SetEffects(builder, "113", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 1)]);
 
-        // 114: Breathing Filters — VP only
+        // 114: Breathing Filters — Requires 7% O2, 2 VP. No effects.
+        SetEffects(builder, "114");
 
         // 115: Artificial Photosynthesis — +1 plant prod OR +2 energy prod
         SetEffects(builder, "115", onPlayEffects:
@@ -1203,7 +1204,8 @@ public static class CardRegistry
             new ChangeResourceEffect(ResourceType.Plants, 2),
         ]);
 
-        // 119: Dust Seals — VP only
+        // 119: Dust Seals — Requires max 3 oceans, 1 VP. No effects.
+        SetEffects(builder, "119");
 
         // 120: Urbanized Area — -1 energy prod, +2 MC prod, place city adjacent to 2 cities
         SetEffects(builder, "120", onPlayEffects:
