@@ -591,6 +591,8 @@ public static class MoveValidator
                     ? null
                     : "Card is not one of the available options.",
 
+            (PlayCardFromHandPending, PassMove) => null, // Skip playing a card
+
             (PlayCardFromHandPending pending, PlayCardMove play) =>
                 ValidatePlayCardForPending(state, play, pending),
 

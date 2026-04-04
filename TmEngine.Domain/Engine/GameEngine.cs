@@ -214,6 +214,10 @@ public static class GameEngine
 
     private static GameState ApplyPass(GameState state, PassMove move)
     {
+        // Pass can also be used to skip a PlayCardFromHandPending
+        if (state.PendingAction is PlayCardFromHandPending)
+            return state with { PendingAction = null };
+
         state = state.UpdatePlayer(move.PlayerId, p => p with { Passed = true });
 
         if (state.Phase == GamePhase.FinalGreeneryConversion)

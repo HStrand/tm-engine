@@ -301,6 +301,10 @@ public static class LegalMoveGenerator
             if (RequirementChecker.CanAffordEffects(state, player.PlayerId, entry) != null)
                 continue;
 
+            // Check tile placement effects have valid locations
+            if (!HasValidPlacements(state, player.PlayerId, entry))
+                continue;
+
             var discount = RequirementChecker.GetCardDiscount(player, card.Tags);
             var effectiveCost = Math.Max(0, card.Cost - discount);
 
@@ -465,6 +469,41 @@ public static class LegalMoveGenerator
         }
 
         return result.ToImmutable();
+    }
+
+    private static bool HasValidPlacements(GameState state, int playerId, CardEntry entry)
+    {
+        foreach (var effect in entry.OnPlayEffects)
+        {
+            if (effect is PlaceTileEffect tileEffect)
+            {
+                var locations = BoardLogic.GetValidTilePlacements(state, tileEffect.TileType, playerId);
+                // Apply constraint filter if present
+                if (tileEffect.Constraint != null)
+                {
+                    locations = tileEffect.Constraint.Value switch
+                    {
+                        PlacementConstraint.Isolated => locations
+                            .Where(c => !c.GetAdjacentCoords().Any(a => state.PlacedTiles.ContainsKey(a)))
+                            .ToImmutableArray(),
+                        PlacementConstraint.AdjacentTo2Cities => locations
+                            .Where(c => c.GetAdjacentCoords().Count(a =>
+                                state.PlacedTiles.TryGetValue(a, out var t) && (t.Type == TileType.City || t.Type == TileType.Capital)) >= 2)
+                            .ToImmutableArray(),
+                        _ => locations,
+                    };
+                }
+                if (locations.Length == 0) return false;
+            }
+            else if (effect is PlaceOceanEffect)
+            {
+                var map = MapDefinitions.GetMap(state.Map);
+                if (state.OceansPlaced >= map.MaxOceans) continue;
+                var locations = BoardLogic.GetValidOceanPlacements(state);
+                if (locations.Length == 0) return false;
+            }
+        }
+        return true;
     }
 
     private static bool CanAffordActionCost(PlayerState player, CardAction action)

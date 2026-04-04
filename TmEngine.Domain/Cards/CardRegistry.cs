@@ -88,8 +88,8 @@ public static class CardRegistry
 
     private static ImmutableDictionary<string, CardEntry> BuildRegistry()
     {
-        // Load all card definitions from cards.json
-        var definitions = CardDataLoader.LoadAll();
+        // Load all card definitions
+        var definitions = CardDefinitions.LoadAll();
         var builder = ImmutableDictionary.CreateBuilder<string, CardEntry>();
 
         foreach (var (id, def) in definitions)
