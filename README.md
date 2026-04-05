@@ -11,6 +11,84 @@ dotnet build
 func start --port 7102
 ```
 
+## Architecture
+
+### How Moves Are Processed
+
+The engine is a pure, deterministic state machine. Game state is an immutable record — every move produces a new state object.
+
+```
+Client                    API Layer                  Domain Engine
+  │                          │                            │
+  │  POST /games/{id}/moves  │                            │
+  │ ─────────────────────────>  deserialize JSON           │
+  │                          │  (MoveJsonConverter)        │
+  │                          │                            │
+  │                          │  load state from storage    │
+  │                          │                            │
+  │                          │      GameEngine.Apply() ──>│
+  │                          │                            │
+  │                          │          1. MoveValidator.Validate()
+  │                          │             └─ reject if illegal
+  │                          │
+  │                          │          2. Apply state transition
+  │                          │             └─ new immutable GameState
+  │                          │
+  │                          │          3. Execute card effects
+  │                          │             └─ EffectExecutor
+  │                          │             └─ TriggerSystem (ongoing effects)
+  │                          │
+  │                          │          4. Advance phase/turn
+  │                          │             └─ PhaseManager
+  │                          │
+  │                          │  <── (newState, result) ───│
+  │                          │                            │
+  │                          │  save new state to storage  │
+  │  <── response ───────────│                            │
+```
+
+Key properties:
+- **Deterministic**: Same state + same move = same result. Games are fully replayable.
+- **Immutable**: State is never mutated. Each move produces a new `GameState` record.
+- **Stateless API**: The server holds no in-memory state. State is loaded from storage, transformed, and saved back.
+
+### Pending Actions (Sub-Moves)
+
+Some moves trigger effects that need further player input before the turn can continue. These are modeled as **pending actions** on the game state.
+
+```
+1. Player plays card "Comet" (010)
+       │
+       v
+2. Engine executes effects:
+   - Raise temperature 1 step       ✓ immediate
+   - Place an ocean tile            ✗ needs player to choose location
+       │
+       v
+3. GameState.PendingAction = PlaceTilePending
+   (remaining effects queued in EffectQueue)
+       │
+       v
+4. Client calls GET /legal-moves
+   → response contains PendingAction with valid locations
+       │
+       v
+5. Player submits PlaceTile sub-move
+       │
+       v
+6. Engine resolves pending action, resumes queued effects:
+   - Remove up to 3 plants from any player  ✗ needs target
+       │
+       v
+7. GameState.PendingAction = RemoveResourcePending
+   ... cycle repeats until all effects resolved
+       │
+       v
+8. Turn advances normally
+```
+
+The 12 pending action types cover tile placement, target selection, card selection, option choices, discarding, and effect ordering.
+
 ## API
 
 ### Create Game
