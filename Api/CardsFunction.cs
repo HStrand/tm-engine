@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using tm_engine.Storage;
 using TmEngine.Domain.Cards;
@@ -30,11 +32,13 @@ public class CardsFunction
 {
     private readonly IGameStore _store;
     private readonly JsonSerializerSettings _jsonSettings;
+    private readonly ILogger<CardsFunction> _logger;
 
-    public CardsFunction(IGameStore store, JsonSerializerSettings jsonSettings)
+    public CardsFunction(IGameStore store, JsonSerializerSettings jsonSettings, ILogger<CardsFunction> logger)
     {
         _store = store;
         _jsonSettings = jsonSettings;
+        _logger = logger;
     }
 
     /// <summary>
@@ -45,6 +49,8 @@ public class CardsFunction
         [HttpTrigger(AuthorizationLevel.Function, "get", Route = "games/{id}/cards")] HttpRequest req,
         string id)
     {
+        var sw = Stopwatch.StartNew();
+
         GameState state;
         try
         {
@@ -71,6 +77,7 @@ public class CardsFunction
             })
             .ToImmutableDictionary(c => c.Id);
 
+        _logger.LogInformation("GetGameCards completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
         return JsonResult(HttpStatusCode.OK, cards);
     }
 

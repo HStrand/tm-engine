@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using tm_engine.Storage;
 using TmEngine.Domain.Engine;
@@ -17,17 +19,21 @@ public class GamesFunction
 {
     private readonly IGameStore _store;
     private readonly JsonSerializerSettings _jsonSettings;
+    private readonly ILogger<GamesFunction> _logger;
 
-    public GamesFunction(IGameStore store, JsonSerializerSettings jsonSettings)
+    public GamesFunction(IGameStore store, JsonSerializerSettings jsonSettings, ILogger<GamesFunction> logger)
     {
         _store = store;
         _jsonSettings = jsonSettings;
+        _logger = logger;
     }
 
     [FunctionName("CreateGame")]
     public async Task<IActionResult> CreateGame(
         [HttpTrigger(AuthorizationLevel.Function, "post", Route = "games")] HttpRequest req)
     {
+        var sw = Stopwatch.StartNew();
+
         var body = await new StreamReader(req.Body).ReadToEndAsync();
         if (string.IsNullOrEmpty(body))
             return JsonResult(HttpStatusCode.BadRequest, new ErrorResponse("Request body is required."));
@@ -47,6 +53,7 @@ public class GamesFunction
         var state = GameEngine.Setup(options, seed);
         await _store.CreateGameAsync(state);
 
+        _logger.LogInformation("CreateGame completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
         return JsonResult(HttpStatusCode.Created, new CreateGameResponse(state.GameId));
     }
 
@@ -55,6 +62,8 @@ public class GamesFunction
         [HttpTrigger(AuthorizationLevel.Function, "get", Route = "games/{id}")] HttpRequest req,
         string id)
     {
+        var sw = Stopwatch.StartNew();
+
         var playerIdStr = req.Query["playerId"];
         int? playerId = !string.IsNullOrEmpty(playerIdStr) ? int.Parse(playerIdStr) : null;
 
@@ -70,6 +79,7 @@ public class GamesFunction
 
         var filtered = GameStateView.FilterForPlayer(state, playerId);
         var cardNames = CardNameResolver.FromGameState(filtered);
+        _logger.LogInformation("GetGame completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
         return JsonResult(HttpStatusCode.OK, new GameStateResponse(filtered, cardNames));
     }
 

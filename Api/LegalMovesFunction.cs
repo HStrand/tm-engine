@@ -1,10 +1,12 @@
 using System;
+using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using tm_engine.Storage;
 using TmEngine.Domain.Engine;
@@ -16,11 +18,13 @@ public class LegalMovesFunction
 {
     private readonly IGameStore _store;
     private readonly JsonSerializerSettings _jsonSettings;
+    private readonly ILogger<LegalMovesFunction> _logger;
 
-    public LegalMovesFunction(IGameStore store, JsonSerializerSettings jsonSettings)
+    public LegalMovesFunction(IGameStore store, JsonSerializerSettings jsonSettings, ILogger<LegalMovesFunction> logger)
     {
         _store = store;
         _jsonSettings = jsonSettings;
+        _logger = logger;
     }
 
     [FunctionName("GetLegalMoves")]
@@ -28,6 +32,8 @@ public class LegalMovesFunction
         [HttpTrigger(AuthorizationLevel.Function, "get", Route = "games/{id}/legal-moves")] HttpRequest req,
         string id)
     {
+        var sw = Stopwatch.StartNew();
+
         var playerIdStr = req.Query["playerId"];
         if (string.IsNullOrEmpty(playerIdStr))
             return JsonResult(HttpStatusCode.BadRequest,
@@ -47,6 +53,7 @@ public class LegalMovesFunction
 
         var legalMoves = LegalMoveGenerator.GetLegalMoves(state, playerId);
         var cardNames = CardNameResolver.FromAvailableMoves(legalMoves);
+        _logger.LogInformation("GetLegalMoves completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
         return JsonResult(HttpStatusCode.OK, new LegalMovesResponse(legalMoves, cardNames));
     }
 

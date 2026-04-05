@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using tm_engine.Storage;
 using TmEngine.Domain.Engine;
@@ -19,11 +21,13 @@ public class MovesFunction
 {
     private readonly IGameStore _store;
     private readonly JsonSerializerSettings _jsonSettings;
+    private readonly ILogger<MovesFunction> _logger;
 
-    public MovesFunction(IGameStore store, JsonSerializerSettings jsonSettings)
+    public MovesFunction(IGameStore store, JsonSerializerSettings jsonSettings, ILogger<MovesFunction> logger)
     {
         _store = store;
         _jsonSettings = jsonSettings;
+        _logger = logger;
     }
 
     [FunctionName("SubmitMove")]
@@ -31,6 +35,8 @@ public class MovesFunction
         [HttpTrigger(AuthorizationLevel.Function, "post", Route = "games/{id}/moves")] HttpRequest req,
         string id)
     {
+        var sw = Stopwatch.StartNew();
+
         var playerIdStr = req.Query["playerId"];
         if (string.IsNullOrEmpty(playerIdStr))
             return JsonResult(HttpStatusCode.BadRequest,
@@ -77,6 +83,7 @@ public class MovesFunction
 
         var filtered = GameStateView.FilterForPlayer(newState, playerId);
         var cardNames = CardNameResolver.FromGameState(filtered);
+        _logger.LogInformation("SubmitMove completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
         return JsonResult(HttpStatusCode.OK, new SubmitMoveResponse(true, null, filtered, cardNames));
     }
 

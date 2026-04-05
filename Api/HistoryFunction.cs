@@ -1,10 +1,12 @@
 using System;
+using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using tm_engine.Storage;
 using TmEngine.Domain.Models;
@@ -15,11 +17,13 @@ public class HistoryFunction
 {
     private readonly IGameStore _store;
     private readonly JsonSerializerSettings _jsonSettings;
+    private readonly ILogger<HistoryFunction> _logger;
 
-    public HistoryFunction(IGameStore store, JsonSerializerSettings jsonSettings)
+    public HistoryFunction(IGameStore store, JsonSerializerSettings jsonSettings, ILogger<HistoryFunction> logger)
     {
         _store = store;
         _jsonSettings = jsonSettings;
+        _logger = logger;
     }
 
     [FunctionName("GetHistory")]
@@ -27,6 +31,8 @@ public class HistoryFunction
         [HttpTrigger(AuthorizationLevel.Function, "get", Route = "games/{id}/history")] HttpRequest req,
         string id)
     {
+        var sw = Stopwatch.StartNew();
+
         GameState state;
         try
         {
@@ -37,6 +43,7 @@ public class HistoryFunction
             return JsonResult(HttpStatusCode.NotFound, new ErrorResponse($"Game '{id}' not found."));
         }
 
+        _logger.LogInformation("GetHistory completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
         return JsonResult(HttpStatusCode.OK, new HistoryResponse(state.Log));
     }
 
