@@ -177,7 +177,7 @@ while (!gameOver)
                 display.ShowGameState(debugState, debugCardNames, HumanPlayerId);
 
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"\n  ActivePlayerIndex: {debugState.ActivePlayerIndex}");
+                Console.WriteLine($"\n  ActivePlayerId: {debugState.ActivePlayerId}");
                 foreach (var p in debugState.Players)
                     Console.WriteLine($"  Player {p.PlayerId}: Passed={p.Passed}, ActionsThisTurn={p.ActionsThisTurn}");
 

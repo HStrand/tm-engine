@@ -22,18 +22,14 @@ public static class PhaseManager
         }
 
         // Find next non-passed player
-        var nextIndex = (state.ActivePlayerIndex + 1) % state.Players.Count;
-        while (state.Players[nextIndex].Passed)
+        var nextId = state.GetNextPlayerId(state.ActivePlayerId);
+        while (state.GetPlayer(nextId).Passed)
         {
-            nextIndex = (nextIndex + 1) % state.Players.Count;
+            nextId = state.GetNextPlayerId(nextId);
         }
 
-        return state with
-        {
-            ActivePlayerIndex = nextIndex,
-            Players = state.Players.SetItem(nextIndex,
-                state.Players[nextIndex] with { ActionsThisTurn = 0 }),
-        };
+        state = state with { ActivePlayerId = nextId };
+        return state.UpdatePlayer(nextId, p => p with { ActionsThisTurn = 0 });
     }
 
     /// <summary>
@@ -126,14 +122,14 @@ public static class PhaseManager
     /// </summary>
     public static GameState StartNewGeneration(GameState state)
     {
-        var nextFirstPlayer = (state.FirstPlayerIndex + 1) % state.Players.Count;
+        var nextFirstPlayer = state.GetNextPlayerId(state.FirstPlayerId);
         var playerCount = state.Players.Count;
 
         state = state with
         {
             Generation = state.Generation + 1,
-            FirstPlayerIndex = nextFirstPlayer,
-            ActivePlayerIndex = nextFirstPlayer,
+            FirstPlayerId = nextFirstPlayer,
+            ActivePlayerId = nextFirstPlayer,
             Phase = GamePhase.Research,
         };
 
@@ -165,6 +161,15 @@ public static class PhaseManager
 
             // Pass direction: clockwise for even gens, counter-clockwise for odd
             bool passLeft = state.Generation % 2 == 0;
+            var passingTo = ImmutableDictionary.CreateBuilder<int, int>();
+            for (int i = 0; i < playerCount; i++)
+            {
+                var fromId = state.Players[i].PlayerId;
+                var toIndex = passLeft
+                    ? (i + 1) % playerCount
+                    : (i - 1 + playerCount) % playerCount;
+                passingTo[fromId] = state.Players[toIndex].PlayerId;
+            }
 
             state = state with
             {
@@ -173,7 +178,7 @@ public static class PhaseManager
                     DraftHands = draftHands.ToImmutable(),
                     DraftedCards = draftedCards.ToImmutable(),
                     DraftRound = 0,
-                    PassLeft = passLeft,
+                    PassingTo = passingTo.ToImmutable(),
                 },
             };
         }
@@ -201,7 +206,7 @@ public static class PhaseManager
         return state with
         {
             Phase = GamePhase.FinalGreeneryConversion,
-            ActivePlayerIndex = state.FirstPlayerIndex,
+            ActivePlayerId = state.FirstPlayerId,
             // Reset passed state so players can choose to convert or pass
             Players = ResetPassedState(state.Players),
         };
@@ -217,13 +222,13 @@ public static class PhaseManager
             return state with { Phase = GamePhase.GameEnd };
         }
 
-        var nextIndex = (state.ActivePlayerIndex + 1) % state.Players.Count;
-        while (state.Players[nextIndex].Passed)
+        var nextId = state.GetNextPlayerId(state.ActivePlayerId);
+        while (state.GetPlayer(nextId).Passed)
         {
-            nextIndex = (nextIndex + 1) % state.Players.Count;
+            nextId = state.GetNextPlayerId(nextId);
         }
 
-        return state with { ActivePlayerIndex = nextIndex };
+        return state with { ActivePlayerId = nextId };
     }
 
     /// <summary>
@@ -234,7 +239,7 @@ public static class PhaseManager
         return state with
         {
             Phase = GamePhase.Action,
-            ActivePlayerIndex = state.FirstPlayerIndex,
+            ActivePlayerId = state.FirstPlayerId,
             Players = ResetPassedState(state.Players),
         };
     }

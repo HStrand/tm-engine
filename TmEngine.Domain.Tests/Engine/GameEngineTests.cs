@@ -33,8 +33,8 @@ public class GameEngineTests
             PreludeExpansion = false,
             Phase = GamePhase.Action,
             Generation = 1,
-            ActivePlayerIndex = 0,
-            FirstPlayerIndex = 0,
+            ActivePlayerId = 0,
+            FirstPlayerId = 0,
             Oxygen = 0,
             Temperature = Constants.MinTemperature,
             OceansPlaced = 0,
@@ -55,12 +55,12 @@ public class GameEngineTests
     public void Pass_SwitchesToNextPlayer()
     {
         var state = CreateTestGame();
-        Assert.Equal(0, state.ActivePlayerIndex);
+        Assert.Equal(0, state.ActivePlayerId);
 
         var (newState, result) = GameEngine.Apply(state, new PassMove(0));
 
         Assert.True(result.IsSuccess);
-        Assert.Equal(1, newState.ActivePlayerIndex);
+        Assert.Equal(1, newState.ActivePlayerId);
         Assert.True(newState.Players[0].Passed);
     }
 
@@ -86,7 +86,7 @@ public class GameEngineTests
     public void WrongPlayer_IsRejected()
     {
         var state = CreateTestGame();
-        Assert.Equal(0, state.ActivePlayerIndex);
+        Assert.Equal(0, state.ActivePlayerId);
 
         var (_, result) = GameEngine.Apply(state, new PassMove(1));
 
@@ -101,12 +101,12 @@ public class GameEngineTests
         // Player 0, action 1: convert heat
         var (s1, r1) = GameEngine.Apply(state, new ConvertHeatMove(0));
         Assert.True(r1.IsSuccess);
-        Assert.Equal(0, s1.ActivePlayerIndex); // Still player 0's turn
+        Assert.Equal(0, s1.ActivePlayerId); // Still player 0's turn
 
         // Player 0, action 2: convert heat again
         var (s2, r2) = GameEngine.Apply(s1, new ConvertHeatMove(0));
         Assert.True(r2.IsSuccess);
-        Assert.Equal(1, s2.ActivePlayerIndex); // Now player 1's turn
+        Assert.Equal(1, s2.ActivePlayerId); // Now player 1's turn
     }
 
     // ── Convert Heat ───────────────────────────────────────────
@@ -618,25 +618,25 @@ public class GameEngineTests
         // Player 0 action 1: convert heat
         var (s1, r1) = GameEngine.Apply(state, new ConvertHeatMove(0));
         Assert.True(r1.IsSuccess);
-        Assert.Equal(0, s1.ActivePlayerIndex); // still player 0's turn
+        Assert.Equal(0, s1.ActivePlayerId); // still player 0's turn
         Assert.Equal(1, s1.Players[0].ActionsThisTurn);
 
         // Player 0 action 2: convert heat
         var (s2, r2) = GameEngine.Apply(s1, new ConvertHeatMove(0));
         Assert.True(r2.IsSuccess);
-        Assert.Equal(1, s2.ActivePlayerIndex); // should advance to player 1
+        Assert.Equal(1, s2.ActivePlayerId); // should advance to player 1
         Assert.Equal(0, s2.Players[1].ActionsThisTurn); // player 1 reset
 
         // Player 1 action 1: convert heat
         var (s3, r3) = GameEngine.Apply(s2, new ConvertHeatMove(1));
         Assert.True(r3.IsSuccess);
-        Assert.Equal(1, s3.ActivePlayerIndex);
+        Assert.Equal(1, s3.ActivePlayerId);
         Assert.Equal(1, s3.Players[1].ActionsThisTurn);
 
         // Player 1 action 2: convert heat
         var (s4, r4) = GameEngine.Apply(s3, new ConvertHeatMove(1));
         Assert.True(r4.IsSuccess);
-        Assert.Equal(0, s4.ActivePlayerIndex); // should advance back to player 0
+        Assert.Equal(0, s4.ActivePlayerId); // should advance back to player 0
         Assert.Equal(0, s4.Players[0].ActionsThisTurn); // player 0 reset
 
         // Player 0 should now have legal moves
@@ -667,7 +667,7 @@ public class GameEngineTests
         Assert.True(r1b.IsSuccess);
         Assert.Null(s1b.PendingAction);
         // Still player 0's turn (only 1 action taken)
-        Assert.Equal(0, s1b.ActivePlayerIndex);
+        Assert.Equal(0, s1b.ActivePlayerId);
         Assert.Equal(1, s1b.Players[0].ActionsThisTurn);
     }
 
@@ -683,7 +683,7 @@ public class GameEngineTests
         var (s1, r1) = GameEngine.Apply(state, new ConvertHeatMove(0));
         Assert.True(r1.IsSuccess);
         Assert.Null(s1.PendingAction);
-        Assert.Equal(0, s1.ActivePlayerIndex);
+        Assert.Equal(0, s1.ActivePlayerId);
 
         // Player 0 action 2: convert heat (-2 -> 0, triggers ocean bonus)
         var (s2, r2) = GameEngine.Apply(s1, new ConvertHeatMove(0));
@@ -691,7 +691,7 @@ public class GameEngineTests
         Assert.NotNull(s2.PendingAction);
         Assert.IsType<PlaceTilePending>(s2.PendingAction);
         // Active player should still be 0 until pending resolved
-        Assert.Equal(0, s2.ActivePlayerIndex);
+        Assert.Equal(0, s2.ActivePlayerId);
 
         // Resolve ocean placement
         var pending = (PlaceTilePending)s2.PendingAction;
@@ -699,7 +699,7 @@ public class GameEngineTests
         Assert.True(r3.IsSuccess);
         Assert.Null(s3.PendingAction);
         // NOW should advance to player 1 (2 actions completed + pending resolved)
-        Assert.Equal(1, s3.ActivePlayerIndex);
+        Assert.Equal(1, s3.ActivePlayerId);
         Assert.Equal(0, s3.Players[1].ActionsThisTurn);
 
         // Player 1 should have legal moves

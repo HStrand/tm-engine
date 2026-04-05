@@ -157,8 +157,8 @@ public static class GameEngine
             // If no cards are registered yet, skip setup and go to Action for testing
             Phase = hasCards ? GamePhase.Setup : GamePhase.Action,
             Generation = 1,
-            ActivePlayerIndex = 0,
-            FirstPlayerIndex = 0,
+            ActivePlayerId = 0,
+            FirstPlayerId = 0,
             Oxygen = Constants.MinOxygen,
             Temperature = Constants.MinTemperature,
             OceansPlaced = 0,
@@ -492,7 +492,7 @@ public static class GameEngine
             {
                 Setup = null,
                 Phase = GamePhase.PreludePlacement,
-                ActivePlayerIndex = 0,
+                ActivePlayerId = state.Players[0].PlayerId,
                 Prelude = new PreludeState
                 {
                     RemainingPreludes = remainingPreludes.ToImmutable(),
@@ -619,16 +619,19 @@ public static class GameEngine
             return TransitionToActionPhase(state);
 
         // Current player still has preludes? Stay on them.
-        var currentPlayerPreludes = state.Prelude.RemainingPreludes[state.ActivePlayerIndex];
+        var activeIndex = state.GetPlayerIndex(state.ActivePlayerId);
+        var currentPlayerPreludes = state.Prelude.RemainingPreludes[activeIndex];
         if (currentPlayerPreludes.Count > 0)
             return state;
 
         // Find next player with preludes
-        for (int offset = 1; offset < state.Players.Count; offset++)
+        var nextId = state.GetNextPlayerId(state.ActivePlayerId);
+        for (int i = 1; i < state.Players.Count; i++)
         {
-            var nextIndex = (state.ActivePlayerIndex + offset) % state.Players.Count;
+            var nextIndex = state.GetPlayerIndex(nextId);
             if (state.Prelude.RemainingPreludes[nextIndex].Count > 0)
-                return state with { ActivePlayerIndex = nextIndex };
+                return state with { ActivePlayerId = nextId };
+            nextId = state.GetNextPlayerId(nextId);
         }
 
         // All preludes played — transition to Action phase
@@ -708,21 +711,20 @@ public static class GameEngine
             return state with { Draft = draft };
         }
 
-        // All picked — pass remaining hands
+        // All picked — pass remaining hands according to PassingTo mapping
         var playerCount = state.Players.Count;
-        var newHands = ImmutableList.CreateBuilder<ImmutableList<string>>();
+        var newHands = new ImmutableList<string>[playerCount];
         for (int i = 0; i < playerCount; i++)
         {
-            // Pass direction alternates: left for even gens, right for odd
-            int sourceIndex = draft.PassLeft
-                ? (i - 1 + playerCount) % playerCount
-                : (i + 1) % playerCount;
-            newHands.Add(draft.DraftHands[sourceIndex]);
+            var fromId = state.Players[i].PlayerId;
+            var toId = draft.PassingTo[fromId];
+            var toIndex = state.GetPlayerIndex(toId);
+            newHands[toIndex] = draft.DraftHands[i];
         }
 
         draft = draft with
         {
-            DraftHands = newHands.ToImmutable(),
+            DraftHands = [.. newHands],
             DraftRound = draft.DraftRound + 1,
         };
 

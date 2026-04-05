@@ -282,8 +282,8 @@ public class SetupAndResearchTests
             PreludeExpansion = false,
             Phase = GamePhase.Research,
             Generation = 2,
-            ActivePlayerIndex = 1, // First player is 1 for gen 2
-            FirstPlayerIndex = 1,
+            ActivePlayerId = 1, // First player is 1 for gen 2
+            FirstPlayerId = 1,
             Oxygen = 0,
             Temperature = Constants.MinTemperature,
             OceansPlaced = 0,
@@ -325,8 +325,8 @@ public class SetupAndResearchTests
             PreludeExpansion = false,
             Phase = GamePhase.Action,
             Generation = 1,
-            ActivePlayerIndex = 0,
-            FirstPlayerIndex = 0,
+            ActivePlayerId = 0,
+            FirstPlayerId = 0,
             Oxygen = 0,
             Temperature = Constants.MinTemperature,
             OceansPlaced = 0,

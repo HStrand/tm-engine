@@ -49,7 +49,7 @@ public sealed record SetupOptions(
     ImmutableList<string> AvailablePreludes,
     ImmutableList<string> AvailableCards);
 
-public sealed record DraftOptions(ImmutableList<string> DraftHand);
+public sealed record DraftOptions(ImmutableList<string> DraftHand, int PassingToPlayerId);
 
 public sealed record BuyCardsOptions(
     ImmutableList<string> AvailableCards,
@@ -175,7 +175,10 @@ public static class LegalMoveGenerator
 
             var draftHand = state.Draft.DraftHands[playerIndex];
             if (draftHand.Count > 0)
-                return new AvailableMoves { Draft = new DraftOptions(draftHand) };
+            {
+                var passingToId = state.Draft.PassingTo[playerId];
+                return new AvailableMoves { Draft = new DraftOptions(draftHand, passingToId) };
+            }
         }
 
         // Buy sub-phase

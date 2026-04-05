@@ -25,9 +25,11 @@ public static class PaymentCalculator
             remaining = Math.Max(0, remaining - steelUsed * steelValue);
         }
 
+        // Use MC first, then heat only for what MC can't cover
         if (canUseHeat && availableHeat > 0)
         {
-            heatUsed = Math.Min(availableHeat, remaining);
+            var mcShortfall = Math.Max(0, remaining - availableMC);
+            heatUsed = Math.Min(availableHeat, mcShortfall);
             remaining -= heatUsed;
         }
 

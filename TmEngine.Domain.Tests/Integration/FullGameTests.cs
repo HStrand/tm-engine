@@ -418,7 +418,7 @@ public class FullGameTests
         Assert.True(r2.IsSuccess);
 
         // After 2 actions, turn passes to player 1
-        Assert.Equal(1, s2.ActivePlayerIndex);
+        Assert.Equal(1, s2.ActivePlayerId);
 
         // Player 1 uses Power Plant standard project
         var (s3, _) = GameEngine.Apply(s2,
@@ -428,7 +428,7 @@ public class FullGameTests
         var (s4, _) = GameEngine.Apply(s3, new PassMove(1));
 
         // Back to player 0 (hasn't passed yet)
-        Assert.Equal(0, s4.ActivePlayerIndex);
+        Assert.Equal(0, s4.ActivePlayerId);
 
         // Player 0 plays Sponsors (cost 10, +2 MC prod)
         var (s5, _) = GameEngine.Apply(s4,
@@ -624,12 +624,12 @@ public class FullGameTests
                     current = resolved;
                 }
 
-                if (current.ActivePlayerIndex != 0) break; // turn advanced after 2 actions
+                if (current.ActivePlayerId != 0) break; // turn advanced after 2 actions
             }
         }
 
         // Player 0 passes
-        if (!current.Players[0].Passed && current.ActivePlayerIndex == 0 && current.PendingAction == null)
+        if (!current.Players[0].Passed && current.ActivePlayerId == 0 && current.PendingAction == null)
         {
             var (s, _) = GameEngine.Apply(current, new PassMove(0));
             current = s;
@@ -679,7 +679,7 @@ public class FullGameTests
         for (int i = 0; i < current.Players.Count; i++)
         {
             var player = current.Players[i];
-            if (!player.PerformedFirstAction && current.ActivePlayerIndex == i && current.PendingAction == null)
+            if (!player.PerformedFirstAction && current.ActivePlayerId == i && current.PendingAction == null)
             {
                 var (next, _) = GameEngine.Apply(current,
                     new PerformFirstActionMove(player.PlayerId));
@@ -698,7 +698,7 @@ public class FullGameTests
 
         // Vitor: fund free award if needed
         while (current.Phase == GamePhase.Action
-            && current.Players[current.ActivePlayerIndex].HasFreeAwardFunding
+            && current.Players[current.ActivePlayerId].HasFreeAwardFunding
             && current.PendingAction == null)
         {
             var pid = current.GetActivePlayer().PlayerId;
@@ -716,7 +716,7 @@ public class FullGameTests
         Assert.Equal(GamePhase.Action, current.Phase);
 
         // Both pass gen 1
-        if (!current.Players[0].Passed && current.ActivePlayerIndex == 0)
+        if (!current.Players[0].Passed && current.ActivePlayerId == 0)
         {
             var (next, _) = GameEngine.Apply(current, new PassMove(0));
             current = next;
@@ -756,8 +756,8 @@ public class FullGameTests
             PreludeExpansion = false,
             Phase = GamePhase.Action,
             Generation = 1,
-            ActivePlayerIndex = 0,
-            FirstPlayerIndex = 0,
+            ActivePlayerId = 0,
+            FirstPlayerId = 0,
             Oxygen = 0,
             Temperature = Constants.MinTemperature,
             OceansPlaced = 0,
@@ -836,8 +836,8 @@ public class FullGameTests
             PreludeExpansion = false,
             Phase = GamePhase.Action,
             Generation = 1,
-            ActivePlayerIndex = 0,
-            FirstPlayerIndex = 0,
+            ActivePlayerId = 0,
+            FirstPlayerId = 0,
             Oxygen = 0,
             Temperature = Constants.MinTemperature,
             OceansPlaced = 0,

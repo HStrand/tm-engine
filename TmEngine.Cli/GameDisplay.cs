@@ -7,7 +7,7 @@ public class GameDisplay
         Console.WriteLine();
         Console.ForegroundColor = ConsoleColor.Cyan;
         Console.WriteLine($"=== Generation {state.Generation} | {state.Phase} | " +
-            $"Player {state.ActivePlayerIndex}'s turn ===");
+            $"Player {state.ActivePlayerId}'s turn ===");
         Console.ResetColor();
 
         // Global parameters

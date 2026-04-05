@@ -89,10 +89,11 @@ public class GameStateDto
     public bool CorporateEra { get; set; }
     public bool DraftVariant { get; set; }
     public bool PreludeExpansion { get; set; }
-    public string Phase { get; set; } = "";
+	public int MoveNumber { get; set; }
+	public string Phase { get; set; } = "";
     public int Generation { get; set; }
-    public int ActivePlayerIndex { get; set; }
-    public int FirstPlayerIndex { get; set; }
+    public int ActivePlayerId { get; set; }
+    public int FirstPlayerId { get; set; }
     public int Oxygen { get; set; }
     public int Temperature { get; set; }
     public int OceansPlaced { get; set; }
@@ -101,7 +102,6 @@ public class GameStateDto
     public List<OffMapTileDto> OffMapTiles { get; set; } = new();
     public List<MilestoneClaimDto> ClaimedMilestones { get; set; } = new();
     public List<AwardFundingDto> FundedAwards { get; set; } = new();
-    public int MoveNumber { get; set; }
     public List<string> Log { get; set; } = new();
 }
 

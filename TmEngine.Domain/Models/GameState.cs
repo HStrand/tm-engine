@@ -15,16 +15,16 @@ public sealed record GameState
     public required bool DraftVariant { get; init; }
     public required bool PreludeExpansion { get; init; }
 
-    // ── Phase & Turn ───────────────────────────────────────────
-
-    public required GamePhase Phase { get; init; }
+	// ── Phase & Turn ───────────────────────────────────────────
+	public required int MoveNumber { get; init; }
+	public required GamePhase Phase { get; init; }
     public required int Generation { get; init; }
 
-    /// <summary>Index into Players for the currently active player.</summary>
-    public required int ActivePlayerIndex { get; init; }
+    /// <summary>Player ID of the currently active player.</summary>
+    public required int ActivePlayerId { get; init; }
 
-    /// <summary>Index into Players for the first player this generation.</summary>
-    public required int FirstPlayerIndex { get; init; }
+    /// <summary>Player ID of the first player this generation.</summary>
+    public required int FirstPlayerId { get; init; }
 
     // ── Global Parameters ──────────────────────────────────────
 
@@ -95,14 +95,12 @@ public sealed record GameState
 
     // ── Audit ──────────────────────────────────────────────────
 
-    public required int MoveNumber { get; init; }
-
     /// <summary>The move that produced this state, if any. Null for the initial state.</summary>
     public Moves.Move? LastMove { get; init; }
 
     // ── Helpers ─────────────────────────────────────────────────
 
-    public PlayerState GetActivePlayer() => Players[ActivePlayerIndex];
+    public PlayerState GetActivePlayer() => GetPlayer(ActivePlayerId);
 
     public bool IsGameOver() => Phase == GamePhase.GameEnd;
 
@@ -119,6 +117,14 @@ public sealed record GameState
 
     public int GetPlayerIndex(int playerId) =>
         Players.FindIndex(p => p.PlayerId == playerId);
+
+    /// <summary>Get the next player ID in turn order after the given player.</summary>
+    public int GetNextPlayerId(int playerId)
+    {
+        var index = GetPlayerIndex(playerId);
+        var nextIndex = (index + 1) % Players.Count;
+        return Players[nextIndex].PlayerId;
+    }
 
     public GameState UpdatePlayer(int playerId, Func<PlayerState, PlayerState> update)
     {
@@ -173,8 +179,8 @@ public sealed record DraftState
     /// <summary>Current draft round (0–3, 4 rounds total).</summary>
     public required int DraftRound { get; init; }
 
-    /// <summary>True if cards pass left (clockwise) this generation.</summary>
-    public required bool PassLeft { get; init; }
+    /// <summary>Maps each player ID to the player ID they pass remaining draft cards to.</summary>
+    public required ImmutableDictionary<int, int> PassingTo { get; init; }
 }
 
 /// <summary>
