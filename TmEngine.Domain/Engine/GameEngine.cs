@@ -55,8 +55,8 @@ public static class GameEngine
             }
         }
 
-        // Increment move number and log
-        newState = newState with { MoveNumber = newState.MoveNumber + 1 };
+        // Increment move number, record the move, and log
+        newState = newState with { MoveNumber = newState.MoveNumber + 1, LastMove = move };
         newState = newState.AppendLog($"[{newState.MoveNumber}] {FormatMove(move)}");
 
         return (newState, new Success());

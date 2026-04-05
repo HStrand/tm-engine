@@ -99,6 +99,9 @@ public sealed record GameState
     public required int MoveNumber { get; init; }
     public required ImmutableList<string> Log { get; init; }
 
+    /// <summary>The move that produced this state, if any. Null for the initial state.</summary>
+    public Moves.Move? LastMove { get; init; }
+
     // ── Helpers ─────────────────────────────────────────────────
 
     public PlayerState ActivePlayer => Players[ActivePlayerIndex];
