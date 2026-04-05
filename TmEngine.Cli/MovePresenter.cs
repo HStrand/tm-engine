@@ -367,7 +367,7 @@ public class MovePresenter
 
         if (actions.CanConvertPlants && actions.ValidGreeneryLocations.Count > 0)
         {
-            options.Add(("[PLANTS] Convert 8 plants → place greenery", () =>
+            options.Add(($"[PLANTS] Convert {actions.PlantConversionCost} plants → place greenery", () =>
             {
                 var loc = PromptLocation(actions.ValidGreeneryLocations);
                 var move = MakeMove("ConvertPlants");

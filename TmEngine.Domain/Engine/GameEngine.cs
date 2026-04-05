@@ -55,9 +55,8 @@ public static class GameEngine
             }
         }
 
-        // Increment move number, record the move, and log
+        // Increment move number and record the move
         newState = newState with { MoveNumber = newState.MoveNumber + 1, LastMove = move };
-        newState = newState.AppendLog($"[{newState.MoveNumber}] {FormatMove(move)}");
 
         return (newState, new Success());
     }
@@ -178,7 +177,6 @@ public static class GameEngine
                 SubmittedMoves = submittedMoves.ToImmutable(),
             } : null,
             MoveNumber = 0,
-            Log = [],
         };
     }
 
@@ -255,10 +253,10 @@ public static class GameEngine
 
     private static GameState ApplyConvertPlants(GameState state, ConvertPlantsMove move)
     {
-        // Spend 8 plants
+        var plantCost = RequirementChecker.GetPlantConversionCost(state.GetPlayer(move.PlayerId));
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
-            Resources = p.Resources.Add(ResourceType.Plants, -Constants.PlantsPerGreenery),
+            Resources = p.Resources.Add(ResourceType.Plants, -plantCost),
             ActionsThisTurn = state.Phase == GamePhase.Action ? p.ActionsThisTurn + 1 : p.ActionsThisTurn,
         });
 
@@ -459,7 +457,6 @@ public static class GameEngine
 
             // 1. Set corporation and apply starting effects (gives starting MC/resources)
             state = state.UpdatePlayer(playerId, p => p with { CorporationId = move.CorporationId });
-            state = state.AppendLog($"Player {playerId} selects corporation {CardName(move.CorporationId)}");
             if (CardRegistry.TryGet(move.CorporationId, out var corpEntry))
             {
                 var (newState, _) = EffectExecutor.ExecuteWithOrdering(state, playerId, corpEntry.OnPlayEffects, move.CorporationId);
@@ -473,12 +470,6 @@ public static class GameEngine
                 Resources = p.Resources.Add(ResourceType.MegaCredits, -cardCost),
                 Hand = p.Hand.AddRange(move.CardIdsToBuy),
             });
-            if (move.CardIdsToBuy.Length > 0)
-            {
-                var cardNames = string.Join(", ", move.CardIdsToBuy.Select(id => $"{CardName(id)} ({id})"));
-                state = state.AppendLog($"Player {playerId} buys {move.CardIdsToBuy.Length} cards: {cardNames}");
-            }
-
             // Discard unselected project cards
             var dealtCards = setup.DealtCards[i];
             var unboughtCards = dealtCards.Where(c => !move.CardIdsToBuy.Contains(c));
@@ -495,11 +486,6 @@ public static class GameEngine
                 var preludeList = move.PreludeIds.ToImmutableList();
                 remainingPreludes.Add(preludeList);
 
-                if (preludeList.Count > 0)
-                {
-                    var preludeNames = string.Join(", ", move.PreludeIds.Select(id => $"{CardName(id)} ({id})"));
-                    state = state.AppendLog($"Player {state.Players[i].PlayerId} selects preludes: {preludeNames}");
-                }
             }
 
             return state with
@@ -591,7 +577,6 @@ public static class GameEngine
             {
                 PlayedCards = p.PlayedCards.Add(move.PreludeId),
             });
-            state = state.AppendLog($"Player {playerId} plays prelude {CardName(move.PreludeId)}");
             var (newState, pending) = EffectExecutor.ExecuteWithOrdering(state, playerId, preludeEntry.OnPlayEffects, move.PreludeId);
             state = newState;
 
@@ -609,8 +594,6 @@ public static class GameEngine
             {
                 Resources = p.Resources.Add(ResourceType.MegaCredits, Constants.PreludeCompensation),
             });
-            state = state.AppendLog(
-                $"Player {playerId} cannot afford prelude {preludeEntry.Definition.Name}, receives {Constants.PreludeCompensation} MC");
         }
 
         // Remove this prelude from remaining and advance
@@ -971,7 +954,7 @@ public static class GameEngine
     {
         if (state.PendingAction is AddCardResourcePending addPending)
         {
-            state = state.UpdatePlayer(state.ActivePlayer.PlayerId, p =>
+            state = state.UpdatePlayer(state.GetActivePlayer().PlayerId, p =>
             {
                 var current = p.CardResources.GetValueOrDefault(move.CardId, 0);
                 return p with { CardResources = p.CardResources.SetItem(move.CardId, current + addPending.Amount) };
@@ -1195,7 +1178,7 @@ public static class GameEngine
     private static string CardName(string cardId) =>
         CardRegistry.TryGet(cardId, out var entry) ? entry.Definition.Name : cardId;
 
-    private static string FormatMove(Move move) => move switch
+    public static string FormatMove(Move move) => move switch
     {
         PassMove m => $"Player {m.PlayerId} passes",
         EndTurnMove m => $"Player {m.PlayerId} ends turn",

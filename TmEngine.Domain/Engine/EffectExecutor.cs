@@ -619,12 +619,6 @@ public static class EffectExecutor
             Hand = p.Hand.AddRange(kept),
         });
 
-        // Log all revealed cards (visible to all players)
-        var revealedNames = string.Join(", ", allRevealed);
-        var keptNames = string.Join(", ", kept);
-        state = state.AppendLog(
-            $"Player {playerId} reveals: [{revealedNames}]. Keeps: [{keptNames}].");
-
         return state;
     }
 

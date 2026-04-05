@@ -22,7 +22,7 @@ public static class SerializationSettings
             ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
         };
 
-        settings.Converters.Add(new StringEnumConverter(new CamelCaseNamingStrategy()));
+        settings.Converters.Add(new StringEnumConverter());
         settings.Converters.Add(new MoveJsonConverter());
         settings.Converters.Add(new PendingActionJsonConverter());
         settings.Converters.Add(new VictoryPointsJsonConverter());

@@ -659,7 +659,6 @@ public class FullGameTests
         Assert.True(r2.Temperature >= Constants.MinTemperature);
         Assert.True(cardsPlayed >= 0); // At least tried
         Assert.True(r2.MoveNumber > 0);
-        Assert.NotEmpty(r2.Log);
     }
 
     [Fact]
@@ -691,7 +690,7 @@ public class FullGameTests
                 {
                     if (tilePending.ValidLocations.Length == 0) break;
                     var (resolved, _) = GameEngine.Apply(current,
-                        new PlaceTileMove(current.ActivePlayer.PlayerId, tilePending.ValidLocations[0]));
+                        new PlaceTileMove(current.GetActivePlayer().PlayerId, tilePending.ValidLocations[0]));
                     current = resolved;
                 }
             }
@@ -702,7 +701,7 @@ public class FullGameTests
             && current.Players[current.ActivePlayerIndex].HasFreeAwardFunding
             && current.PendingAction == null)
         {
-            var pid = current.ActivePlayer.PlayerId;
+            var pid = current.GetActivePlayer().PlayerId;
             var map = MapDefinitions.GetMap(current.Map);
             var availableAward = map.AwardNames.FirstOrDefault(a =>
                 !current.FundedAwards.Any(f => f.AwardName == a));
@@ -742,8 +741,6 @@ public class FullGameTests
 
         Assert.Equal(GamePhase.Action, r2.Phase);
 
-        // Log should have meaningful entries
-        Assert.True(r2.Log.Count > 2);
     }
 
     // ── Helpers ─────────────────────────────────────────────────
@@ -782,7 +779,7 @@ public class FullGameTests
             DrawPile = drawPile,
             DiscardPile = [],
             MoveNumber = 0,
-            Log = [],
+
         };
     }
 
@@ -861,7 +858,7 @@ public class FullGameTests
             DrawPile = drawPile,
             DiscardPile = [],
             MoveNumber = 0,
-            Log = [],
+
         };
     }
 }

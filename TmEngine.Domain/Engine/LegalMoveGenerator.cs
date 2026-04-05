@@ -80,6 +80,7 @@ public sealed record ActionPhaseOptions
     public bool CanEndTurn { get; init; }
     public bool CanConvertHeat { get; init; }
     public bool CanConvertPlants { get; init; }
+    public int PlantConversionCost { get; init; } = Constants.PlantsPerGreenery;
     public ImmutableArray<HexCoord> ValidGreeneryLocations { get; init; } = [];
     public bool CanPerformFirstAction { get; init; }
     public ImmutableList<PlayableCard> PlayableCards { get; init; } = [];
@@ -102,13 +103,13 @@ public static class LegalMoveGenerator
 {
     public static AvailableMoves GetLegalMoves(GameState state, int playerId)
     {
-        if (state.IsGameOver)
+        if (state.IsGameOver())
             return new AvailableMoves { GameOver = true };
 
         // Pending action — only the active player can resolve it
         if (state.PendingAction != null)
         {
-            if (state.ActivePlayer.PlayerId != playerId)
+            if (state.GetActivePlayer().PlayerId != playerId)
                 return new AvailableMoves { WaitingForOtherPlayer = true };
 
             return new AvailableMoves { PendingAction = state.PendingAction };
@@ -145,7 +146,7 @@ public static class LegalMoveGenerator
 
     private static AvailableMoves GetPreludeMoves(GameState state, int playerId)
     {
-        if (state.Prelude == null || state.ActivePlayer.PlayerId != playerId)
+        if (state.Prelude == null || state.GetActivePlayer().PlayerId != playerId)
             return new AvailableMoves { WaitingForOtherPlayer = true };
 
         var playerIndex = state.GetPlayerIndex(playerId);
@@ -196,7 +197,7 @@ public static class LegalMoveGenerator
 
     private static AvailableMoves GetActionMoves(GameState state, int playerId)
     {
-        if (state.ActivePlayer.PlayerId != playerId)
+        if (state.GetActivePlayer().PlayerId != playerId)
             return new AvailableMoves { WaitingForOtherPlayer = true };
 
         var player = state.GetPlayer(playerId);
@@ -250,9 +251,10 @@ public static class LegalMoveGenerator
                 CanEndTurn = player.ActionsThisTurn >= 1,
                 CanConvertHeat = player.Resources.Heat >= Constants.HeatPerTemperature
                                  && state.Temperature < map.MaxTemperature,
-                CanConvertPlants = player.Resources.Plants >= Constants.PlantsPerGreenery
+                CanConvertPlants = player.Resources.Plants >= RequirementChecker.GetPlantConversionCost(player)
                                    && BoardLogic.GetValidGreeneryPlacements(state, playerId).Length > 0,
-                ValidGreeneryLocations = player.Resources.Plants >= Constants.PlantsPerGreenery
+                PlantConversionCost = RequirementChecker.GetPlantConversionCost(player),
+                ValidGreeneryLocations = player.Resources.Plants >= RequirementChecker.GetPlantConversionCost(player)
                     ? BoardLogic.GetValidGreeneryPlacements(state, playerId) : [],
                 CanPerformFirstAction = false,
                 PlayableCards = GetPlayableCards(state, player),
@@ -266,11 +268,11 @@ public static class LegalMoveGenerator
 
     private static AvailableMoves GetFinalGreeneryMoves(GameState state, int playerId)
     {
-        if (state.ActivePlayer.PlayerId != playerId)
+        if (state.GetActivePlayer().PlayerId != playerId)
             return new AvailableMoves { WaitingForOtherPlayer = true };
 
         var player = state.GetPlayer(playerId);
-        var greeneryLocations = player.Resources.Plants >= Constants.PlantsPerGreenery
+        var greeneryLocations = player.Resources.Plants >= RequirementChecker.GetPlantConversionCost(player)
             ? BoardLogic.GetValidGreeneryPlacements(state, playerId) : [];
         bool canConvert = greeneryLocations.Length > 0;
 

@@ -42,7 +42,7 @@ public class EffectExecutorTests
             DrawPile = ImmutableList.Create("draw1", "draw2", "draw3"),
             DiscardPile = [],
             MoveNumber = 0,
-            Log = [],
+
         };
     }
 

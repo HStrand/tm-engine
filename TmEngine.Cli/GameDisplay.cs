@@ -2,8 +2,6 @@ namespace TmEngine.Cli;
 
 public class GameDisplay
 {
-    private int _lastLogCount;
-
     public void ShowGameState(GameStateDto state, Dictionary<string, string> cardNames, int humanPlayerId)
     {
         Console.WriteLine();
@@ -86,15 +84,11 @@ public class GameDisplay
         }
     }
 
-    public void ShowNewLogEntries(List<string> log)
+    public void ShowLogEntry(string message)
     {
-        if (log.Count <= _lastLogCount) return;
-
         Console.ForegroundColor = ConsoleColor.DarkGray;
-        for (int i = _lastLogCount; i < log.Count; i++)
-            Console.WriteLine($"  {log[i]}");
+        Console.WriteLine($"  {message}");
         Console.ResetColor();
-        _lastLogCount = log.Count;
     }
 
     public void ShowFinalScores(GameStateDto state, Dictionary<string, string> cardNames)

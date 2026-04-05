@@ -133,8 +133,6 @@ while (!gameOver)
             {
                 var (finalState, finalNames) = await api.GetGameStateAsync(gameId, HumanPlayerId);
                 presenter.UpdateCardNames(finalNames);
-                var log = await api.GetHistoryAsync(gameId);
-                display.ShowNewLogEntries(log);
                 display.ShowFinalScores(finalState, finalNames);
                 gameOver = true;
                 break;
@@ -177,9 +175,6 @@ while (!gameOver)
             {
                 var (debugState, debugCardNames) = await api.GetGameStateAsync(gameId, HumanPlayerId);
                 display.ShowGameState(debugState, debugCardNames, HumanPlayerId);
-
-                var debugLog = await api.GetHistoryAsync(gameId);
-                display.ShowNewLogEntries(debugLog);
 
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"\n  ActivePlayerIndex: {debugState.ActivePlayerIndex}");
@@ -233,10 +228,6 @@ while (!gameOver)
     presenter.UpdateCardNames(stateCardNames);
     bot.UpdateCardNames(stateCardNames);
     var allCardNames = MergeCardNames(cardNames!, stateCardNames);
-
-    // Show new log entries
-    var history = await api.GetHistoryAsync(gameId);
-    display.ShowNewLogEntries(history);
 
     // Get the move
     Newtonsoft.Json.Linq.JObject move;

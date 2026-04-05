@@ -42,7 +42,7 @@ public static class PhaseManager
     /// </summary>
     public static GameState AfterAction(GameState state)
     {
-        var player = state.ActivePlayer;
+        var player = state.GetActivePlayer();
 
         if (player.ActionsThisTurn >= 2)
         {
@@ -62,7 +62,7 @@ public static class PhaseManager
         state = RunProductionPhase(state);
 
         // Check for game end: all parameters maxed means game ends after this generation's production
-        if (state.AllParametersMaxed)
+        if (state.AreAllParametersMaxed())
         {
             return StartFinalGreeneryConversion(state);
         }

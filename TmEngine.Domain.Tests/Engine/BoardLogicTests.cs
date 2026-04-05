@@ -33,7 +33,7 @@ public class BoardLogicTests
             DrawPile = [],
             DiscardPile = [],
             MoveNumber = 0,
-            Log = [],
+
         };
     }
 

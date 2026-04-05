@@ -45,7 +45,7 @@ public class GameEngineTests
             DrawPile = [],
             DiscardPile = [],
             MoveNumber = 0,
-            Log = [],
+
         };
     }
 
@@ -279,6 +279,42 @@ public class GameEngineTests
         Assert.True(result.IsSuccess);
         Assert.Equal(102, newState.Players[0].Resources.MegaCredits); // 100 + 2
         Assert.Single(newState.Players[0].Hand); // 1 card left
+    }
+
+    // ── Plant Conversion ────────────────────────────────────────
+
+    [Fact]
+    public void ConvertPlants_Ecoline_CanConvertWith7Plants()
+    {
+        // Ecoline has PlantConversionModifierEffect(7) — only needs 7 plants
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            CorporationId = "CORP02", // Ecoline
+            Resources = p.Resources with { Plants = 7 },
+        });
+
+        var greeneryLocations = BoardLogic.GetValidGreeneryPlacements(state, 0);
+        var greeneryHex = greeneryLocations[0];
+        var (newState, result) = GameEngine.Apply(state, new ConvertPlantsMove(0, greeneryHex));
+
+        Assert.True(result.IsSuccess, $"Expected success but got error: {result}");
+        Assert.Equal(0, newState.Players[0].Resources.Plants);
+        Assert.Equal(TileType.Greenery, newState.PlacedTiles[greeneryHex].Type);
+    }
+
+    [Fact]
+    public void ConvertPlants_Ecoline_LegalMovesAvailableWith7Plants()
+    {
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            CorporationId = "CORP02", // Ecoline
+            Resources = p.Resources with { Plants = 7 },
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.True(moves.Actions!.CanConvertPlants);
     }
 
     // ── Milestones & Awards ────────────────────────────────────
@@ -528,8 +564,8 @@ public class GameEngineTests
         s2 = PhaseManager.StartActionPhase(s2);
 
         // Gen 2: both pass
-        var (s3, _) = GameEngine.Apply(s2, new PassMove(s2.ActivePlayer.PlayerId));
-        var (s4, _) = GameEngine.Apply(s3, new PassMove(s3.ActivePlayer.PlayerId));
+        var (s3, _) = GameEngine.Apply(s2, new PassMove(s2.GetActivePlayer().PlayerId));
+        var (s4, _) = GameEngine.Apply(s3, new PassMove(s3.GetActivePlayer().PlayerId));
         Assert.Equal(3, s4.Generation);
     }
 
@@ -569,21 +605,6 @@ public class GameEngineTests
         var (s2, r2) = GameEngine.Apply(s1, new PassMove(1));
         Assert.True(r2.IsSuccess);
         Assert.Equal(GamePhase.GameEnd, s2.Phase);
-    }
-
-    // ── Audit Log ──────────────────────────────────────────────
-
-    [Fact]
-    public void Moves_AreLoggedSequentially()
-    {
-        var state = CreateTestGame();
-
-        var (s1, _) = GameEngine.Apply(state, new ConvertHeatMove(0));
-        var (s2, _) = GameEngine.Apply(s1, new PassMove(0));
-
-        Assert.Equal(2, s2.Log.Count);
-        Assert.Contains("converts heat", s2.Log[0]);
-        Assert.Contains("passes", s2.Log[1]);
     }
 
     [Fact]

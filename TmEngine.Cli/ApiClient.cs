@@ -75,12 +75,5 @@ public class ApiClient
             ?? new Dictionary<string, CardInfoDto>();
     }
 
-    public async Task<List<string>> GetHistoryAsync(string gameId)
-    {
-        var response = await _http.GetAsync($"{_baseUrl}/games/{gameId}/history");
-        response.EnsureSuccessStatusCode();
-        var body = await response.Content.ReadAsStringAsync();
-        var result = JsonConvert.DeserializeObject<HistoryResponse>(body, _jsonSettings)!;
-        return result.Log;
-    }
+
 }

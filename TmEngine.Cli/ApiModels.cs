@@ -80,11 +80,6 @@ public class SubmitMoveResponse
     public Dictionary<string, string>? CardNames { get; set; }
 }
 
-public class HistoryResponse
-{
-    public List<string> Log { get; set; } = new();
-}
-
 // ── Game State DTOs ──
 
 public class GameStateDto
@@ -222,6 +217,7 @@ public class ActionPhaseOptionsDto
     public bool CanEndTurn { get; set; }
     public bool CanConvertHeat { get; set; }
     public bool CanConvertPlants { get; set; }
+    public int PlantConversionCost { get; set; } = 8;
     public List<HexCoordDto> ValidGreeneryLocations { get; set; } = new();
     public bool CanPerformFirstAction { get; set; }
     public List<PlayableCardDto> PlayableCards { get; set; } = new();

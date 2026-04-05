@@ -14,7 +14,7 @@ public static class MoveValidator
     public static string? Validate(GameState state, Move move)
     {
         // Universal checks
-        if (state.IsGameOver)
+        if (state.IsGameOver())
             return "Game is over.";
 
         // If there's a pending action, only sub-move resolutions are allowed
@@ -25,7 +25,7 @@ public static class MoveValidator
         bool isSimultaneousPhase = state.Phase is GamePhase.Setup or GamePhase.Research;
         if (!isSimultaneousPhase && move is not SetupMove and not BuyCardsMove and not DraftCardMove)
         {
-            if (move.PlayerId != state.ActivePlayer.PlayerId)
+            if (move.PlayerId != state.GetActivePlayer().PlayerId)
                 return $"It is not player {move.PlayerId}'s turn.";
         }
 
@@ -166,8 +166,9 @@ public static class MoveValidator
         if (firstActionErr != null) return firstActionErr;
 
         var player = state.GetPlayer(move.PlayerId);
-        if (player.Resources.Plants < Constants.PlantsPerGreenery)
-            return $"Need {Constants.PlantsPerGreenery} plants, have {player.Resources.Plants}.";
+        var plantCost = RequirementChecker.GetPlantConversionCost(player);
+        if (player.Resources.Plants < plantCost)
+            return $"Need {plantCost} plants, have {player.Resources.Plants}.";
 
         if (state.Phase == GamePhase.Action && player.ActionsThisTurn >= 2)
             return "Already took 2 actions this turn.";
@@ -541,7 +542,7 @@ public static class MoveValidator
         if (state.Prelude == null)
             return "No active prelude placement state.";
 
-        if (move.PlayerId != state.ActivePlayer.PlayerId)
+        if (move.PlayerId != state.GetActivePlayer().PlayerId)
             return $"It is not player {move.PlayerId}'s turn.";
 
         var playerIndex = state.GetPlayerIndex(move.PlayerId);
@@ -557,7 +558,7 @@ public static class MoveValidator
 
     private static string? ValidatePendingActionMove(GameState state, Move move)
     {
-        if (move.PlayerId != state.ActivePlayer.PlayerId)
+        if (move.PlayerId != state.GetActivePlayer().PlayerId)
             return $"It is not player {move.PlayerId}'s turn.";
 
         return (state.PendingAction, move) switch

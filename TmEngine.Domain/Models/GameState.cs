@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-
 namespace TmEngine.Domain.Models;
 
 /// <summary>
@@ -97,26 +96,22 @@ public sealed record GameState
     // ── Audit ──────────────────────────────────────────────────
 
     public required int MoveNumber { get; init; }
-    public required ImmutableList<string> Log { get; init; }
 
     /// <summary>The move that produced this state, if any. Null for the initial state.</summary>
     public Moves.Move? LastMove { get; init; }
 
     // ── Helpers ─────────────────────────────────────────────────
 
-    public PlayerState ActivePlayer => Players[ActivePlayerIndex];
+    public PlayerState GetActivePlayer() => Players[ActivePlayerIndex];
 
-    public bool IsGameOver => Phase == GamePhase.GameEnd;
+    public bool IsGameOver() => Phase == GamePhase.GameEnd;
 
-    public bool AllParametersMaxed
+    public bool AreAllParametersMaxed()
     {
-        get
-        {
-            var map = MapDefinitions.GetMap(Map);
-            return Oxygen >= map.MaxOxygen &&
-                   Temperature >= map.MaxTemperature &&
-                   OceansPlaced >= map.MaxOceans;
-        }
+        var map = MapDefinitions.GetMap(Map);
+        return Oxygen >= map.MaxOxygen &&
+               Temperature >= map.MaxTemperature &&
+               OceansPlaced >= map.MaxOceans;
     }
 
     public PlayerState GetPlayer(int playerId) =>
@@ -131,8 +126,6 @@ public sealed record GameState
         return this with { Players = Players.SetItem(index, update(Players[index])) };
     }
 
-    public GameState AppendLog(string message) =>
-        this with { Log = Log.Add(message) };
 }
 
 /// <summary>

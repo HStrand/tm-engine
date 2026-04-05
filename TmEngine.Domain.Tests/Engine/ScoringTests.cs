@@ -39,7 +39,7 @@ public class ScoringTests
             DrawPile = [],
             DiscardPile = [],
             MoveNumber = 0,
-            Log = [],
+
         };
     }
 

@@ -165,14 +165,14 @@ public class GameStateTests
             OceansPlaced = Constants.DefaultMaxOceans,
         };
 
-        Assert.True(state.AllParametersMaxed);
+        Assert.True(state.AreAllParametersMaxed());
     }
 
     [Fact]
     public void GameState_AllParametersMaxed_FalseWhenNotMaxed()
     {
         var state = CreateMinimalGameState();
-        Assert.False(state.AllParametersMaxed);
+        Assert.False(state.AreAllParametersMaxed());
     }
 
     [Fact]
@@ -219,6 +219,6 @@ public class GameStateTests
         DrawPile = [],
         DiscardPile = [],
         MoveNumber = 0,
-        Log = [],
+
     };
 }

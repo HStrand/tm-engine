@@ -162,22 +162,6 @@ Submits a move for the specified player. The request body contains the move obje
 }
 ```
 
-### Get Game History
-
-```
-GET /games/{id}/history
-```
-
-Returns the action log for a game.
-
-**Response** `200 OK`:
-
-```json
-{
-  "log": ["Player 1 played card X", ...]
-}
-```
-
 ### Get Game Cards
 
 ```

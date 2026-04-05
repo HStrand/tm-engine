@@ -27,6 +27,4 @@ public sealed record LegalMovesResponse(
     TmEngine.Domain.Engine.AvailableMoves Moves,
     ImmutableDictionary<string, string> CardNames);
 
-public sealed record HistoryResponse(ImmutableList<string> Log);
-
 public sealed record ErrorResponse(string Error);

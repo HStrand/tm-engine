@@ -307,7 +307,7 @@ public class SetupAndResearchTests
                 Submitted = [false, false],
             },
             MoveNumber = 0,
-            Log = [],
+
         };
     }
 
@@ -341,7 +341,7 @@ public class SetupAndResearchTests
             DrawPile = drawPile,
             DiscardPile = [],
             MoveNumber = 0,
-            Log = [],
+
         };
     }
 }
