@@ -17,34 +17,26 @@ func start --port 7102
 
 The engine is a pure, deterministic state machine. Game state is an immutable record — every move produces a new state object.
 
-```
-Client                    API Layer                  Domain Engine
-  │                          │                            │
-  │  POST /games/{id}/moves  │                            │
-  │ ─────────────────────────>  deserialize JSON           │
-  │                          │  (MoveJsonConverter)        │
-  │                          │                            │
-  │                          │  load state from storage    │
-  │                          │                            │
-  │                          │      GameEngine.Apply() ──>│
-  │                          │                            │
-  │                          │          1. MoveValidator.Validate()
-  │                          │             └─ reject if illegal
-  │                          │
-  │                          │          2. Apply state transition
-  │                          │             └─ new immutable GameState
-  │                          │
-  │                          │          3. Execute card effects
-  │                          │             └─ EffectExecutor
-  │                          │             └─ TriggerSystem (ongoing effects)
-  │                          │
-  │                          │          4. Advance phase/turn
-  │                          │             └─ PhaseManager
-  │                          │
-  │                          │  <── (newState, result) ───│
-  │                          │                            │
-  │                          │  save new state to storage  │
-  │  <── response ───────────│                            │
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as API Layer
+    participant Engine as Domain Engine
+    participant Storage
+
+    Client->>API: POST /games/{id}/moves
+    API->>API: Deserialize JSON move
+    API->>Storage: Load current GameState
+    Storage-->>API: GameState
+    API->>Engine: GameEngine.Apply(state, move)
+    Engine->>Engine: MoveValidator.Validate()
+    Engine->>Engine: Apply state transition
+    Engine->>Engine: EffectExecutor (card effects)
+    Engine->>Engine: TriggerSystem (ongoing effects)
+    Engine->>Engine: PhaseManager (advance phase/turn)
+    Engine-->>API: (newState, result)
+    API->>Storage: Save new GameState
+    API-->>Client: Response with updated state
 ```
 
 Key properties:
@@ -56,35 +48,33 @@ Key properties:
 
 Some moves trigger effects that need further player input before the turn can continue. These are modeled as **pending actions** on the game state.
 
-```
-1. Player plays card "Comet" (010)
-       │
-       v
-2. Engine executes effects:
-   - Raise temperature 1 step       ✓ immediate
-   - Place an ocean tile            ✗ needs player to choose location
-       │
-       v
-3. GameState.PendingAction = PlaceTilePending
-   (remaining effects queued in EffectQueue)
-       │
-       v
-4. Client calls GET /legal-moves
-   → response contains PendingAction with valid locations
-       │
-       v
-5. Player submits PlaceTile sub-move
-       │
-       v
-6. Engine resolves pending action, resumes queued effects:
-   - Remove up to 3 plants from any player  ✗ needs target
-       │
-       v
-7. GameState.PendingAction = RemoveResourcePending
-   ... cycle repeats until all effects resolved
-       │
-       v
-8. Turn advances normally
+Example: playing card "Comet" (010), which raises temperature, places an ocean, and removes plants.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Engine
+
+    Client->>Engine: PlayCard (010 "Comet")
+    Engine->>Engine: Raise temperature 1 step
+    Note right of Engine: Needs player to choose ocean location
+    Engine-->>Client: PendingAction = PlaceTilePending
+
+    Client->>Engine: GET /legal-moves
+    Engine-->>Client: Valid ocean locations
+
+    Client->>Engine: PlaceTile { col: 4, row: 3 }
+    Engine->>Engine: Place ocean tile
+    Note right of Engine: Needs player to choose target
+    Engine-->>Client: PendingAction = RemoveResourcePending
+
+    Client->>Engine: GET /legal-moves
+    Engine-->>Client: Valid target players
+
+    Client->>Engine: ChooseTargetPlayer { targetPlayerId: 1 }
+    Engine->>Engine: Remove up to 3 plants
+    Note right of Engine: All effects resolved
+    Engine-->>Client: Turn advances normally
 ```
 
 The 12 pending action types cover tile placement, target selection, card selection, option choices, discarding, and effect ordering.
