@@ -82,7 +82,7 @@ public class BoardLogicTests
         var map = MapDefinitions.Tharsis;
         var expectedCount = map.Hexes.Values.Count(h =>
             h.Type != HexType.OceanReserved &&
-            !(h.Type == HexType.Named && h.ReservedFor != null));
+            !(h.Type == HexType.Named && h.ReservedFor == "Noctis City"));
 
         Assert.Equal(expectedCount, placements.Length);
     }

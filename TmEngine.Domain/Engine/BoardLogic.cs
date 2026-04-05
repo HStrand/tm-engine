@@ -72,7 +72,7 @@ public static class BoardLogic
         {
             if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
                 continue;
-            if (hex.Type == HexType.Named && hex.ReservedFor != null)
+            if (IsReservedHex(hex))
                 continue;
 
             allLand.Add(coord);
@@ -98,7 +98,7 @@ public static class BoardLogic
         {
             if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
                 continue;
-            if (hex.Type == HexType.Named && hex.ReservedFor != null)
+            if (IsReservedHex(hex))
                 continue;
             if (IsAdjacentToCity(state, coord))
                 continue;
@@ -122,7 +122,7 @@ public static class BoardLogic
         {
             if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
                 continue;
-            if (hex.Type == HexType.Named && hex.ReservedFor != null)
+            if (IsReservedHex(hex))
                 continue;
             if (IsAdjacentToCity(state, coord))
                 continue;
@@ -169,7 +169,7 @@ public static class BoardLogic
         {
             if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
                 continue;
-            if (hex.Type == HexType.Named && hex.ReservedFor != null)
+            if (IsReservedHex(hex))
                 continue;
 
             // Must not be adjacent to any placed tile
@@ -202,7 +202,7 @@ public static class BoardLogic
         {
             if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
                 continue;
-            if (hex.Type == HexType.Named && hex.ReservedFor != null)
+            if (IsReservedHex(hex))
                 continue;
 
             if (IsAdjacentToCity(state, coord))
@@ -224,7 +224,7 @@ public static class BoardLogic
         {
             if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
                 continue;
-            if (hex.Type == HexType.Named && hex.ReservedFor != null)
+            if (IsReservedHex(hex))
                 continue;
 
             foreach (var adj in coord.GetAdjacentCoords())
@@ -297,7 +297,7 @@ public static class BoardLogic
         {
             if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
                 continue;
-            if (hex.Type == HexType.Named && hex.ReservedFor != null)
+            if (IsReservedHex(hex))
                 continue;
             if (IsClaimedByOther(state, coord, playerId))
                 continue;
@@ -428,6 +428,9 @@ public static class BoardLogic
     }
 
     // ── Helpers ─────────────────────────────────────────────────
+
+    private static bool IsReservedHex(HexDefinition hex) =>
+        hex.Type == HexType.Named && hex.ReservedFor == "Noctis City";
 
     private static bool HasMiningBonus(HexDefinition hex) =>
         hex.Bonuses.Contains(PlacementBonus.Steel) || hex.Bonuses.Contains(PlacementBonus.Titanium);
