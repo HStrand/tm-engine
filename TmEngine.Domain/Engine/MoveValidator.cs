@@ -39,7 +39,12 @@ public static class MoveValidator
             EndTurnMove m => ValidateEndTurn(state, m),
             ConvertHeatMove m => ValidateConvertHeat(state, m),
             ConvertPlantsMove m => ValidateConvertPlants(state, m),
-            UseStandardProjectMove m => ValidateStandardProject(state, m),
+            SellPatentsMove m => ValidateStandardProject(state, m.PlayerId, () => ValidateSellPatents(state, m)),
+            PowerPlantMove m => ValidateStandardProject(state, m.PlayerId, () => ValidateResourceCost(state.GetPlayer(m.PlayerId), RequirementChecker.GetPowerPlantCost(state.GetPlayer(m.PlayerId)), "Power Plant")),
+            AsteroidMove m => ValidateStandardProject(state, m.PlayerId, () => ValidateAsteroidProject(state, state.GetPlayer(m.PlayerId))),
+            AquiferMove m => ValidateStandardProject(state, m.PlayerId, () => ValidateAquiferProject(state, m)),
+            GreeneryMove m => ValidateStandardProject(state, m.PlayerId, () => ValidateGreeneryProject(state, m)),
+            CityMove m => ValidateStandardProject(state, m.PlayerId, () => ValidateCityProject(state, m)),
             ClaimMilestoneMove m => ValidateClaimMilestone(state, m),
             FundAwardMove m => ValidateFundAward(state, m),
             PlayCardMove m => ValidatePlayCard(state, m),
@@ -175,36 +180,28 @@ public static class MoveValidator
         return null;
     }
 
-    private static string? ValidateStandardProject(GameState state, UseStandardProjectMove move)
+    private static string? ValidateStandardProject(GameState state, int playerId, Func<string?> validateSpecific)
     {
         if (state.Phase != GamePhase.Action)
             return "Can only use standard projects during the action phase.";
 
-        var firstActionErr = CheckFirstActionRequired(state, move.PlayerId);
+        var firstActionErr = CheckFirstActionRequired(state, playerId);
         if (firstActionErr != null) return firstActionErr;
 
-        var player = state.GetPlayer(move.PlayerId);
+        var player = state.GetPlayer(playerId);
         if (player.ActionsThisTurn >= 2)
             return "Already took 2 actions this turn.";
 
-        return move.Project switch
-        {
-            StandardProject.SellPatents => ValidateSellPatents(state, move, player),
-            StandardProject.PowerPlant => ValidateResourceCost(player, RequirementChecker.GetPowerPlantCost(player), "Power Plant"),
-            StandardProject.Asteroid => ValidateAsteroidProject(state, player),
-            StandardProject.Aquifer => ValidateAquiferProject(state, move, player),
-            StandardProject.Greenery => ValidateGreeneryProject(state, move, player),
-            StandardProject.City => ValidateCityProject(state, move, player),
-            _ => $"Unknown standard project: {move.Project}",
-        };
+        return validateSpecific();
     }
 
-    private static string? ValidateSellPatents(GameState state, UseStandardProjectMove move, PlayerState player)
+    private static string? ValidateSellPatents(GameState state, SellPatentsMove move)
     {
-        if (move.CardsToDiscard.IsDefaultOrEmpty)
+        if (move.CardIds.IsDefaultOrEmpty)
             return "Must discard at least one card.";
 
-        foreach (var cardId in move.CardsToDiscard)
+        var player = state.GetPlayer(move.PlayerId);
+        foreach (var cardId in move.CardIds)
         {
             if (!player.Hand.Contains(cardId))
                 return $"Card {cardId} is not in player's hand.";
@@ -230,8 +227,9 @@ public static class MoveValidator
         return null;
     }
 
-    private static string? ValidateAquiferProject(GameState state, UseStandardProjectMove move, PlayerState player)
+    private static string? ValidateAquiferProject(GameState state, AquiferMove move)
     {
+        var player = state.GetPlayer(move.PlayerId);
         if (player.Resources.MegaCredits < Constants.AquiferCost)
             return $"Need {Constants.AquiferCost} MC for Aquifer, have {player.Resources.MegaCredits}.";
 
@@ -239,35 +237,28 @@ public static class MoveValidator
         if (state.OceansPlaced >= map.MaxOceans)
             return "All oceans have been placed.";
 
-        if (move.Location == null)
-            return "Must specify location for ocean tile.";
-
         var validPlacements = BoardLogic.GetValidOceanPlacements(state);
-        return validPlacements.Contains(move.Location.Value) ? null : "Invalid ocean placement location.";
+        return validPlacements.Contains(move.Location) ? null : "Invalid ocean placement location.";
     }
 
-    private static string? ValidateGreeneryProject(GameState state, UseStandardProjectMove move, PlayerState player)
+    private static string? ValidateGreeneryProject(GameState state, GreeneryMove move)
     {
+        var player = state.GetPlayer(move.PlayerId);
         if (player.Resources.MegaCredits < Constants.GreeneryCost)
             return $"Need {Constants.GreeneryCost} MC for Greenery, have {player.Resources.MegaCredits}.";
 
-        if (move.Location == null)
-            return "Must specify location for greenery tile.";
-
         var validPlacements = BoardLogic.GetValidGreeneryPlacements(state, move.PlayerId);
-        return validPlacements.Contains(move.Location.Value) ? null : "Invalid greenery placement location.";
+        return validPlacements.Contains(move.Location) ? null : "Invalid greenery placement location.";
     }
 
-    private static string? ValidateCityProject(GameState state, UseStandardProjectMove move, PlayerState player)
+    private static string? ValidateCityProject(GameState state, CityMove move)
     {
+        var player = state.GetPlayer(move.PlayerId);
         if (player.Resources.MegaCredits < Constants.CityCost)
             return $"Need {Constants.CityCost} MC for City, have {player.Resources.MegaCredits}.";
 
-        if (move.Location == null)
-            return "Must specify location for city tile.";
-
         var validPlacements = BoardLogic.GetValidCityPlacements(state);
-        return validPlacements.Contains(move.Location.Value) ? null : "Invalid city placement location.";
+        return validPlacements.Contains(move.Location) ? null : "Invalid city placement location.";
     }
 
     private static string? ValidateClaimMilestone(GameState state, ClaimMilestoneMove move)

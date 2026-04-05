@@ -190,7 +190,12 @@ public static class GameEngine
         EndTurnMove m => ApplyEndTurn(state, m),
         ConvertHeatMove m => ApplyConvertHeat(state, m),
         ConvertPlantsMove m => ApplyConvertPlants(state, m),
-        UseStandardProjectMove m => ApplyStandardProject(state, m),
+        SellPatentsMove m => ApplyStandardProject(state, ApplySellPatents(state, m)),
+        PowerPlantMove m => ApplyStandardProject(state, ApplyPowerPlant(state, m)),
+        AsteroidMove m => ApplyStandardProject(state, ApplyAsteroidProject(state, m)),
+        AquiferMove m => ApplyStandardProject(state, ApplyAquiferProject(state, m)),
+        GreeneryMove m => ApplyStandardProject(state, ApplyGreeneryProject(state, m)),
+        CityMove m => ApplyStandardProject(state, ApplyCityProject(state, m)),
         ClaimMilestoneMove m => ApplyClaimMilestone(state, m),
         FundAwardMove m => ApplyFundAward(state, m),
         PlaceTileMove m => ApplyPlaceTile(state, m),
@@ -267,36 +272,25 @@ public static class GameEngine
         return PhaseManager.AfterAction(state);
     }
 
-    private static GameState ApplyStandardProject(GameState state, UseStandardProjectMove move)
+    private static GameState ApplyStandardProject(GameState state, GameState newState)
     {
-        state = move.Project switch
-        {
-            StandardProject.SellPatents => ApplySellPatents(state, move),
-            StandardProject.PowerPlant => ApplyPowerPlant(state, move),
-            StandardProject.Asteroid => ApplyAsteroidProject(state, move),
-            StandardProject.Aquifer => ApplyAquiferProject(state, move),
-            StandardProject.Greenery => ApplyGreeneryProject(state, move),
-            StandardProject.City => ApplyCityProject(state, move),
-            _ => state,
-        };
-
-        if (state.PendingAction != null) return state;
-        return PhaseManager.AfterAction(state);
+        if (newState.PendingAction != null) return newState;
+        return PhaseManager.AfterAction(newState);
     }
 
-    private static GameState ApplySellPatents(GameState state, UseStandardProjectMove move)
+    private static GameState ApplySellPatents(GameState state, SellPatentsMove move)
     {
-        var gain = move.CardsToDiscard.Length;
+        var gain = move.CardIds.Length;
         return state.UpdatePlayer(move.PlayerId, p => p with
         {
-            Hand = p.Hand.RemoveRange(move.CardsToDiscard),
+            Hand = p.Hand.RemoveRange(move.CardIds),
             Resources = p.Resources.Add(ResourceType.MegaCredits, gain),
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
         // TODO: Add discarded cards to discard pile
     }
 
-    private static GameState ApplyPowerPlant(GameState state, UseStandardProjectMove move)
+    private static GameState ApplyPowerPlant(GameState state, PowerPlantMove move)
     {
         var player = state.GetPlayer(move.PlayerId);
         var cost = RequirementChecker.GetPowerPlantCost(player);
@@ -309,7 +303,7 @@ public static class GameEngine
         });
     }
 
-    private static GameState ApplyAsteroidProject(GameState state, UseStandardProjectMove move)
+    private static GameState ApplyAsteroidProject(GameState state, AsteroidMove move)
     {
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
@@ -320,7 +314,7 @@ public static class GameEngine
         return GlobalParameters.RaiseTemperature(state, move.PlayerId);
     }
 
-    private static GameState ApplyAquiferProject(GameState state, UseStandardProjectMove move)
+    private static GameState ApplyAquiferProject(GameState state, AquiferMove move)
     {
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
@@ -328,10 +322,10 @@ public static class GameEngine
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
 
-        return GlobalParameters.PlaceOcean(state, move.PlayerId, move.Location!.Value);
+        return GlobalParameters.PlaceOcean(state, move.PlayerId, move.Location);
     }
 
-    private static GameState ApplyGreeneryProject(GameState state, UseStandardProjectMove move)
+    private static GameState ApplyGreeneryProject(GameState state, GreeneryMove move)
     {
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
@@ -342,10 +336,10 @@ public static class GameEngine
         // Rebate based on printed SP cost (Credicor)
         state = ApplyStandardProjectRebate(state, move.PlayerId, Constants.GreeneryCost);
 
-        return GlobalParameters.PlaceGreenery(state, move.PlayerId, move.Location!.Value);
+        return GlobalParameters.PlaceGreenery(state, move.PlayerId, move.Location);
     }
 
-    private static GameState ApplyCityProject(GameState state, UseStandardProjectMove move)
+    private static GameState ApplyCityProject(GameState state, CityMove move)
     {
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
@@ -357,7 +351,7 @@ public static class GameEngine
         // Rebate based on printed SP cost (Credicor)
         state = ApplyStandardProjectRebate(state, move.PlayerId, Constants.CityCost);
 
-        return GlobalParameters.PlaceCity(state, move.PlayerId, move.Location!.Value);
+        return GlobalParameters.PlaceCity(state, move.PlayerId, move.Location);
     }
 
     private static GameState ApplyStandardProjectRebate(GameState state, int playerId, int printedCost)
@@ -1207,7 +1201,12 @@ public static class GameEngine
         EndTurnMove m => $"Player {m.PlayerId} ends turn",
         ConvertHeatMove m => $"Player {m.PlayerId} converts heat to temperature",
         ConvertPlantsMove m => $"Player {m.PlayerId} converts plants to greenery at {m.Location}",
-        UseStandardProjectMove m => $"Player {m.PlayerId} uses {m.Project}",
+        SellPatentsMove m => $"Player {m.PlayerId} sells {m.CardIds.Length} patents",
+        PowerPlantMove m => $"Player {m.PlayerId} uses Power Plant",
+        AsteroidMove m => $"Player {m.PlayerId} uses Asteroid",
+        AquiferMove m => $"Player {m.PlayerId} uses Aquifer at {m.Location}",
+        GreeneryMove m => $"Player {m.PlayerId} uses Greenery at {m.Location}",
+        CityMove m => $"Player {m.PlayerId} uses City at {m.Location}",
         ClaimMilestoneMove m => $"Player {m.PlayerId} claims {m.MilestoneName}",
         FundAwardMove m => $"Player {m.PlayerId} funds {m.AwardName}",
         PlayCardMove m => $"Player {m.PlayerId} plays {CardName(m.CardId)} ({m.CardId})",

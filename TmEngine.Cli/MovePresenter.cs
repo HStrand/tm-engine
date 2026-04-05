@@ -302,9 +302,8 @@ public class MovePresenter
                     var picks = ReadMultiChoice(playerState.Hand.Count, 1, playerState.Hand.Count);
                     var discard = picks.Select(i => playerState.Hand[i - 1]).ToList();
 
-                    var move = MakeMove("UseStandardProject");
-                    move["project"] = s.Project;
-                    move["cardsToDiscard"] = new JArray(discard.ToArray());
+                    var move = MakeMove("SellPatents");
+                    move["cardIds"] = new JArray(discard.ToArray());
                     return move;
                 }));
             }
@@ -315,8 +314,7 @@ public class MovePresenter
                     || s.Project.Equals("City", StringComparison.OrdinalIgnoreCase);
                 options.Add(($"[SP] {s.Project} ({s.Cost} MC)", () =>
                 {
-                    var move = MakeMove("UseStandardProject");
-                    move["project"] = s.Project;
+                    var move = MakeMove(s.Project);
                     if (needsLoc && s.ValidLocations != null && s.ValidLocations.Count > 0)
                     {
                         var loc = PromptLocation(s.ValidLocations);

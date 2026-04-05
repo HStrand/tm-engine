@@ -192,7 +192,7 @@ public class GameEngineTests
         var initialEnergyProd = state.Players[0].Production.Energy;
 
         var (newState, result) = GameEngine.Apply(state,
-            new UseStandardProjectMove(0, StandardProject.PowerPlant));
+            new PowerPlantMove(0));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(initialMC - Constants.PowerPlantCost, newState.Players[0].Resources.MegaCredits);
@@ -206,7 +206,7 @@ public class GameEngineTests
         var initialTemp = state.Temperature;
 
         var (newState, result) = GameEngine.Apply(state,
-            new UseStandardProjectMove(0, StandardProject.Asteroid));
+            new AsteroidMove(0));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(initialTemp + Constants.TemperatureStep, newState.Temperature);
@@ -220,7 +220,7 @@ public class GameEngineTests
         var oceanHex = new HexCoord(4, 1); // Ocean hex on Tharsis
 
         var (newState, result) = GameEngine.Apply(state,
-            new UseStandardProjectMove(0, StandardProject.Aquifer, Location: oceanHex));
+            new AquiferMove(0, oceanHex));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(1, newState.OceansPlaced);
@@ -237,7 +237,7 @@ public class GameEngineTests
         var landHex = new HexCoord(5, 3);
 
         var (newState, result) = GameEngine.Apply(state,
-            new UseStandardProjectMove(0, StandardProject.City, Location: landHex));
+            new CityMove(0, landHex));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(initialMCProd + 1, newState.Players[0].Production.MegaCredits);
@@ -252,14 +252,14 @@ public class GameEngineTests
 
         // Place first city (player 0, action 1)
         var (s1, _) = GameEngine.Apply(state,
-            new UseStandardProjectMove(0, StandardProject.City, Location: new HexCoord(5, 3)));
+            new CityMove(0, new HexCoord(5, 3)));
 
         // Player 0 passes, now player 1's turn
         var (s2, _) = GameEngine.Apply(s1, new PassMove(0));
 
         // Player 1 tries adjacent hex (6,3 is adjacent to 5,3 on row 3 odd)
         var (_, result) = GameEngine.Apply(s2,
-            new UseStandardProjectMove(1, StandardProject.City, Location: new HexCoord(6, 3)));
+            new CityMove(1, new HexCoord(6, 3)));
 
         Assert.True(result.IsError);
     }
@@ -274,8 +274,7 @@ public class GameEngineTests
         });
 
         var (newState, result) = GameEngine.Apply(state,
-            new UseStandardProjectMove(0, StandardProject.SellPatents,
-                CardsToDiscard: ["card1", "card2"]));
+            new SellPatentsMove(0, ["card1", "card2"]));
 
         Assert.True(result.IsSuccess);
         Assert.Equal(102, newState.Players[0].Resources.MegaCredits); // 100 + 2
@@ -452,7 +451,7 @@ public class GameEngineTests
         // Place an ocean
         var oceanHex = new HexCoord(4, 1);
         var (s1, _) = GameEngine.Apply(state,
-            new UseStandardProjectMove(0, StandardProject.Aquifer, Location: oceanHex));
+            new AquiferMove(0, oceanHex));
         var (s2, _) = GameEngine.Apply(s1, new PassMove(0));
 
         // Player 1 places city adjacent to ocean
@@ -461,7 +460,7 @@ public class GameEngineTests
         var mcBefore = s2.Players[1].Resources.MegaCredits;
 
         var (s3, _) = GameEngine.Apply(s2,
-            new UseStandardProjectMove(1, StandardProject.City, Location: cityHex));
+            new CityMove(1, cityHex));
 
         // Should gain 2 MC from ocean adjacency (minus 25 MC city cost)
         var expected = mcBefore - Constants.CityCost + Constants.OceanAdjacencyBonus;

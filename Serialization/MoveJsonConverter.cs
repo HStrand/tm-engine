@@ -26,59 +26,60 @@ public class MoveJsonConverter : JsonConverter<Move>
         var playerId = obj["playerId"]?.Value<int>()
             ?? throw new JsonSerializationException("Move JSON must include a 'playerId' field.");
 
-        return type switch
+        return type.ToLowerInvariant() switch
         {
-            "Setup" => new SetupMove(
+            "setup" => new SetupMove(
                 playerId,
                 obj["corporationId"]!.Value<string>()!,
                 ReadStringArray(obj, "preludeIds"),
                 ReadStringArray(obj, "cardIdsToBuy")),
 
-            "DraftCard" => new DraftCardMove(playerId, obj["cardId"]!.Value<string>()!),
+            "draftcard" => new DraftCardMove(playerId, obj["cardId"]!.Value<string>()!),
 
-            "BuyCards" => new BuyCardsMove(playerId, ReadStringArray(obj, "cardIds")),
+            "buycards" => new BuyCardsMove(playerId, ReadStringArray(obj, "cardIds")),
 
-            "PlayCard" => new PlayCardMove(
+            "playcard" => new PlayCardMove(
                 playerId,
                 obj["cardId"]!.Value<string>()!,
                 ReadPayment(obj["payment"])),
 
-            "UseStandardProject" => new UseStandardProjectMove(
-                playerId,
-                Enum.Parse<StandardProject>(obj["project"]!.Value<string>()!, ignoreCase: true),
-                ReadStringArray(obj, "cardsToDiscard"),
-                ReadHexCoord(obj["location"])),
+            "sellpatents" => new SellPatentsMove(playerId, ReadStringArray(obj, "cardIds")),
+            "powerplant" => new PowerPlantMove(playerId),
+            "asteroid" => new AsteroidMove(playerId),
+            "aquifer" => new AquiferMove(playerId, ReadRequiredHexCoord(obj["location"])),
+            "greenery" => new GreeneryMove(playerId, ReadRequiredHexCoord(obj["location"])),
+            "city" => new CityMove(playerId, ReadRequiredHexCoord(obj["location"])),
 
-            "UseCardAction" => new UseCardActionMove(playerId, obj["cardId"]!.Value<string>()!),
+            "usecardaction" => new UseCardActionMove(playerId, obj["cardId"]!.Value<string>()!),
 
-            "ClaimMilestone" => new ClaimMilestoneMove(playerId, obj["milestoneName"]!.Value<string>()!),
+            "claimmilestone" => new ClaimMilestoneMove(playerId, obj["milestoneName"]!.Value<string>()!),
 
-            "FundAward" => new FundAwardMove(playerId, obj["awardName"]!.Value<string>()!),
+            "fundaward" => new FundAwardMove(playerId, obj["awardName"]!.Value<string>()!),
 
-            "ConvertPlants" => new ConvertPlantsMove(playerId, ReadRequiredHexCoord(obj["location"])),
+            "convertplants" => new ConvertPlantsMove(playerId, ReadRequiredHexCoord(obj["location"])),
 
-            "ConvertHeat" => new ConvertHeatMove(playerId),
+            "convertheat" => new ConvertHeatMove(playerId),
 
-            "Pass" => new PassMove(playerId),
+            "pass" => new PassMove(playerId),
 
-            "EndTurn" => new EndTurnMove(playerId),
+            "endturn" => new EndTurnMove(playerId),
 
-            "PerformFirstAction" => new PerformFirstActionMove(playerId),
+            "performfirstaction" => new PerformFirstActionMove(playerId),
 
-            "PlayPrelude" => new PlayPreludeMove(playerId, obj["preludeId"]!.Value<string>()!),
+            "playprelude" => new PlayPreludeMove(playerId, obj["preludeId"]!.Value<string>()!),
 
-            "PlaceTile" => new PlaceTileMove(playerId, ReadRequiredHexCoord(obj["location"])),
+            "placetile" => new PlaceTileMove(playerId, ReadRequiredHexCoord(obj["location"])),
 
-            "ChooseTargetPlayer" => new ChooseTargetPlayerMove(
+            "choosetargetplayer" => new ChooseTargetPlayerMove(
                 playerId, obj["targetPlayerId"]!.Value<int>()),
 
-            "SelectCard" => new SelectCardMove(playerId, obj["cardId"]!.Value<string>()!),
+            "selectcard" => new SelectCardMove(playerId, obj["cardId"]!.Value<string>()!),
 
-            "ChooseOption" => new ChooseOptionMove(playerId, obj["optionIndex"]!.Value<int>()),
+            "chooseoption" => new ChooseOptionMove(playerId, obj["optionIndex"]!.Value<int>()),
 
-            "DiscardCards" => new DiscardCardsMove(playerId, ReadStringArray(obj, "cardIds")),
+            "discardcards" => new DiscardCardsMove(playerId, ReadStringArray(obj, "cardIds")),
 
-            "ChooseEffectOrder" => new ChooseEffectOrderMove(playerId, obj["effectIndex"]!.Value<int>()),
+            "chooseeffectorder" => new ChooseEffectOrderMove(playerId, obj["effectIndex"]!.Value<int>()),
 
             _ => throw new JsonSerializationException($"Unknown move type: '{type}'"),
         };
@@ -100,7 +101,12 @@ public class MoveJsonConverter : JsonConverter<Move>
             DraftCardMove => "DraftCard",
             BuyCardsMove => "BuyCards",
             PlayCardMove => "PlayCard",
-            UseStandardProjectMove => "UseStandardProject",
+            SellPatentsMove => "SellPatents",
+            PowerPlantMove => "PowerPlant",
+            AsteroidMove => "Asteroid",
+            AquiferMove => "Aquifer",
+            GreeneryMove => "Greenery",
+            CityMove => "City",
             UseCardActionMove => "UseCardAction",
             ClaimMilestoneMove => "ClaimMilestone",
             FundAwardMove => "FundAward",

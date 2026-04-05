@@ -124,22 +124,21 @@ public class BotPlayer
             var s = sp;
             options.Add(() =>
             {
-                var move = MakeMove("UseStandardProject");
-                move["project"] = s.Project;
-
                 if (s.Project.Equals("SellPatents", StringComparison.OrdinalIgnoreCase) && botState.Hand.Count > 0)
                 {
                     var discard = PickRandomN(botState.Hand, _rng.Next(1, botState.Hand.Count + 1));
-                    move["cardsToDiscard"] = new JArray(discard.ToArray());
+                    var move = MakeMove("SellPatents");
+                    move["cardIds"] = new JArray(discard.ToArray());
                     return (move, $"sells {discard.Count} patents");
                 }
 
+                var spMove = MakeMove(s.Project);
                 if (s.ValidLocations != null && s.ValidLocations.Count > 0)
                 {
                     var loc = PickRandom(s.ValidLocations);
-                    move["location"] = new JObject { ["col"] = loc.Col, ["row"] = loc.Row };
+                    spMove["location"] = new JObject { ["col"] = loc.Col, ["row"] = loc.Row };
                 }
-                return (move, $"uses {s.Project} ({s.Cost} MC)");
+                return (spMove, $"uses {s.Project} ({s.Cost} MC)");
             });
         }
 

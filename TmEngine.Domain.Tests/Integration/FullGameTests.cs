@@ -114,14 +114,14 @@ public class FullGameTests
 
         // Gen 1: Player 0 uses Power Plant, Player 1 uses Asteroid
         var (s1, r1) = GameEngine.Apply(state,
-            new UseStandardProjectMove(0, StandardProject.PowerPlant));
+            new PowerPlantMove(0));
         Assert.True(r1.IsSuccess);
         Assert.Equal(1, s1.Players[0].Production.Energy);
 
         var (s2, _) = GameEngine.Apply(s1, new PassMove(0)); // pass after 1 action
 
         var (s3, r3) = GameEngine.Apply(s2,
-            new UseStandardProjectMove(1, StandardProject.Asteroid));
+            new AsteroidMove(1));
         Assert.True(r3.IsSuccess);
         Assert.Equal(-28, s3.Temperature); // -30 + 2
 
@@ -292,7 +292,7 @@ public class FullGameTests
         var (s2, _) = GameEngine.Apply(s1, new PassMove(0));
         var oceanHex = BoardLogic.GetValidOceanPlacements(s2).First();
         var (s3, _) = GameEngine.Apply(s2,
-            new UseStandardProjectMove(1, StandardProject.Aquifer, Location: oceanHex));
+            new AquiferMove(1, oceanHex));
 
         // Arctic Algae should trigger: player 0 gains 2 plants
         Assert.Equal(3, s3.Players[0].Resources.Plants); // 1 + 2
@@ -422,7 +422,7 @@ public class FullGameTests
 
         // Player 1 uses Power Plant standard project
         var (s3, _) = GameEngine.Apply(s2,
-            new UseStandardProjectMove(1, StandardProject.PowerPlant));
+            new PowerPlantMove(1));
 
         // Player 1 passes
         var (s4, _) = GameEngine.Apply(s3, new PassMove(1));

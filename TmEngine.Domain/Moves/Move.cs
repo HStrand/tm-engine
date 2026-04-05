@@ -45,14 +45,25 @@ public sealed record PlayCardMove(
     string CardId,
     PaymentInfo Payment) : Move(PlayerId);
 
-/// <summary>Player uses one of the 6 standard projects.</summary>
-public sealed record UseStandardProjectMove(
-    int PlayerId,
-    StandardProject Project,
-    /// <summary>Cards to discard (only for SellPatents).</summary>
-    ImmutableArray<string> CardsToDiscard = default,
-    /// <summary>Location for tile placement (Aquifer, Greenery, City).</summary>
-    HexCoord? Location = null) : Move(PlayerId);
+// ── Standard Projects ──────────────────────────────────────
+
+/// <summary>Player sells cards from hand for 1 MC each.</summary>
+public sealed record SellPatentsMove(int PlayerId, ImmutableArray<string> CardIds) : Move(PlayerId);
+
+/// <summary>Player pays to increase energy production 1 step.</summary>
+public sealed record PowerPlantMove(int PlayerId) : Move(PlayerId);
+
+/// <summary>Player pays to raise temperature 1 step.</summary>
+public sealed record AsteroidMove(int PlayerId) : Move(PlayerId);
+
+/// <summary>Player pays to place an ocean tile.</summary>
+public sealed record AquiferMove(int PlayerId, HexCoord Location) : Move(PlayerId);
+
+/// <summary>Player pays to place a greenery tile and raise oxygen.</summary>
+public sealed record GreeneryMove(int PlayerId, HexCoord Location) : Move(PlayerId);
+
+/// <summary>Player pays to place a city tile and increase MC production.</summary>
+public sealed record CityMove(int PlayerId, HexCoord Location) : Move(PlayerId);
 
 /// <summary>Player uses the action on a blue (active) card.</summary>
 public sealed record UseCardActionMove(int PlayerId, string CardId) : Move(PlayerId);

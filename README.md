@@ -231,16 +231,40 @@ Moves are submitted as JSON to `POST /games/{id}/moves?playerId={playerId}`. Eve
 }
 ```
 
-**UseStandardProject** — Use a standard project (`SellPatents`, `PowerPlant`, `Asteroid`, `Aquifer`, `Greenery`, `City`):
+**SellPatents** — Sell cards from hand for 1 MC each:
 
 ```json
-{ "type": "UseStandardProject", "playerId": 0, "project": "Aquifer", "location": { "col": 4, "row": 3 } }
+{ "type": "SellPatents", "playerId": 0, "cardIds": ["047", "048"] }
 ```
 
-`location` is required for Aquifer, Greenery, and City. `cardsToDiscard` is required for SellPatents:
+**PowerPlant** — Pay to increase energy production 1 step:
 
 ```json
-{ "type": "UseStandardProject", "playerId": 0, "project": "SellPatents", "cardsToDiscard": ["047", "048"] }
+{ "type": "PowerPlant", "playerId": 0 }
+```
+
+**Asteroid** — Pay to raise temperature 1 step:
+
+```json
+{ "type": "Asteroid", "playerId": 0 }
+```
+
+**Aquifer** — Pay to place an ocean tile:
+
+```json
+{ "type": "Aquifer", "playerId": 0, "location": { "col": 4, "row": 3 } }
+```
+
+**Greenery** — Pay to place a greenery tile and raise oxygen:
+
+```json
+{ "type": "Greenery", "playerId": 0, "location": { "col": 4, "row": 3 } }
+```
+
+**City** — Pay to place a city tile and increase MC production:
+
+```json
+{ "type": "City", "playerId": 0, "location": { "col": 5, "row": 3 } }
 ```
 
 **UseCardAction** — Use a blue card's action:
