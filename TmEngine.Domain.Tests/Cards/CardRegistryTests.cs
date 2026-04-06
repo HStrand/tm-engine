@@ -296,4 +296,51 @@ public class CardRegistryTests
         Assert.True(s2.Players[0].Resources.MegaCredits > 0);
         Assert.True(s2.Players[1].Resources.MegaCredits > 0);
     }
+
+    [Fact]
+    public void SaturnSystems_StartsWithOwnJovianTagTrigger()
+    {
+        // Saturn Systems (CORP12) has a Jovian tag and "When anyone plays a Jovian tag,
+        // increase your MC production 1 step" — including itself.
+        // So it should start with 1 MC production from its own Jovian tag.
+        var state = new GameState
+        {
+            GameId = "test",
+            Map = MapName.Tharsis,
+            CorporateEra = true,
+            DraftVariant = false,
+            PreludeExpansion = false,
+            Phase = GamePhase.Setup,
+            Generation = 1,
+            ActivePlayerId = 0,
+            FirstPlayerId = 0,
+            Oxygen = 0,
+            Temperature = Constants.MinTemperature,
+            OceansPlaced = 0,
+            Players =
+            [
+                PlayerState.CreateInitial(0, 20),
+                PlayerState.CreateInitial(1, 20),
+            ],
+            PlacedTiles = ImmutableDictionary<HexCoord, PlacedTile>.Empty,
+            ClaimedMilestones = [],
+            FundedAwards = [],
+            DrawPile = [],
+            DiscardPile = [],
+            MoveNumber = 0,
+            Setup = new SetupState
+            {
+                DealtCorporations = [["CORP12"], ["CORP01"]],
+                DealtPreludes = [[], []],
+                DealtCards = [[], []],
+                SubmittedMoves = [null, null],
+            },
+        };
+
+        var (s1, _) = GameEngine.Apply(state, new SetupMove(0, "CORP12", [], []));
+        var (s2, _) = GameEngine.Apply(s1, new SetupMove(1, "CORP01", [], []));
+
+        // Saturn Systems should have 1 MC production from its own Jovian tag trigger
+        Assert.Equal(1, s2.Players[0].Production.MegaCredits);
+    }
 }

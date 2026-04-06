@@ -239,11 +239,13 @@ public static class CardRegistry
             ongoingEffects: [new TagDiscountEffect(Tag.Earth, 3)]);
 
         // CORP12: Saturn Systems — Start with 42 MC, 1 titanium prod. Effect: When anyone plays Jovian tag, gain 1 MC prod.
+        // The "including this" means its own Jovian tag triggers +1 MC prod at setup.
         SetEffects(builder, "CORP12",
             onPlayEffects:
             [
                 new ChangeResourceEffect(ResourceType.MegaCredits, 42),
                 new ChangeProductionEffect(ResourceType.Titanium, 1),
+                new ChangeProductionEffect(ResourceType.MegaCredits, 1), // own Jovian tag
             ],
             ongoingEffects:
             [
