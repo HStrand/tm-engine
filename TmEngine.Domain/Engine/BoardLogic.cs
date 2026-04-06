@@ -134,18 +134,16 @@ public static class BoardLogic
     }
 
     /// <summary>
-    /// Lava Flows: must be placed on a volcanic area (map-specific).
-    /// On Hellas (no volcanos), can be placed on any non-ocean area.
+    /// Returns unoccupied volcanic area hexes on the current map.
+    /// On Hellas (no volcanos), returns the given fallback placements.
     /// </summary>
-    private static ImmutableArray<HexCoord> GetValidLavaFlowsPlacements(GameState state)
+    public static ImmutableArray<HexCoord> GetValidVolcanicPlacements(
+        GameState state, ImmutableArray<HexCoord> hellasFallback)
     {
         var map = MapDefinitions.GetMap(state.Map);
 
         if (map.VolcanicAreas.IsEmpty)
-        {
-            // Hellas: no volcanos, Lava Flows can go anywhere
-            return GetValidLandPlacements(state);
-        }
+            return hellasFallback;
 
         var builder = ImmutableArray.CreateBuilder<HexCoord>();
         foreach (var coord in map.VolcanicAreas)
@@ -156,6 +154,9 @@ public static class BoardLogic
 
         return builder.ToImmutable();
     }
+
+    private static ImmutableArray<HexCoord> GetValidLavaFlowsPlacements(GameState state) =>
+        GetValidVolcanicPlacements(state, GetValidLandPlacements(state));
 
     /// <summary>
     /// Tiles that must be placed next to no other tile (Nuclear Zone, Natural Preserve).

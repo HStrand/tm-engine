@@ -1714,12 +1714,12 @@ public static class CardRegistry
         SetEffects(builder, "P36", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Steel, 1)]);
 
-        // P37: Lava Tube Settlement — -1 energy prod, +2 MC prod, place city
+        // P37: Lava Tube Settlement — -1 energy prod, +2 MC prod, place city on volcanic area
         SetEffects(builder, "P37", onPlayEffects:
         [
             new ChangeProductionEffect(ResourceType.Energy, -1),
             new ChangeProductionEffect(ResourceType.MegaCredits, 2),
-            new PlaceTileEffect(TileType.City),
+            new PlaceTileEffect(TileType.City, PlacementConstraint.Volcanic),
         ]);
 
         // P38: Martian Survey — Draw 2 cards

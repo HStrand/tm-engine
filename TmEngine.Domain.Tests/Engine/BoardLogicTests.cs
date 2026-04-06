@@ -209,6 +209,28 @@ public class BoardLogicTests
     }
 
     [Fact]
+    public void GetValidVolcanicPlacements_Tharsis_ReturnsVolcanicAreas()
+    {
+        var state = CreateTestState(MapName.Tharsis);
+        var placements = BoardLogic.GetValidVolcanicPlacements(state,
+            BoardLogic.GetValidCityPlacements(state));
+
+        Assert.Equal(4, placements.Length);
+        Assert.Contains(new HexCoord(1, 5), placements); // Arsia Mons
+    }
+
+    [Fact]
+    public void GetValidVolcanicPlacements_Hellas_FallsBackToCityPlacements()
+    {
+        var state = CreateTestState(MapName.Hellas);
+        var cityPlacements = BoardLogic.GetValidCityPlacements(state);
+        var placements = BoardLogic.GetValidVolcanicPlacements(state, cityPlacements);
+
+        // Hellas has no volcanos, should fall back to city placements
+        Assert.Equal(cityPlacements.Length, placements.Length);
+    }
+
+    [Fact]
     public void GetValidPlacements_NuclearZone_AnyLandHex()
     {
         var state = CreateTestState();

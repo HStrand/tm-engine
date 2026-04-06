@@ -396,9 +396,7 @@ public static class EffectExecutor
             PlacementConstraint.OceanOnLand => BoardLogic.GetValidLandPlacements(state, playerId),
 
             PlacementConstraint.Volcanic =>
-                MapDefinitions.GetMap(state.Map).VolcanicAreas
-                    .Where(c => !state.PlacedTiles.ContainsKey(c))
-                    .ToImmutableArray(),
+                BoardLogic.GetValidVolcanicPlacements(state, basePlacements),
 
             _ => basePlacements,
         };
