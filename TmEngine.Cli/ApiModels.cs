@@ -234,6 +234,8 @@ public class PlayableCardDto
     public bool CanUseSteel { get; set; }
     public bool CanUseTitanium { get; set; }
     public bool CanUseHeat { get; set; }
+    public int SteelValue { get; set; } = 2;
+    public int TitaniumValue { get; set; } = 3;
 }
 
 public class StandardProjectOptionDto

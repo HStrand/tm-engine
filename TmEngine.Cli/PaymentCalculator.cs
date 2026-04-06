@@ -15,14 +15,14 @@ public static class PaymentCalculator
 
         if (canUseTitanium && availableTitanium > 0)
         {
-            titaniumUsed = Math.Min(availableTitanium, (remaining + titaniumValue - 1) / titaniumValue);
-            remaining = Math.Max(0, remaining - titaniumUsed * titaniumValue);
+            titaniumUsed = Math.Min(availableTitanium, remaining / titaniumValue);
+            remaining -= titaniumUsed * titaniumValue;
         }
 
         if (canUseSteel && availableSteel > 0)
         {
-            steelUsed = Math.Min(availableSteel, (remaining + steelValue - 1) / steelValue);
-            remaining = Math.Max(0, remaining - steelUsed * steelValue);
+            steelUsed = Math.Min(availableSteel, remaining / steelValue);
+            remaining -= steelUsed * steelValue;
         }
 
         // Use MC first, then heat only for what MC can't cover

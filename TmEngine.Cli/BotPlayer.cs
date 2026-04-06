@@ -103,7 +103,8 @@ public class BotPlayer
                 var payment = PaymentCalculator.Calculate(
                     c.EffectiveCost, c.CanUseSteel, c.CanUseTitanium, c.CanUseHeat,
                     botState.Resources.MegaCredits, botState.Resources.Steel,
-                    botState.Resources.Titanium, botState.Resources.Heat);
+                    botState.Resources.Titanium, botState.Resources.Heat,
+                    c.SteelValue, c.TitaniumValue);
 
                 var move = MakeMove("PlayCard");
                 move["cardId"] = c.CardId;

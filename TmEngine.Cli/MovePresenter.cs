@@ -580,7 +580,8 @@ public class MovePresenter
         var auto = PaymentCalculator.Calculate(
             card.EffectiveCost, card.CanUseSteel, card.CanUseTitanium, card.CanUseHeat,
             player.Resources.MegaCredits, player.Resources.Steel,
-            player.Resources.Titanium, player.Resources.Heat);
+            player.Resources.Titanium, player.Resources.Heat,
+            card.SteelValue, card.TitaniumValue);
 
         // Auto-pay without prompting if there's no alternative resource to use
         bool hasAlternative = (card.CanUseSteel && player.Resources.Steel > 0)
@@ -604,12 +605,12 @@ public class MovePresenter
             int steel = 0, titanium = 0, heat = 0;
             if (card.CanUseSteel)
             {
-                Console.Write($"  Steel (have {player.Resources.Steel}, worth 2 MC each): ");
+                Console.Write($"  Steel (have {player.Resources.Steel}, worth {card.SteelValue} MC each): ");
                 steel = int.Parse(Console.ReadLine()?.Trim() ?? "0");
             }
             if (card.CanUseTitanium)
             {
-                Console.Write($"  Titanium (have {player.Resources.Titanium}, worth 3 MC each): ");
+                Console.Write($"  Titanium (have {player.Resources.Titanium}, worth {card.TitaniumValue} MC each): ");
                 titanium = int.Parse(Console.ReadLine()?.Trim() ?? "0");
             }
             if (card.CanUseHeat)

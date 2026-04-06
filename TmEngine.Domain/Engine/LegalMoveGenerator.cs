@@ -60,7 +60,9 @@ public sealed record PlayableCard(
     int EffectiveCost,
     bool CanUseSteel,
     bool CanUseTitanium,
-    bool CanUseHeat);
+    bool CanUseHeat,
+    int SteelValue,
+    int TitaniumValue);
 
 public sealed record StandardProjectOption(
     StandardProject Project,
@@ -328,7 +330,7 @@ public static class LegalMoveGenerator
             if (maxPayable < effectiveCost)
                 continue;
 
-            result.Add(new PlayableCard(cardId, effectiveCost, canUseSteel, canUseTitanium, canUseHeat));
+            result.Add(new PlayableCard(cardId, effectiveCost, canUseSteel, canUseTitanium, canUseHeat, steelValue, titaniumValue));
         }
 
         return result.ToImmutable();
