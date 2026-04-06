@@ -343,4 +343,104 @@ public class CardRegistryTests
         // Saturn Systems should have 1 MC production from its own Jovian tag trigger
         Assert.Equal(1, s2.Players[0].Production.MegaCredits);
     }
+
+    [Fact]
+    public void PointLuna_DrawsCard_ForOwnEarthTag()
+    {
+        // Point Luna (CORP19) has an Earth tag and "When you play an Earth tag, draw a card"
+        // — including itself. Should draw 1 card at setup.
+        var state = new GameState
+        {
+            GameId = "test",
+            Map = MapName.Tharsis,
+            CorporateEra = true,
+            DraftVariant = false,
+            PreludeExpansion = false,
+            Phase = GamePhase.Setup,
+            Generation = 1,
+            ActivePlayerId = 0,
+            FirstPlayerId = 0,
+            Oxygen = 0,
+            Temperature = Constants.MinTemperature,
+            OceansPlaced = 0,
+            Players =
+            [
+                PlayerState.CreateInitial(0, 20),
+                PlayerState.CreateInitial(1, 20),
+            ],
+            PlacedTiles = ImmutableDictionary<HexCoord, PlacedTile>.Empty,
+            ClaimedMilestones = [],
+            FundedAwards = [],
+            DrawPile = ImmutableList.Create("card1", "card2", "card3"),
+            DiscardPile = [],
+            MoveNumber = 0,
+            Setup = new SetupState
+            {
+                DealtCorporations = [["CORP19"], ["CORP01"]],
+                DealtPreludes = [[], []],
+                DealtCards = [[], []],
+                SubmittedMoves = [null, null],
+            },
+        };
+
+        var (s1, _) = GameEngine.Apply(state, new SetupMove(0, "CORP19", [], []));
+        var (s2, _) = GameEngine.Apply(s1, new SetupMove(1, "CORP01", [], []));
+
+        // Point Luna should have drawn 1 card from its own Earth tag
+        Assert.Single(s2.Players[0].Hand);
+    }
+
+    [Fact]
+    public void PointLuna_DrawsCard_WhenPlayingPreludeWithEarthTag()
+    {
+        // Playing a prelude with an Earth tag should trigger Point Luna's effect.
+        // P01 (Allied Banks) has an Earth tag.
+        var state = new GameState
+        {
+            GameId = "test",
+            Map = MapName.Tharsis,
+            CorporateEra = true,
+            DraftVariant = false,
+            PreludeExpansion = true,
+            Phase = GamePhase.PreludePlacement,
+            Generation = 1,
+            ActivePlayerId = 0,
+            FirstPlayerId = 0,
+            Oxygen = 0,
+            Temperature = Constants.MinTemperature,
+            OceansPlaced = 0,
+            Players =
+            [
+                PlayerState.CreateInitial(0, 20) with
+                {
+                    CorporationId = "CORP19",
+                    Resources = new ResourceSet(MegaCredits: 50),
+                },
+                PlayerState.CreateInitial(1, 20) with
+                {
+                    CorporationId = "CORP01",
+                },
+            ],
+            PlacedTiles = ImmutableDictionary<HexCoord, PlacedTile>.Empty,
+            ClaimedMilestones = [],
+            FundedAwards = [],
+            DrawPile = ImmutableList.Create("card1", "card2", "card3"),
+            DiscardPile = [],
+            MoveNumber = 0,
+            Prelude = new PreludeState
+            {
+                RemainingPreludes =
+                [
+                    ImmutableList.Create("P01"), // Allied Banks (Earth tag)
+                    ImmutableList<string>.Empty,
+                ],
+            },
+        };
+
+        var (newState, result) = GameEngine.Apply(state, new PlayPreludeMove(0, "P01"));
+
+        Assert.True(result.IsSuccess, $"Expected success but got: {result}");
+        // Should have drawn 1 card from Point Luna's Earth tag trigger
+        Assert.Single(newState.Players[0].Hand);
+    }
 }

@@ -580,6 +580,14 @@ public static class GameEngine
             var (newState, pending) = EffectExecutor.ExecuteWithOrdering(state, playerId, preludeEntry.OnPlayEffects, move.PreludeId);
             state = newState;
 
+            // Fire tag-based triggered effects
+            foreach (var tag in preludeEntry.Definition.Tags)
+            {
+                var condition = TagToTriggerCondition(tag);
+                if (condition != null)
+                    state = TriggerSystem.FireTrigger(state, playerId, condition.Value);
+            }
+
             if (pending != null)
             {
                 // Remove this prelude from remaining, then set pending action

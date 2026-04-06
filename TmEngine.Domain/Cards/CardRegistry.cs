@@ -262,11 +262,13 @@ public static class CardRegistry
             ongoingEffects: [new TagDiscountEffect(Tag.Building, 2)]);
 
         // CORP19: Point Luna — Start with 38 MC, 1 titanium prod. Effect: When you play Earth tag, draw card.
+        // The card has an Earth tag itself, so it draws 1 card at setup.
         SetEffects(builder, "CORP19",
             onPlayEffects:
             [
                 new ChangeResourceEffect(ResourceType.MegaCredits, 38),
                 new ChangeProductionEffect(ResourceType.Titanium, 1),
+                new DrawCardsEffect(1), // own Earth tag
             ],
             ongoingEffects:
             [
