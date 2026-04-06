@@ -317,6 +317,49 @@ public class GameEngineTests
         Assert.True(moves.Actions!.CanConvertPlants);
     }
 
+    // ── Triggered Effects ──────────────────────────────────────
+
+    [Fact]
+    public void InterplanetaryCinematics_Gains2MC_WhenPlayingEvent()
+    {
+        // CORP05 effect: "When you play an event, gain 2 MC"
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            CorporationId = "CORP05",
+            Hand = p.Hand.Add("036"), // Release of Inert Gases (Event, cost 14)
+        });
+
+        var initialMC = state.Players[0].Resources.MegaCredits;
+        var (newState, result) = GameEngine.Apply(state,
+            new PlayCardMove(0, "036", new PaymentInfo(14, 0, 0, 0)));
+
+        Assert.True(result.IsSuccess, $"Expected success but got: {result}");
+        // Should have spent 14 MC and gained 2 MC from the triggered effect
+        Assert.Equal(initialMC - 14 + 2, newState.Players[0].Resources.MegaCredits);
+    }
+
+    [Fact]
+    public void InterplanetaryCinematics_Gains2MC_WhenPlayingEventWithPendingAction()
+    {
+        // Virus (050) is an Event+Microbe card that creates a pending action (ChooseEffect).
+        // CORP05's trigger should still fire even when the card's effects create a pending action.
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            CorporationId = "CORP05",
+            Hand = p.Hand.Add("050"), // Virus (Event, cost 1)
+        });
+
+        var initialMC = state.Players[0].Resources.MegaCredits;
+        var (newState, result) = GameEngine.Apply(state,
+            new PlayCardMove(0, "050", new PaymentInfo(1, 0, 0, 0)));
+
+        Assert.True(result.IsSuccess, $"Expected success but got: {result}");
+        // Should have spent 1 MC and gained 2 MC from the triggered effect, even with pending action
+        Assert.Equal(initialMC - 1 + 2, newState.Players[0].Resources.MegaCredits);
+    }
+
     // ── Milestones & Awards ────────────────────────────────────
 
     [Fact]

@@ -848,10 +848,16 @@ public static class GameEngine
         var (newState, pending) = EffectExecutor.ExecuteWithOrdering(state, move.PlayerId, entry.OnPlayEffects, move.CardId);
         state = newState;
 
+        // Fire tag-based triggered effects
+        foreach (var tag in card.Tags)
+        {
+            var condition = TagToTriggerCondition(tag);
+            if (condition != null)
+                state = TriggerSystem.FireTrigger(state, move.PlayerId, condition.Value);
+        }
+
         if (pending != null)
             return state with { PendingAction = pending };
-
-        // TODO: Fire triggered effects for other players' cards (TriggerSystem)
 
         // If resolved from a pending action during setup, don't advance turn
         if (isFromPending)
@@ -1204,5 +1210,21 @@ public static class GameEngine
             ? $"Player {m.PlayerId} auto-resolves remaining effects"
             : $"Player {m.PlayerId} chooses to resolve effect {m.EffectIndex}",
         _ => $"Player {move.PlayerId} does {move.GetType().Name}",
+    };
+
+    private static TriggerCondition? TagToTriggerCondition(Tag tag) => tag switch
+    {
+        Tag.Building => TriggerCondition.PlayBuildingTag,
+        Tag.Space => TriggerCondition.PlaySpaceTag,
+        Tag.Science => TriggerCondition.PlayScienceTag,
+        Tag.Power => TriggerCondition.PlayPowerTag,
+        Tag.Jovian => TriggerCondition.PlayJovianTag,
+        Tag.Earth => TriggerCondition.PlayEarthTag,
+        Tag.Plant => TriggerCondition.PlayPlantTag,
+        Tag.Microbe => TriggerCondition.PlayMicrobeTag,
+        Tag.Animal => TriggerCondition.PlayAnimalTag,
+        Tag.City => TriggerCondition.PlayCityTag,
+        Tag.Event => TriggerCondition.PlayEventTag,
+        _ => null,
     };
 }
