@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
@@ -42,44 +43,56 @@ public class CardsFunction
     }
 
     /// <summary>
-    /// Returns card metadata for all cards referenced in a game.
+    /// Returns card metadata. If <c>gameId</c> is provided as a query parameter, only cards
+    /// referenced by that game are returned; otherwise the full card catalog is returned.
     /// </summary>
-    [FunctionName("GetGameCards")]
-    public async Task<IActionResult> GetGameCards(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "games/{id}/cards")] HttpRequest req,
-        string id)
+    [FunctionName("GetCards")]
+    public async Task<IActionResult> GetCards(
+        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "cards")] HttpRequest req)
     {
         var sw = Stopwatch.StartNew();
 
-        GameState state;
-        try
+        var gameId = req.Query.TryGetValue("gameId", out var values) ? values.ToString() : null;
+
+        IEnumerable<string> cardIds;
+        if (!string.IsNullOrWhiteSpace(gameId))
         {
-            state = await _store.LoadStateAsync(id);
+            GameState state;
+            try
+            {
+                state = await _store.LoadStateAsync(gameId);
+            }
+            catch (InvalidOperationException)
+            {
+                return JsonResult(HttpStatusCode.NotFound, new ErrorResponse($"Game '{gameId}' not found."));
+            }
+
+            cardIds = CollectAllCardIds(state);
         }
-        catch (InvalidOperationException)
+        else
         {
-            return JsonResult(HttpStatusCode.NotFound, new ErrorResponse($"Game '{id}' not found."));
+            cardIds = CardRegistry.All.Keys;
         }
 
-        var cards = CollectAllCardIds(state)
+        var cards = cardIds
             .Where(cardId => CardRegistry.TryGet(cardId, out _))
-            .Select(cardId =>
-            {
-                var def = CardRegistry.GetDefinition(cardId);
-                return new CardInfo(
-                    def.Id,
-                    def.Name,
-                    def.Type,
-                    def.Cost,
-                    def.Tags,
-                    def.Requirements,
-                    def.Description);
-            })
+            .Select(cardId => ToCardInfo(CardRegistry.GetDefinition(cardId)))
             .ToImmutableDictionary(c => c.Id);
 
-        _logger.LogInformation("GetGameCards completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
+        _logger.LogInformation(
+            "GetCards completed in {ElapsedMs}ms (gameId={GameId}, count={Count})",
+            sw.ElapsedMilliseconds, gameId ?? "<all>", cards.Count);
         return JsonResult(HttpStatusCode.OK, cards);
     }
+
+    private static CardInfo ToCardInfo(CardDefinition def) => new(
+        def.Id,
+        def.Name,
+        def.Type,
+        def.Cost,
+        def.Tags,
+        def.Requirements,
+        def.Description);
 
     private static ImmutableHashSet<string> CollectAllCardIds(GameState state)
     {
