@@ -387,7 +387,7 @@ public static class MoveValidator
             return $"Not enough heat: have {player.Resources.Heat}, trying to spend {payment.Heat}.";
 
         // Check total payment covers effective cost (after discounts)
-        var discount = RequirementChecker.GetCardDiscount(player, card.Tags);
+        var discount = RequirementChecker.GetCardDiscount(player, card.Tags) + player.NextCardDiscount;
         var effectiveCost = Math.Max(0, card.Cost - discount);
         var steelValue = RequirementChecker.GetSteelValue(player);
         var titaniumValue = RequirementChecker.GetTitaniumValue(player);

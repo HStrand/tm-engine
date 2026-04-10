@@ -806,10 +806,10 @@ public static class GameEngine
         var pendingDiscount = isFromPending ? ((PlayCardFromHandPending)state.PendingAction!).CostDiscount : 0;
 
         // Calculate effective cost with discounts
-        var discount = RequirementChecker.GetCardDiscount(player, card.Tags) + pendingDiscount;
+        var discount = RequirementChecker.GetCardDiscount(player, card.Tags) + pendingDiscount + player.NextCardDiscount;
         var effectiveCost = Math.Max(0, card.Cost - discount);
 
-        // Deduct resources
+        // Deduct resources and consume next-card discount
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
             Resources = new ResourceSet(
@@ -822,6 +822,7 @@ public static class GameEngine
             Hand = p.Hand.Remove(move.CardId),
             // Only count as an action if this is a normal action phase play
             ActionsThisTurn = isFromPending ? p.ActionsThisTurn : p.ActionsThisTurn + 1,
+            NextCardDiscount = 0,
         });
 
         // Clear the pending action if resolving one

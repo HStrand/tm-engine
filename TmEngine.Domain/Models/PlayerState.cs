@@ -44,6 +44,12 @@ public sealed record PlayerState
     public bool HasFreeAwardFunding { get; init; }
 
     /// <summary>
+    /// Discount (in MC) to apply to the next card played this generation.
+    /// Set by Indentured Workers. Consumed when the next card is played.
+    /// </summary>
+    public int NextCardDiscount { get; init; }
+
+    /// <summary>
     /// Creates a fresh player state for game start.
     /// </summary>
     public static PlayerState CreateInitial(int playerId, int startingTR) => new()

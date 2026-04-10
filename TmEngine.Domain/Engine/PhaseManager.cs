@@ -106,6 +106,7 @@ public static class PhaseManager
                 Passed = false,
                 ActionsThisTurn = 0,
                 IncreasedTRThisGeneration = false,
+                NextCardDiscount = 0,
             });
         }
 

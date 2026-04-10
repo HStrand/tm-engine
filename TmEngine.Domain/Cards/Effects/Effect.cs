@@ -360,6 +360,13 @@ public sealed record PlayCardFromHandEffect(
     int CostDiscount = 0) : Effect;
 
 /// <summary>
+/// Apply a discount to the next card the player plays this generation.
+/// The discount persists across actions until a card is actually played.
+/// E.g., Indentured Workers: next card costs 8 MC less.
+/// </summary>
+public sealed record NextCardDiscountEffect(int Discount) : Effect;
+
+/// <summary>
 /// Grants the player one free award funding (Vitor corporation).
 /// The player can use it at any point — it's not tied to a specific generation.
 /// </summary>

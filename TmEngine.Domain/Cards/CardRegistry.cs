@@ -1642,7 +1642,7 @@ public static class CardRegistry
         // Variable amount action — deferred
 
         // 195: Indentured Workers — Next card this generation costs 8 MC less
-        // Temporary discount — deferred
+        SetEffects(builder, "195", onPlayEffects: [new NextCardDiscountEffect(8)]);
 
         // 196: Lagrange Observatory — Draw 1 card
         SetEffects(builder, "196", onPlayEffects: [new DrawCardsEffect(1)]);

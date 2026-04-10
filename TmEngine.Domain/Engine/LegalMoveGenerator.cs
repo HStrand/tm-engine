@@ -333,7 +333,7 @@ public static class LegalMoveGenerator
             if (!HasValidPlacements(state, player.PlayerId, entry))
                 continue;
 
-            var discount = RequirementChecker.GetCardDiscount(player, card.Tags) + costDiscount;
+            var discount = RequirementChecker.GetCardDiscount(player, card.Tags) + costDiscount + player.NextCardDiscount;
             var effectiveCost = Math.Max(0, card.Cost - discount);
 
             // Check if the player can afford it with any combination of resources
