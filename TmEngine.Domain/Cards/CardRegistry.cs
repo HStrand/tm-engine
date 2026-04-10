@@ -591,6 +591,7 @@ public static class CardRegistry
         // 007: Martian Rails — Action: spend 1 energy, gain 1 MC per city on Mars
         // Complex action — deferred
 
+        // Tested OK
         // 008: Capital — -2 energy prod, +5 MC prod, place Capital city tile
         SetEffects(builder, "008", onPlayEffects:
         [
@@ -642,6 +643,7 @@ public static class CardRegistry
                 new ChangeTREffect(1),
             ]));
 
+        // Tested OK
         // 016: Domed Crater — +3 plants, place city, -1 energy prod, +3 MC prod
         SetEffects(builder, "016", onPlayEffects:
         [
@@ -751,6 +753,7 @@ public static class CardRegistry
         // Complex triggered effect — needs compound trigger effect
         // Deferred
 
+        // Tested OK
         // 032: Underground City — place city, -2 energy prod, +2 steel prod
         SetEffects(builder, "032", onPlayEffects:
         [
@@ -786,6 +789,7 @@ public static class CardRegistry
             new RemoveResourceEffect(ResourceType.Plants, 8),
         ]);
 
+        // Tested OK
         // 040: Asteroid Mining — +2 titanium prod
         SetEffects(builder, "040", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Titanium, 2)]);
@@ -1221,6 +1225,7 @@ public static class CardRegistry
             new ChangeResourceEffect(ResourceType.Plants, 2),
         ]);
 
+        // Tested OK
         // 119: Dust Seals — Requires max 3 oceans, 1 VP. No effects.
         SetEffects(builder, "119");
 
@@ -1336,6 +1341,7 @@ public static class CardRegistry
         SetEffects(builder, "136", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 2)]);
 
+        // Tested OK
         // 137: Cartel — +1 MC prod per Earth tag including this
         SetEffects(builder, "137", onPlayEffects:
             [new ChangeProductionPerTagEffect(ResourceType.MegaCredits, Tag.Earth, 1)]);
@@ -1360,6 +1366,7 @@ public static class CardRegistry
             new PlaceTileEffect(TileType.LavaFlows),
         ]);
 
+        // Tested OK
         // 141: Power Plant — +1 energy prod
         SetEffects(builder, "141", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 1)]);
@@ -1414,6 +1421,7 @@ public static class CardRegistry
         SetEffects(builder, "150",
             ongoingEffects: [new GlobalDiscountEffect(2)]);
 
+        // Tested OK
         // 151: Investment Loan — -1 MC prod, +10 MC
         SetEffects(builder, "151", onPlayEffects:
         [
@@ -1432,6 +1440,7 @@ public static class CardRegistry
         SetEffects(builder, "154",
             action: new CardAction(new SpendHeatCost(8), [new ChangeTREffect(1)]));
 
+        // Tested OK
         // 155: Designed Microorganisms — +2 plant prod
         SetEffects(builder, "155", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Plants, 2)]);

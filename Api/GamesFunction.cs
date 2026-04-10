@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -77,10 +79,15 @@ public class GamesFunction
             return JsonResult(HttpStatusCode.NotFound, new ErrorResponse($"Game '{id}' not found."));
         }
 
+        // Extract counts before filtering hides the data
+        var drawPileCount = state.DrawPile.Count;
+        var discardPileCount = state.DiscardPile.Count;
+        var handCounts = state.Players.ToImmutableDictionary(p => p.PlayerId, p => p.Hand.Count);
+
         var filtered = GameStateView.FilterForPlayer(state, playerId);
         var cardNames = CardNameResolver.FromGameState(filtered);
         _logger.LogInformation("GetGame completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
-        return JsonResult(HttpStatusCode.OK, new GameStateResponse(filtered, cardNames));
+        return JsonResult(HttpStatusCode.OK, new GameStateResponse(filtered, cardNames, drawPileCount, discardPileCount, handCounts));
     }
 
     private ContentResult JsonResult(HttpStatusCode status, object body)

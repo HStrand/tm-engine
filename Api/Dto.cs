@@ -15,7 +15,10 @@ public sealed record CreateGameResponse(string GameId);
 
 public sealed record GameStateResponse(
     GameState State,
-    ImmutableDictionary<string, string> CardNames);
+    ImmutableDictionary<string, string> CardNames,
+    int DrawPileCount,
+    int DiscardPileCount,
+    ImmutableDictionary<int, int> HandCounts);
 
 public sealed record SubmitMoveResponse(
     bool Success,
