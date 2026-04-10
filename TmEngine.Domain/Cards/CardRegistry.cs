@@ -883,6 +883,7 @@ public static class CardRegistry
             new ChangeResourceEffect(ResourceType.Plants, 2),
         ]);
 
+        // Tested OK
         // 056: Mine — +1 steel prod
         SetEffects(builder, "056", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Steel, 1)]);

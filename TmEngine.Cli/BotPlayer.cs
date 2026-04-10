@@ -6,11 +6,12 @@ public class BotPlayer
 {
     private readonly Random _rng = new();
     private readonly Dictionary<string, string> _cardNames;
-    private readonly int _playerId;
+
+    public int PlayerId { get; }
 
     public BotPlayer(int playerId)
     {
-        _playerId = playerId;
+        PlayerId = playerId;
         _cardNames = new();
     }
 
@@ -335,7 +336,7 @@ public class BotPlayer
     }
 
     private JObject MakeMove(string type) =>
-        new() { ["type"] = type, ["playerId"] = _playerId };
+        new() { ["type"] = type, ["playerId"] = PlayerId };
 
     private T PickRandom<T>(List<T> list) =>
         list[_rng.Next(list.Count)];
@@ -346,6 +347,6 @@ public class BotPlayer
         return shuffled.Take(count).ToList();
     }
 
-    private string CardName(string id) =>
+    public string CardName(string id) =>
         _cardNames.GetValueOrDefault(id, id);
 }
