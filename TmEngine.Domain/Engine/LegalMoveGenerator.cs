@@ -35,6 +35,14 @@ public sealed record AvailableMoves
     /// <summary>Available during Action phase when a PendingAction must be resolved.</summary>
     public PendingAction? PendingAction { get; init; }
 
+    /// <summary>
+    /// Cards from the player's hand that are playable in response to a
+    /// <see cref="PlayCardFromHandPending"/>. Effective costs reflect the pending
+    /// action's discount and any "ignore global requirements" waiver. Empty for
+    /// other pending action types.
+    /// </summary>
+    public ImmutableList<PlayableCard> PendingPlayableCards { get; init; } = [];
+
     /// <summary>Available during Action phase for normal actions.</summary>
     public ActionPhaseOptions? Actions { get; init; }
 
@@ -114,7 +122,17 @@ public static class LegalMoveGenerator
             if (state.GetActivePlayer().PlayerId != playerId)
                 return new AvailableMoves { WaitingForOtherPlayer = true };
 
-            return new AvailableMoves { PendingAction = state.PendingAction };
+            var pendingPlayable = state.PendingAction is PlayCardFromHandPending pcfh
+                ? GetPlayableCards(state, state.GetPlayer(playerId),
+                    costDiscount: pcfh.CostDiscount,
+                    ignoreGlobalRequirements: pcfh.IgnoreGlobalRequirements)
+                : [];
+
+            return new AvailableMoves
+            {
+                PendingAction = state.PendingAction,
+                PendingPlayableCards = pendingPlayable,
+            };
         }
 
         return state.Phase switch
@@ -289,7 +307,9 @@ public static class LegalMoveGenerator
 
     // ── Helpers ─────────────────────────────────────────────────
 
-    private static ImmutableList<PlayableCard> GetPlayableCards(GameState state, PlayerState player)
+    private static ImmutableList<PlayableCard> GetPlayableCards(
+        GameState state, PlayerState player,
+        int costDiscount = 0, bool ignoreGlobalRequirements = false)
     {
         var result = ImmutableList.CreateBuilder<PlayableCard>();
 
@@ -300,8 +320,9 @@ public static class LegalMoveGenerator
 
             var card = entry.Definition;
 
-            // Check requirements
-            if (RequirementChecker.CanPlayCard(state, player.PlayerId, card) != null)
+            // Check requirements (optionally waiving global parameters)
+            if (RequirementChecker.CanPlayCard(state, player.PlayerId, card,
+                    ignoreGlobalRequirements: ignoreGlobalRequirements) != null)
                 continue;
 
             // Check mandatory effects affordability
@@ -312,7 +333,7 @@ public static class LegalMoveGenerator
             if (!HasValidPlacements(state, player.PlayerId, entry))
                 continue;
 
-            var discount = RequirementChecker.GetCardDiscount(player, card.Tags);
+            var discount = RequirementChecker.GetCardDiscount(player, card.Tags) + costDiscount;
             var effectiveCost = Math.Max(0, card.Cost - discount);
 
             // Check if the player can afford it with any combination of resources

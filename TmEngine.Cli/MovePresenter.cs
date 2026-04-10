@@ -28,7 +28,7 @@ public class MovePresenter
     public JObject PromptMove(AvailableMovesDto moves, PlayerStateDto playerState)
     {
         if (moves.PendingAction != null)
-            return PromptPendingAction(moves.PendingAction, playerState);
+            return PromptPendingAction(moves.PendingAction, moves.PendingPlayableCards, playerState);
         if (moves.Setup != null)
             return PromptSetup(moves.Setup, playerState);
         if (moves.Prelude != null)
@@ -420,7 +420,7 @@ public class MovePresenter
 
     // ── Pending Action ──
 
-    private JObject PromptPendingAction(JObject pending, PlayerStateDto playerState)
+    private JObject PromptPendingAction(JObject pending, List<PlayableCardDto> pendingPlayableCards, PlayerStateDto playerState)
     {
         var type = pending["type"]?.Value<string>() ?? "";
         Console.ForegroundColor = ConsoleColor.Yellow;
@@ -520,23 +520,26 @@ public class MovePresenter
                 var desc = pending["description"]?.Value<string>() ?? "";
                 Console.WriteLine(desc);
                 Console.WriteLine("Choose a card to play from hand, or 0 to skip:");
-                for (int i = 0; i < playerState.Hand.Count; i++)
-                    Console.WriteLine($"  {i + 1}. {CardName(playerState.Hand[i])}");
+                for (int i = 0; i < pendingPlayableCards.Count; i++)
+                {
+                    var c = pendingPlayableCards[i];
+                    Console.WriteLine($"  {i + 1}. {CardName(c.CardId)} (cost {c.EffectiveCost} MC)");
+                }
 
                 Console.Write("Choice: ");
                 var input = Console.ReadLine()?.Trim() ?? "0";
-                if (int.TryParse(input, out int idx) && idx >= 1 && idx <= playerState.Hand.Count)
+                if (int.TryParse(input, out int idx) && idx >= 1 && idx <= pendingPlayableCards.Count)
                 {
-                    var cardId = playerState.Hand[idx - 1];
-                    // Simplified: pay full cost in MC
+                    var card = pendingPlayableCards[idx - 1];
+                    var payment = PromptPayment(card, playerState);
                     var move = MakeMove("PlayCard");
-                    move["cardId"] = cardId;
+                    move["cardId"] = card.CardId;
                     move["payment"] = new JObject
                     {
-                        ["megaCredits"] = 0, // discount may cover it
-                        ["steel"] = 0,
-                        ["titanium"] = 0,
-                        ["heat"] = 0,
+                        ["megaCredits"] = payment.MegaCredits,
+                        ["steel"] = payment.Steel,
+                        ["titanium"] = payment.Titanium,
+                        ["heat"] = payment.Heat,
                     };
                     return move;
                 }

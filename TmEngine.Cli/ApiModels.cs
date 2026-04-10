@@ -184,6 +184,7 @@ public class AvailableMovesDto
     public DraftOptionsDto? Draft { get; set; }
     public BuyCardsOptionsDto? BuyCards { get; set; }
     public JObject? PendingAction { get; set; }
+    public List<PlayableCardDto> PendingPlayableCards { get; set; } = new();
     public ActionPhaseOptionsDto? Actions { get; set; }
     public FinalGreeneryOptionsDto? FinalGreenery { get; set; }
 }
