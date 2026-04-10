@@ -566,6 +566,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Titanium, 1),
         ]);
 
+        // Tested OK
         // 003: Deep Well Heating — +1 energy prod, raise temp 1
         SetEffects(builder, "003", onPlayEffects:
         [
@@ -689,8 +690,9 @@ public static class CardRegistry
             new PlaceOffMapCityEffect("Phobos Space Haven"),
         ]);
 
-        // 022: Black Polar Dust — place ocean, -2 MC prod, +3 heat prod
-        SetEffects(builder, "022", onPlayEffects:
+		// Tested OK
+		// 022: Black Polar Dust — place ocean, -2 MC prod, +3 heat prod
+		SetEffects(builder, "022", onPlayEffects:
         [
             new PlaceOceanEffect(1),
             new ChangeProductionEffect(ResourceType.MegaCredits, -2),
@@ -721,10 +723,11 @@ public static class CardRegistry
             new AddCardResourceEffect(CardResourceType.Animal, 1),
         ]);
 
-        // 027: Interstellar Colony Ship — VP only (event, 4 VP)
+		// 027: Interstellar Colony Ship — VP only (event, 4 VP)
 
-        // 028: Security Fleet — Action: spend 1 titanium, add 1 fighter resource. 1VP/fighter
-        SetEffects(builder, "028",
+		// Tested OK
+		// 028: Security Fleet — Action: spend 1 titanium, add 1 fighter resource. 1VP/fighter
+		SetEffects(builder, "028",
             action: new CardAction(new SpendTitaniumCost(1),
                 [new AddCardResourceEffect(CardResourceType.Fighter, 1, "028")]));
 
@@ -833,12 +836,14 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Plants, 2),
         ]);
 
-        // 048: Adapted Lichen — +1 plant prod
-        SetEffects(builder, "048", onPlayEffects:
+		// Tested OK
+		// 048: Adapted Lichen — +1 plant prod
+		SetEffects(builder, "048", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Plants, 1)]);
 
-        // 049: Tardigrades — Action: add 1 microbe. 1VP/4 microbes
-        SetEffects(builder, "049",
+		// Tested OK
+		// 049: Tardigrades — Action: add 1 microbe. 1VP/4 microbes
+		SetEffects(builder, "049",
             action: new CardAction(null, [new AddCardResourceEffect(CardResourceType.Microbe, 1, "049")]));
 
         // 050: Virus — Remove up to 2 animals or 5 plants from any player
@@ -851,8 +856,9 @@ public static class CardRegistry
             ]),
         ]);
 
-        // 051: Miranda Resort — +1 MC prod per Earth tag you have
-        SetEffects(builder, "051", onPlayEffects:
+		// Tested OK
+		// 051: Miranda Resort — +1 MC prod per Earth tag you have
+		SetEffects(builder, "051", onPlayEffects:
             [new ChangeProductionPerTagEffect(ResourceType.MegaCredits, Tag.Earth, 1)]);
 
         // 052: Fish — Action: add 1 animal. -1 plant prod (any). 1VP/animal
@@ -910,8 +916,9 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Steel, 1),
         ]);
 
-        // 062: Mineral Deposit — +5 steel
-        SetEffects(builder, "062", onPlayEffects:
+		// Tested OK
+		// 062: Mineral Deposit — +5 steel
+		SetEffects(builder, "062", onPlayEffects:
             [new ChangeResourceEffect(ResourceType.Steel, 5)]);
 
         // 063: Mining Expedition — Raise O2 1 step, remove 2 plants from any, +2 steel
@@ -925,10 +932,11 @@ public static class CardRegistry
         // 064: Mining Area — Place special tile on steel/titanium bonus hex adjacent to own. +1 prod of that resource
         SetEffects(builder, "064", onPlayEffects:
             [new PlaceTileEffect(TileType.MiningArea)]);
-        // Note: production increase for the specific bonus is handled by the tile type logic
+		// Note: production increase for the specific bonus is handled by the tile type logic
 
-        // 065: Building Industries — -1 energy prod, +2 steel prod
-        SetEffects(builder, "065", onPlayEffects:
+		// Tested OK
+		// 065: Building Industries — -1 energy prod, +2 steel prod
+		SetEffects(builder, "065", onPlayEffects:
         [
             new ChangeProductionEffect(ResourceType.Energy, -1),
             new ChangeProductionEffect(ResourceType.Steel, 2),
@@ -941,8 +949,9 @@ public static class CardRegistry
         SetEffects(builder, "067", onPlayEffects:
             [new PlaceTileEffect(TileType.MiningRights)]);
 
-        // 068: Sponsors — +2 MC prod
-        SetEffects(builder, "068", onPlayEffects:
+		// Tested OK
+		// 068: Sponsors — +2 MC prod
+		SetEffects(builder, "068", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.MegaCredits, 2)]);
 
         // 069: Electro Catapult — Action: spend 1 plant or 1 steel for 7 MC. -1 energy prod
@@ -1022,10 +1031,11 @@ public static class CardRegistry
         SetEffects(builder, "083", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 3)]);
 
-        // 084: Trans-Neptune Probe — VP only
+		// 084: Trans-Neptune Probe — VP only
 
-        // 085: Commercial District — -1 energy prod, +4 MC prod, place special tile
-        SetEffects(builder, "085", onPlayEffects:
+		// Tested OK
+		// 085: Commercial District — -1 energy prod, +4 MC prod, place special tile
+		SetEffects(builder, "085", onPlayEffects:
         [
             new ChangeProductionEffect(ResourceType.Energy, -1),
             new ChangeProductionEffect(ResourceType.MegaCredits, 4),
@@ -1143,6 +1153,7 @@ public static class CardRegistry
         SetEffects(builder, "105",
             ongoingEffects: [new TagDiscountEffect(Tag.Earth, 3)]);
 
+        // Tested OK
         // 106: Acquired Company — +3 MC prod
         SetEffects(builder, "106", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.MegaCredits, 3)]);
@@ -1167,13 +1178,14 @@ public static class CardRegistry
         // 110: Business Network — -1 MC prod. Action: look at top card, buy or discard
         SetEffects(builder, "110",
             onPlayEffects: [new ChangeProductionEffect(ResourceType.MegaCredits, -1)]);
-        // Action deferred — complex
+		// Action deferred — complex
 
-        // 111: Business Contacts — Look at top 4 cards, keep 2 discard 2
-        // Complex — deferred
+		// 111: Business Contacts — Look at top 4 cards, keep 2 discard 2
+		// Complex — deferred
 
-        // 112: Bribed Committee — +2 TR
-        SetEffects(builder, "112", onPlayEffects: [new ChangeTREffect(2)]);
+		// Tested OK
+		// 112: Bribed Committee — +2 TR
+		SetEffects(builder, "112", onPlayEffects: [new ChangeTREffect(2)]);
 
         // 113: Solar Power — +1 energy prod
         SetEffects(builder, "113", onPlayEffects:
@@ -1551,8 +1563,9 @@ public static class CardRegistry
         SetEffects(builder, "177",
             action: new CardAction(new SpendEnergyCost(3), [new RaiseOxygenEffect(1)]));
 
-        // 178: Heat Trappers — Decrease any heat prod 2, +1 energy prod
-        SetEffects(builder, "178", onPlayEffects:
+		// Tested OK
+		// 178: Heat Trappers — Decrease any heat prod 2, +1 energy prod
+		SetEffects(builder, "178", onPlayEffects:
         [
             new ReduceAnyProductionEffect(ResourceType.Heat, 2),
             new ChangeProductionEffect(ResourceType.Energy, 1),
@@ -1638,11 +1651,12 @@ public static class CardRegistry
         SetEffects(builder, "193", onPlayEffects:
             [new PlaceTileEffect(TileType.Greenery)]);
 
-        // 194: Power Infrastructure — Action: spend any energy, gain that much MC
-        // Variable amount action — deferred
+		// 194: Power Infrastructure — Action: spend any energy, gain that much MC
+		// Variable amount action — deferred
 
-        // 195: Indentured Workers — Next card this generation costs 8 MC less
-        SetEffects(builder, "195", onPlayEffects: [new NextCardDiscountEffect(8)]);
+		// Tested OK
+		// 195: Indentured Workers — Next card this generation costs 8 MC less
+		SetEffects(builder, "195", onPlayEffects: [new NextCardDiscountEffect(8)]);
 
         // 196: Lagrange Observatory — Draw 1 card
         SetEffects(builder, "196", onPlayEffects: [new DrawCardsEffect(1)]);
@@ -1682,6 +1696,7 @@ public static class CardRegistry
         SetEffects(builder, "202",
             action: new CardAction(new SpendMCCost(10), [new ChangeProductionEffect(ResourceType.Heat, 2)]));
 
+        // Tested OK
         // 203: Soletta — +7 heat prod
         SetEffects(builder, "203", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Heat, 7)]);
@@ -1730,10 +1745,11 @@ public static class CardRegistry
         SetEffects(builder, "P39",
             action: new CardAction(null, [new AddCardResourceEffect(CardResourceType.Microbe, 1, "P39")]));
 
-        // P40: Research Coordination — no effects (wild tag only)
+		// P40: Research Coordination — no effects (wild tag only)
 
-        // P41: SF Memorial — Draw 1 card
-        SetEffects(builder, "P41", onPlayEffects: [new DrawCardsEffect(1)]);
+		// Tested OK
+		// P41: SF Memorial — Draw 1 card
+		SetEffects(builder, "P41", onPlayEffects: [new DrawCardsEffect(1)]);
 
         // P42: Space Hotels — +4 MC prod
         SetEffects(builder, "P42", onPlayEffects:

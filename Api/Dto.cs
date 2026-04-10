@@ -28,3 +28,45 @@ public sealed record LegalMovesResponse(
     ImmutableDictionary<string, string> CardNames);
 
 public sealed record ErrorResponse(string Error);
+
+// ── Player Status ──────────────────────────────────────────
+
+public sealed record PlayerStatusResponse(
+    ImmutableList<PlayerStatusDto> Players);
+
+public sealed record PlayerStatusDto(
+    int PlayerId,
+    string Corporation,
+    PlayerPointsDto Points,
+    PlayerTilesDto Tiles,
+    ResourceSet Resources,
+    ProductionSet Production,
+    PlayerTagsDto Tags);
+
+public sealed record PlayerPointsDto(
+    int Total,
+    int TR,
+    int VP,
+    int Milestones,
+    int Awards,
+    int Greeneries,
+    int Cities);
+
+public sealed record PlayerTilesDto(
+    int Greeneries,
+    int Cities,
+    int SpecialTiles);
+
+public sealed record PlayerTagsDto(
+    int Building,
+    int Space,
+    int Power,
+    int Science,
+    int Jovian,
+    int Earth,
+    int Plant,
+    int Microbe,
+    int Animal,
+    int City,
+    int Event,
+    int Wild);
