@@ -128,13 +128,14 @@ public static class RequirementChecker
                 }
             }
 
-            // ReduceAnyProductionEffect — at least one player must have enough
+            // ReduceAnyProductionEffect — at least one player must be able to absorb the reduction
             if (effect is ReduceAnyProductionEffect reduce)
             {
-                bool anyoneHasEnough = state.Players.Any(p =>
-                    p.Production.Get(reduce.Resource) >= reduce.Amount);
-                if (!anyoneHasEnough)
-                    return $"No player has {reduce.Amount} {reduce.Resource} production to reduce.";
+                var minProd = reduce.Resource == ResourceType.MegaCredits ? Constants.MinMCProduction : 0;
+                bool anyoneCanAbsorb = state.Players.Any(p =>
+                    p.Production.Get(reduce.Resource) - reduce.Amount >= minProd);
+                if (!anyoneCanAbsorb)
+                    return $"No player can have their {reduce.Resource} production reduced by {reduce.Amount}.";
             }
         }
 

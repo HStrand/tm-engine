@@ -574,6 +574,7 @@ public static class CardRegistry
             new RaiseTemperatureEffect(1),
         ]);
 
+        // Tested OK
         // 004: Cloud Seeding — -1 MC prod, decrease any heat prod 1, +2 plant prod
         SetEffects(builder, "004", onPlayEffects:
         [
@@ -661,6 +662,7 @@ public static class CardRegistry
             new PlaceTileEffect(TileType.City, PlacementConstraint.NoctisCity),
         ]);
 
+        // Tested OK
         // 018: Methane From Titan — +2 heat prod, +2 plant prod
         SetEffects(builder, "018", onPlayEffects:
         [
@@ -733,6 +735,7 @@ public static class CardRegistry
             action: new CardAction(new SpendTitaniumCost(1),
                 [new AddCardResourceEffect(CardResourceType.Fighter, 1, "028")]));
 
+        // Tested OK
         // 029: Cupola City — place city, -1 energy prod, +3 MC prod
         SetEffects(builder, "029", onPlayEffects:
         [
@@ -741,6 +744,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.MegaCredits, 3),
         ]);
 
+        // Tested OK
         // 030: Lunar Beam — -2 MC prod, +2 heat prod, +2 energy prod
         SetEffects(builder, "030", onPlayEffects:
         [
@@ -771,6 +775,7 @@ public static class CardRegistry
         // 035: Ants — Action: remove 1 microbe from any to add 1 here. 1VP/2 microbes
         // Complex action — deferred
 
+        // Tested OK
         // 036: Release of Inert Gases — +2 TR
         SetEffects(builder, "036", onPlayEffects: [new ChangeTREffect(2)]);
 
@@ -794,6 +799,7 @@ public static class CardRegistry
         SetEffects(builder, "040", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Titanium, 2)]);
 
+        // Tested OK
         // 041: Food Factory — -1 plant prod, +4 MC prod
         SetEffects(builder, "041", onPlayEffects:
         [
@@ -801,10 +807,12 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.MegaCredits, 4),
         ]);
 
+        // Tested OK
         // 042: Archaebacteria — +1 plant prod
         SetEffects(builder, "042", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Plants, 1)]);
 
+        // Tested OK
         // 043: Carbonate Processing — -1 energy prod, +3 heat prod
         SetEffects(builder, "043", onPlayEffects:
         [
@@ -812,6 +820,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Heat, 3),
         ]);
 
+        // Tested OK
         // 044: Natural Preserve — place special tile next to no other, +1 MC prod
         SetEffects(builder, "044", onPlayEffects:
         [
@@ -819,6 +828,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.MegaCredits, 1),
         ]);
 
+        // Tested OK
         // 045: Nuclear Power — -2 MC prod, +3 energy prod
         SetEffects(builder, "045", onPlayEffects:
         [
@@ -833,6 +843,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.MegaCredits, 1),
         ]);
 
+        // Tested OK
         // 047: Algae — +1 plant, +2 plant prod
         SetEffects(builder, "047", onPlayEffects:
         [
@@ -870,6 +881,7 @@ public static class CardRegistry
             onPlayEffects: [new ReduceAnyProductionEffect(ResourceType.Plants, 1)],
             action: new CardAction(null, [new AddCardResourceEffect(CardResourceType.Animal, 1, "052")]));
 
+        // Tested OK
         // 053: Lake Marineris — Place 2 oceans
         SetEffects(builder, "053", onPlayEffects:
             [new PlaceOceanEffect(1), new PlaceOceanEffect(1)]);
@@ -879,6 +891,7 @@ public static class CardRegistry
             onPlayEffects: [new ReduceAnyProductionEffect(ResourceType.Plants, 1)],
             action: new CardAction(null, [new AddCardResourceEffect(CardResourceType.Animal, 1, "054")]));
 
+        // Tested OK
         // 055: Kelp Farming — +2 MC prod, +3 plant prod, +2 plants
         SetEffects(builder, "055", onPlayEffects:
         [
@@ -892,10 +905,12 @@ public static class CardRegistry
         SetEffects(builder, "056", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Steel, 1)]);
 
+        // Tested OK
         // 057: Vesta Shipyard — +1 titanium prod
         SetEffects(builder, "057", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Titanium, 1)]);
 
+        // Tested OK
         // 058: Beam from a Thorium Asteroid — +3 heat prod, +3 energy prod
         SetEffects(builder, "058", onPlayEffects:
         [
@@ -907,6 +922,7 @@ public static class CardRegistry
         SetEffects(builder, "059", onPlayEffects:
             [new PlaceTileEffect(TileType.Greenery, PlacementConstraint.OnOceanArea)]);
 
+        // Tested OK
         // 060: Trees — +3 plant prod, +1 plant
         SetEffects(builder, "060", onPlayEffects:
         [
@@ -1050,6 +1066,7 @@ public static class CardRegistry
         // 086: Robotic Workforce — Duplicate production box of one of your building cards
         // Complex — deferred
 
+        // Tested OK
         // 087: Grass — +1 plant prod, +3 plants
         SetEffects(builder, "087", onPlayEffects:
         [
@@ -1057,6 +1074,7 @@ public static class CardRegistry
             new ChangeResourceEffect(ResourceType.Plants, 3),
         ]);
 
+        // Tested OK
         // 088: Heather — +1 plant prod, +1 plant
         SetEffects(builder, "088", onPlayEffects:
         [
@@ -1085,6 +1103,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.MegaCredits, 2),
         ]);
 
+        // Tested OK
         // 093: Bushes — +2 plant prod, +2 plants
         SetEffects(builder, "093", onPlayEffects:
         [
@@ -1105,6 +1124,7 @@ public static class CardRegistry
         // 096: Greenhouses — Gain 1 plant per city tile in play
         // Dynamic count — deferred (needs "count tiles" effect)
 
+        // Tested OK
         // 097: Nuclear Zone — Place tile, raise temp 2
         SetEffects(builder, "097", onPlayEffects:
         [
@@ -1217,6 +1237,7 @@ public static class CardRegistry
         SetEffects(builder, "117", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 2)]);
 
+        // Tested OK
         // 118: Farming — +2 MC prod, +2 plant prod, +2 plants
         SetEffects(builder, "118", onPlayEffects:
         [
@@ -1248,6 +1269,7 @@ public static class CardRegistry
             ]),
         ]);
 
+        // Tested OK
         // 122: Moss — Lose 1 plant, +1 plant prod
         SetEffects(builder, "122", onPlayEffects:
         [
@@ -1285,6 +1307,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Heat, 4),
         ]);
 
+        // Tested OK
         // 127: Subterranean Reservoir — Place 1 ocean
         SetEffects(builder, "127", onPlayEffects: [new PlaceOceanEffect(1)]);
 
@@ -1489,6 +1512,7 @@ public static class CardRegistry
             new AddCardResourceEffect(CardResourceType.Animal, 2),
         ]);
 
+        // Tested OK
         // 164: Micro-Mills — +1 heat prod
         SetEffects(builder, "164", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Heat, 1)]);
@@ -1518,6 +1542,7 @@ public static class CardRegistry
         SetEffects(builder, "168", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 1)]);
 
+        // Tested OK
         // 169: Tundra Farming — +1 plant prod, +2 MC prod, +1 plant
         SetEffects(builder, "169", onPlayEffects:
         [
@@ -1581,6 +1606,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Energy, 1),
         ]);
 
+        // Tested OK
         // 179: Soil Factory — -1 energy prod, +1 plant prod
         SetEffects(builder, "179", onPlayEffects:
         [
@@ -1588,6 +1614,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Plants, 1),
         ]);
 
+        // Tested OK
         // 180: Fuel Factory — -1 energy prod, +1 titanium prod, +1 MC prod
         SetEffects(builder, "180", onPlayEffects:
         [
@@ -1596,9 +1623,11 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.MegaCredits, 1),
         ]);
 
+        // Tested OK
         // 181: Ice Cap Melting — Place 1 ocean
         SetEffects(builder, "181", onPlayEffects: [new PlaceOceanEffect(1)]);
 
+        // Tested OK
         // 182: Corporate Stronghold — -1 energy prod, +3 MC prod, place city
         SetEffects(builder, "182", onPlayEffects:
         [
@@ -1607,6 +1636,7 @@ public static class CardRegistry
             new PlaceTileEffect(TileType.City),
         ]);
 
+        // Tested OK
         // 183: Biomass Combustors — Decrease any plant prod 1, +2 energy prod
         SetEffects(builder, "183", onPlayEffects:
         [
@@ -1651,6 +1681,7 @@ public static class CardRegistry
             ]),
         ]);
 
+        // Tested OK
         // 191: Permafrost Extraction — Place 1 ocean
         SetEffects(builder, "191", onPlayEffects: [new PlaceOceanEffect(1)]);
 

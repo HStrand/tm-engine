@@ -287,9 +287,11 @@ public static class EffectExecutor
     private static (GameState, PendingAction?) ApplyReduceAnyProduction(
         GameState state, int playerId, ReduceAnyProductionEffect e)
     {
-        // Must reduce someone's production. Check opponents first, then self.
+        // Must reduce someone's production.
+        // MC production can go down to -5; all other productions floor at 0.
+        var minProduction = e.Resource == ResourceType.MegaCredits ? Constants.MinMCProduction : 0;
         var validTargets = state.Players
-            .Where(p => p.Production.Get(e.Resource) >= e.Amount)
+            .Where(p => p.Production.Get(e.Resource) - e.Amount >= minProduction)
             .Select(p => p.PlayerId)
             .ToImmutableArray();
 

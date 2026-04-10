@@ -246,9 +246,14 @@ async Task RunBotGame()
                     ShowPlayerStatus(p, result.CardNames ?? stateCardNames);
             }
 
-            // Check if the target card was just played
+            // Check if the target card was played and all its effects are resolved
             if (stopAfterTargetPlayed && bot0 is TargetedBotPlayer tb && tb.TargetCardPlayed)
             {
+                // Don't stop if there's still a pending action to resolve
+                var (checkMoves, _) = await api.GetLegalMovesAsync(gameId, 0);
+                if (checkMoves.PendingAction != null)
+                    continue;
+
                 Console.WriteLine();
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine("════════════════════════════════════════════════════════");
@@ -257,7 +262,7 @@ async Task RunBotGame()
                 Console.ResetColor();
                 Console.WriteLine();
 
-                // Show game state after the card was played
+                // Show game state after the card was fully resolved
                 var (postState, postCardNames) = await api.GetGameStateAsync(gameId, 0);
                 var display = new GameDisplay();
                 display.ShowGameState(postState, postCardNames, 0);
