@@ -654,6 +654,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.MegaCredits, 3),
         ]);
 
+        // Tested OK
         // 017: Noctis City — -1 energy prod, +3 MC prod, place city on Noctis reserved area
         SetEffects(builder, "017", onPlayEffects:
         [
@@ -1292,6 +1293,7 @@ public static class CardRegistry
             ]),
         ]);
 
+        // Tested OK
         // 125: Hackers — -1 energy prod, decrease any MC prod 2, +2 MC prod
         SetEffects(builder, "125", onPlayEffects:
         [
@@ -1394,6 +1396,7 @@ public static class CardRegistry
         SetEffects(builder, "141", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 1)]);
 
+        // Tested OK
         // 142: Mohole Area — +4 heat prod, place on ocean-reserved area
         SetEffects(builder, "142", onPlayEffects:
         [
@@ -1412,6 +1415,7 @@ public static class CardRegistry
             ]),
         ]);
 
+        // Tested OK
         // 144: Titanium Mine — +1 titanium prod
         SetEffects(builder, "144", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Titanium, 1)]);
@@ -1433,6 +1437,7 @@ public static class CardRegistry
             ongoingEffects:
                 [new WhenYouEffect(TriggerCondition.PlaceGreeneryTile, new AddCardResourceEffect(CardResourceType.Animal, 1, "147"))]);
 
+        // Tested OK
         // 148: Insects — +1 plant prod per plant tag you have
         SetEffects(builder, "148", onPlayEffects:
             [new ChangeProductionPerTagEffect(ResourceType.Plants, Tag.Plant, 1)]);
@@ -1474,6 +1479,7 @@ public static class CardRegistry
         // 157: Nitrite Reducing Bacteria — Action: add 1 microbe, or remove 3 to +1 TR
         // Complex action with choice — deferred
 
+        // Tested OK
         // 158: Industrial Microbes — +1 energy prod, +1 steel prod
         SetEffects(builder, "158", onPlayEffects:
         [
@@ -1481,10 +1487,12 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Steel, 1),
         ]);
 
+        // Tested OK
         // 159: Lichen — +1 plant prod
         SetEffects(builder, "159", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Plants, 1)]);
 
+        // Tested OK
         // 160: Power Supply Consortium — Decrease any energy prod 1, +1 own energy prod
         SetEffects(builder, "160", onPlayEffects:
         [

@@ -387,11 +387,7 @@ public static class EffectExecutor
                 })
                 .ToImmutableArray(),
 
-            PlacementConstraint.NoctisCity =>
-                MapDefinitions.GetMap(state.Map).Hexes.Values
-                    .Where(h => h.ReservedFor == "Noctis City" && !state.PlacedTiles.ContainsKey(h.Coord))
-                    .Select(h => h.Coord)
-                    .ToImmutableArray(),
+            PlacementConstraint.NoctisCity => GetNoctisCityPlacements(state, playerId),
 
             PlacementConstraint.OceanReserved => BoardLogic.GetValidOceanPlacements(state),
 
@@ -404,6 +400,23 @@ public static class EffectExecutor
 
             _ => basePlacements,
         };
+    }
+
+    private static ImmutableArray<HexCoord> GetNoctisCityPlacements(GameState state, int playerId)
+    {
+        var map = MapDefinitions.GetMap(state.Map);
+
+        // On Tharsis, Noctis City must go on the reserved hex
+        var reserved = map.Hexes.Values
+            .Where(h => h.ReservedFor == "Noctis City" && !state.PlacedTiles.ContainsKey(h.Coord))
+            .Select(h => h.Coord)
+            .ToImmutableArray();
+
+        if (reserved.Length > 0)
+            return reserved;
+
+        // On other maps, use normal city placement rules
+        return BoardLogic.GetValidCityPlacements(state);
     }
 
     // ── Cards ──────────────────────────────────────────────────

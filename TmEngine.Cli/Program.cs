@@ -29,7 +29,7 @@ async Task RunBotGame()
     bool corporateEra = true;
     bool draft = true;
     bool prelude = true;
-    string map = "Tharsis";
+    string map = "Hellas";
 
     Console.Write("Search for a card? (Enter card name, or leave blank for seed/random): ");
     var cardInput = Console.ReadLine()?.Trim();
@@ -300,7 +300,7 @@ async Task RunInteractiveGame()
 
     Console.WriteLine();
 
-    var map = "Tharsis";
+    var map = "Hellas";
     bool corporateEra = true;
     bool draft = true;
     bool prelude = true;
