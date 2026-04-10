@@ -559,6 +559,7 @@ public static class CardRegistry
     {
         // 001: Colonizer Training Camp — VP only (automated, no effects)
 
+        // Tested OK
         // 002: Asteroid Mining Consortium — Decrease any titanium prod 1, increase own 1
         SetEffects(builder, "002", onPlayEffects:
         [
@@ -601,6 +602,7 @@ public static class CardRegistry
             new PlaceTileEffect(TileType.Capital),
         ]);
 
+        // Tested OK
         // 009: Asteroid — Raise temp 1, +2 titanium, remove up to 3 plants from any
         SetEffects(builder, "009", onPlayEffects:
         [
@@ -609,6 +611,7 @@ public static class CardRegistry
             new RemoveResourceEffect(ResourceType.Plants, 3),
         ]);
 
+        // Tested OK
         // 010: Comet — Raise temp 1, place ocean, remove up to 3 plants from any
         SetEffects(builder, "010", onPlayEffects:
         [
@@ -617,6 +620,7 @@ public static class CardRegistry
             new RemoveResourceEffect(ResourceType.Plants, 3),
         ]);
 
+        // Tested OK
         // 011: Big Asteroid — Raise temp 2, +4 titanium, remove up to 4 plants from any
         SetEffects(builder, "011", onPlayEffects:
         [
@@ -628,6 +632,7 @@ public static class CardRegistry
         // 012: Water Import From Europa — Action: pay 12 MC to place ocean (titanium usable)
         // Complex action — deferred
 
+        // Tested OK
         // 013: Space Elevator — +1 titanium prod. Action: spend 1 steel, gain 5 MC
         SetEffects(builder, "013", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Titanium, 1)],
@@ -683,6 +688,7 @@ public static class CardRegistry
             new PlaceOceanEffect(1),
         ]);
 
+        // Tested OK
         // 020: Research Outpost — Effect: cards cost 1 MC less. Place city next to no other tile
         SetEffects(builder, "020",
             onPlayEffects: [new PlaceTileEffect(TileType.City, PlacementConstraint.Isolated)],
@@ -716,6 +722,7 @@ public static class CardRegistry
                 new AddCardResourceEffect(CardResourceType.Animal, 1, "024"),
             ]));
 
+        // Tested OK
         // 025: Space Station — Effect: space cards cost 2 MC less
         SetEffects(builder, "025",
             ongoingEffects: [new TagDiscountEffect(Tag.Space, 2)]);
@@ -787,6 +794,7 @@ public static class CardRegistry
         SetEffects(builder, "038",
             ongoingEffects: [new WhenAnyoneEffect(TriggerCondition.PlaceCityTileOnMars, new ChangeResourceEffect(ResourceType.MegaCredits, 2))]);
 
+        // Tested OK
         // 039: Deimos Down — raise temp 3, +4 steel, remove up to 8 plants from any
         SetEffects(builder, "039", onPlayEffects:
         [
@@ -837,6 +845,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Energy, 3),
         ]);
 
+        // Tested OK
         // 046: Lightning Harvest — +1 energy prod, +1 MC prod
         SetEffects(builder, "046", onPlayEffects:
         [
@@ -931,6 +940,7 @@ public static class CardRegistry
             new ChangeResourceEffect(ResourceType.Plants, 1),
         ]);
 
+        // Tested OK
         // 061: Great Escarpment Consortium — Decrease any steel prod 1, increase own 1
         SetEffects(builder, "061", onPlayEffects:
         [
@@ -951,6 +961,7 @@ public static class CardRegistry
             new ChangeResourceEffect(ResourceType.Steel, 2),
         ]);
 
+        // Tested OK
         // 064: Mining Area — Place special tile on steel/titanium bonus hex adjacent to own. +1 prod of that resource
         SetEffects(builder, "064", onPlayEffects:
             [new PlaceTileEffect(TileType.MiningArea)]);
@@ -967,6 +978,7 @@ public static class CardRegistry
         // 066: Land Claim — Claim a non-reserved land hex. Only you may place tiles there.
         SetEffects(builder, "066", onPlayEffects: [new ClaimLandEffect()]);
 
+        // Tested OK
         // 067: Mining Rights — Place special tile on steel/titanium bonus hex. +1 prod
         SetEffects(builder, "067", onPlayEffects:
             [new PlaceTileEffect(TileType.MiningRights)]);
@@ -985,6 +997,7 @@ public static class CardRegistry
         SetEffects(builder, "070",
             ongoingEffects: [new GlobalDiscountEffect(2)]);
 
+        // Tested OK
         // 071: Advanced Alloys — Steel +1 MC, Titanium +1 MC
         SetEffects(builder, "071",
             ongoingEffects:
@@ -1004,6 +1017,7 @@ public static class CardRegistry
         // 074: Viral Enhancers — Effect: when you play plant/microbe/animal, gain 1 plant or add 1 resource
         // Complex triggered effect — deferred
 
+        // Tested OK
         // 075: Towing a Comet — +2 plants, raise O2 1, place ocean
         SetEffects(builder, "075", onPlayEffects:
         [
@@ -1016,6 +1030,7 @@ public static class CardRegistry
         SetEffects(builder, "076",
             action: new CardAction(new SpendMCCost(7), [new ChangeProductionEffect(ResourceType.Energy, 1)]));
 
+        // Tested OK
         // 077: Solar Wind Power — +1 energy prod, +2 titanium
         SetEffects(builder, "077", onPlayEffects:
         [
@@ -1023,15 +1038,18 @@ public static class CardRegistry
             new ChangeResourceEffect(ResourceType.Titanium, 2),
         ]);
 
+        // Tested OK
         // 078: Ice Asteroid — Place 2 oceans
         SetEffects(builder, "078", onPlayEffects:
             [new PlaceOceanEffect(1), new PlaceOceanEffect(1)]);
 
+        // Tested OK
         // 079: Quantum Extractor — Effect: space cards cost 2 less. +4 energy prod
         SetEffects(builder, "079",
             onPlayEffects: [new ChangeProductionEffect(ResourceType.Energy, 4)],
             ongoingEffects: [new TagDiscountEffect(Tag.Space, 2)]);
 
+        // Tested OK
         // 080: Giant Ice Asteroid — Raise temp 2, place 2 oceans, remove up to 6 plants
         SetEffects(builder, "080", onPlayEffects:
         [
@@ -1045,10 +1063,12 @@ public static class CardRegistry
         SetEffects(builder, "081", onPlayEffects:
             [new PlaceOffMapCityEffect("Ganymede Colony")]);
 
+        // Tested OK
         // 082: Callisto Penal Mines — +3 MC prod
         SetEffects(builder, "082", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.MegaCredits, 3)]);
 
+        // Tested OK
         // 083: Giant Space Mirror — +3 energy prod
         SetEffects(builder, "083", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 3)]);
@@ -1083,6 +1103,7 @@ public static class CardRegistry
             new ChangeResourceEffect(ResourceType.Plants, 1),
         ]);
 
+        // Tested OK
         // 089: Peroxide Power — -1 MC prod, +2 energy prod
         SetEffects(builder, "089", onPlayEffects:
         [
@@ -1090,13 +1111,16 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Energy, 2),
         ]);
 
+        // Tested OK
         // 090: Research — Draw 2 cards (counts as 2 science tags)
         SetEffects(builder, "090", onPlayEffects: [new DrawCardsEffect(2)]);
 
+        // Tested OK
         // 091: Gene Repair — +2 MC prod
         SetEffects(builder, "091", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.MegaCredits, 2)]);
 
+        // Tested OK
         // 092: Io Mining Industries — +2 titanium prod, +2 MC prod. 1VP/Jovian tag
         SetEffects(builder, "092", onPlayEffects:
         [
@@ -1143,6 +1167,7 @@ public static class CardRegistry
         // 099: Toll Station — +1 MC prod per space tag opponents have
         // Dynamic count of opponents' tags — deferred
 
+        // Tested OK
         // 100: Fueled Generators — -1 MC prod, +1 energy prod
         SetEffects(builder, "100", onPlayEffects:
         [
@@ -1157,6 +1182,7 @@ public static class CardRegistry
                 new RaiseOxygenEffect(1),
             ]));
 
+        // Tested OK
         // 102: Power Grid — +1 energy prod per power tag including this
         SetEffects(builder, "102", onPlayEffects:
             [new ChangeProductionPerTagEffect(ResourceType.Energy, Tag.Power, 1)]);
@@ -1175,6 +1201,7 @@ public static class CardRegistry
                 new RaiseOxygenEffect(1),
             ]));
 
+        // Tested OK
         // 105: Earth Office — Effect: Earth cards cost 3 less
         SetEffects(builder, "105",
             ongoingEffects: [new TagDiscountEffect(Tag.Earth, 3)]);
@@ -1213,6 +1240,7 @@ public static class CardRegistry
 		// 112: Bribed Committee — +2 TR
 		SetEffects(builder, "112", onPlayEffects: [new ChangeTREffect(2)]);
 
+        // Tested OK
         // 113: Solar Power — +1 energy prod
         SetEffects(builder, "113", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 1)]);
@@ -1220,6 +1248,7 @@ public static class CardRegistry
         // 114: Breathing Filters — Requires 7% O2, 2 VP. No effects.
         SetEffects(builder, "114");
 
+        // Tested OK
         // 115: Artificial Photosynthesis — +1 plant prod OR +2 energy prod
         SetEffects(builder, "115", onPlayEffects:
         [
@@ -1234,6 +1263,7 @@ public static class CardRegistry
         SetEffects(builder, "116", onPlayEffects:
             [new PlaceTileEffect(TileType.Ocean, PlacementConstraint.OceanOnLand)]);
 
+        // Tested OK
         // 117: Geothermal Power — +2 energy prod
         SetEffects(builder, "117", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 2)]);
@@ -1259,6 +1289,7 @@ public static class CardRegistry
             new PlaceTileEffect(TileType.City, PlacementConstraint.AdjacentTo2Cities),
         ]);
 
+        // Tested OK
         // 121: Sabotage — Remove up to 3 titanium OR 4 steel OR 7 MC from any player
         SetEffects(builder, "121", onPlayEffects:
         [
@@ -1283,6 +1314,7 @@ public static class CardRegistry
             onPlayEffects: [new PlaceTileEffect(TileType.IndustrialCenter)],
             action: new CardAction(new SpendMCCost(7), [new ChangeProductionEffect(ResourceType.Steel, 1)]));
 
+        // Tested OK
         // 124: Hired Raiders — Steal up to 2 steel or 3 MC from any player
         SetEffects(builder, "124", onPlayEffects:
         [
@@ -1302,6 +1334,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.MegaCredits, 2),
         ]);
 
+        // Tested OK
         // 126: GHG Factories — -1 energy prod, +4 heat prod
         SetEffects(builder, "126", onPlayEffects:
         [
@@ -1362,6 +1395,7 @@ public static class CardRegistry
 
         // 135: Advanced Ecosystems — VP only (3 VP, requires plant+microbe+animal tags)
 
+        // Tested OK
         // 136: Great Dam — +2 energy prod
         SetEffects(builder, "136", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 2)]);
@@ -1371,6 +1405,7 @@ public static class CardRegistry
         SetEffects(builder, "137", onPlayEffects:
             [new ChangeProductionPerTagEffect(ResourceType.MegaCredits, Tag.Earth, 1)]);
 
+        // Tested OK
         // 138: Strip Mine — -2 energy prod, +2 steel prod, +1 titanium prod, raise O2 2
         SetEffects(builder, "138", onPlayEffects:
         [
@@ -1380,6 +1415,7 @@ public static class CardRegistry
             new RaiseOxygenEffect(2),
         ]);
 
+        // Tested OK
         // 139: Wave Power — +1 energy prod
         SetEffects(builder, "139", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 1)]);
@@ -1424,6 +1460,7 @@ public static class CardRegistry
         SetEffects(builder, "145", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 3)]);
 
+        // Tested OK
         // 146: Nitrophilic Moss — Lose 2 plants, +2 plant prod
         SetEffects(builder, "146", onPlayEffects:
         [
@@ -1445,6 +1482,7 @@ public static class CardRegistry
         // 149: CEO's Favorite Project — Add 1 resource to any card with resources
         // Complex — deferred
 
+        // Tested OK
         // 150: Anti-gravity Technology — Effect: cards cost 2 less
         SetEffects(builder, "150",
             ongoingEffects: [new GlobalDiscountEffect(2)]);
@@ -1500,6 +1538,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Energy, 1),
         ]);
 
+        // Tested OK
         // 161: Convoy from Europa — Place 1 ocean, draw 1 card
         SetEffects(builder, "161", onPlayEffects:
             [new PlaceOceanEffect(1), new DrawCardsEffect(1)]);
@@ -1533,6 +1572,7 @@ public static class CardRegistry
             new ChangeTREffect(3),
         ]);
 
+        // Tested OK
         // 166: Shuttles — Effect: space cards cost 2 less. -1 energy prod, +2 MC prod
         SetEffects(builder, "166",
             onPlayEffects:
@@ -1542,6 +1582,7 @@ public static class CardRegistry
             ],
             ongoingEffects: [new TagDiscountEffect(Tag.Space, 2)]);
 
+        // Tested OK
         // 167: Import of Advanced GHG — +2 heat prod
         SetEffects(builder, "167", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Heat, 2)]);
@@ -1584,6 +1625,7 @@ public static class CardRegistry
         // 173: Protected Habitats — Opponents may not remove your animals, plants, or microbes
         // Passive protection — deferred (needs resource protection mechanic)
 
+        // Tested OK
         // 174: Protected Valley — +2 MC prod, place greenery on ocean-reserved area
         SetEffects(builder, "174", onPlayEffects:
         [
@@ -1591,10 +1633,12 @@ public static class CardRegistry
             new PlaceTileEffect(TileType.Greenery, PlacementConstraint.OnOceanArea),
         ]);
 
+        // Tested OK
         // 175: Satellites — +1 MC prod per space tag including this
         SetEffects(builder, "175", onPlayEffects:
             [new ChangeProductionPerTagEffect(ResourceType.MegaCredits, Tag.Space, 1)]);
 
+        // Tested OK
         // 176: Noctis Farming — +1 MC prod, +2 plants
         SetEffects(builder, "176", onPlayEffects:
         [
@@ -1663,6 +1707,7 @@ public static class CardRegistry
         SetEffects(builder, "185",
             onPlayEffects: [new AddCardResourceEffect(CardResourceType.Science, 1, "185")]);
 
+        // Tested OK
         // 186: Rad-Suits — +1 MC prod
         SetEffects(builder, "186", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.MegaCredits, 1)]);
@@ -1696,6 +1741,7 @@ public static class CardRegistry
         // 192: Invention Contest — Look at top 3 cards, take 1, discard 2
         // Complex — deferred
 
+        // Tested OK
         // 193: Plantation — Place greenery, raise O2
         SetEffects(builder, "193", onPlayEffects:
             [new PlaceTileEffect(TileType.Greenery)]);
@@ -1707,6 +1753,7 @@ public static class CardRegistry
 		// 195: Indentured Workers — Next card this generation costs 8 MC less
 		SetEffects(builder, "195", onPlayEffects: [new NextCardDiscountEffect(8)]);
 
+        // Tested OK
         // 196: Lagrange Observatory — Draw 1 card
         SetEffects(builder, "196", onPlayEffects: [new DrawCardsEffect(1)]);
 
@@ -1714,6 +1761,7 @@ public static class CardRegistry
         SetEffects(builder, "197", onPlayEffects:
             [new ChangeTRPerTagEffect(Tag.Jovian, 1)]);
 
+        // Tested OK
         // 198: Immigration Shuttles — +5 MC prod. 1VP/3 cities in play
         SetEffects(builder, "198", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.MegaCredits, 5)]);
@@ -1750,6 +1798,7 @@ public static class CardRegistry
         SetEffects(builder, "203", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Heat, 7)]);
 
+        // Tested OK
         // 204: Technology Demonstration — Draw 2 cards
         SetEffects(builder, "204", onPlayEffects: [new DrawCardsEffect(2)]);
 

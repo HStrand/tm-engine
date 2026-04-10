@@ -775,6 +775,11 @@ public static class GameEngine
                 TileType.City or TileType.Capital => GlobalParameters.PlaceCity(state, move.PlayerId, move.Location),
                 _ => GlobalParameters.PlaceTileOnBoard(state, pending.TileType, move.PlayerId, move.Location),
             };
+
+            // Mining Rights / Mining Area: +1 production of the hex's mineral bonus
+            if (pending.TileType is TileType.MiningRights or TileType.MiningArea)
+                state = ApplyMiningProductionBonus(state, move.PlayerId, move.Location);
+
             return state with { PendingAction = null };
         }
 
@@ -786,6 +791,26 @@ public static class GameEngine
                 PendingAction = null,
             };
             return state;
+        }
+
+        return state;
+    }
+
+    private static GameState ApplyMiningProductionBonus(GameState state, int playerId, HexCoord location)
+    {
+        var map = MapDefinitions.GetMap(state.Map);
+        if (!map.Hexes.TryGetValue(location, out var hex))
+            return state;
+
+        // Give +1 production for each mineral bonus on the hex
+        foreach (var bonus in hex.Bonuses)
+        {
+            if (bonus == PlacementBonus.Steel)
+                state = state.UpdatePlayer(playerId, p => p with
+                    { Production = p.Production.Add(ResourceType.Steel, 1) });
+            else if (bonus == PlacementBonus.Titanium)
+                state = state.UpdatePlayer(playerId, p => p with
+                    { Production = p.Production.Add(ResourceType.Titanium, 1) });
         }
 
         return state;
