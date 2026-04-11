@@ -734,6 +734,7 @@ public static class CardRegistry
         SetEffects(builder, "025",
             ongoingEffects: [new TagDiscountEffect(Tag.Space, 2)]);
 
+        // Tested OK
         // 026: Eos Chasma National Park — +2 MC prod, +3 plants, add 1 animal to any animal card
         SetEffects(builder, "026", onPlayEffects:
         [
@@ -742,6 +743,7 @@ public static class CardRegistry
             new AddCardResourceEffect(CardResourceType.Animal, 1),
         ]);
 
+        // Tested OK
         // 027: Interstellar Colony Ship — 4 VP, requires 5 science tags. No on-play effects.
         SetEffects(builder, "027");
 
@@ -1360,13 +1362,13 @@ public static class CardRegistry
         // 127: Subterranean Reservoir — Place 1 ocean
         SetEffects(builder, "127", onPlayEffects: [new PlaceOceanEffect(1)]);
 
+        // Tested OK
         // 128: Ecological Zone — Place tile adjacent to greenery. 1VP/2 animals
         // Effect: when you play animal/plant tag (including this card's 2 tags), add animal to this
         SetEffects(builder, "128",
             onPlayEffects:
             [
                 new PlaceTileEffect(TileType.EcologicalZone),
-                new AddCardResourceEffect(CardResourceType.Animal, 2, "128"), // self-trigger for plant+animal tags on this card
             ],
             ongoingEffects:
             [
