@@ -800,6 +800,7 @@ public static class CardRegistry
         // 037: Nitrogen-Rich Asteroid — +2 TR, +1 temp, +1 plant prod or +4 if 3 plant tags
         // Complex conditional — deferred
 
+        // Tested OK
         // 038: Rover Construction — Effect: when any city is placed, gain 2 MC
         SetEffects(builder, "038",
             ongoingEffects: [new WhenAnyoneEffect(TriggerCondition.PlaceCityTileOnMars, new ChangeResourceEffect(ResourceType.MegaCredits, 2))]);
@@ -881,6 +882,7 @@ public static class CardRegistry
 		SetEffects(builder, "049",
             action: new CardAction(null, [new AddCardResourceEffect(CardResourceType.Microbe, 1, "049")]));
 
+        // Tested OK
         // 050: Virus — Remove up to 2 animals or 5 plants from any player
         SetEffects(builder, "050", onPlayEffects:
         [
@@ -940,6 +942,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Energy, 3),
         ]);
 
+        // Tested OK
         // 059: Mangrove — Place greenery on ocean-reserved area, raise O2
         SetEffects(builder, "059", onPlayEffects:
             [new PlaceTileEffect(TileType.Greenery, PlacementConstraint.OnOceanArea)]);
@@ -965,6 +968,7 @@ public static class CardRegistry
 		SetEffects(builder, "062", onPlayEffects:
             [new ChangeResourceEffect(ResourceType.Steel, 5)]);
 
+        // Tested OK
         // 063: Mining Expedition — Raise O2 1 step, remove 2 plants from any, +2 steel
         SetEffects(builder, "063", onPlayEffects:
         [
@@ -1005,6 +1009,7 @@ public static class CardRegistry
         SetEffects(builder, "069", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, -1)]);
 
+        // Tested OK
         // 070: Earth Catapult — Effect: cards cost 2 MC less
         SetEffects(builder, "070",
             ongoingEffects: [new GlobalDiscountEffect(2)]);
@@ -1039,6 +1044,7 @@ public static class CardRegistry
             new PlaceOceanEffect(1),
         ]);
 
+        // Tested OK
         // 076: Space Mirrors — Action: spend 7 MC, +1 energy prod
         SetEffects(builder, "076",
             action: new CardAction(new SpendMCCost(7), [new ChangeProductionEffect(ResourceType.Energy, 1)]));
@@ -1086,10 +1092,11 @@ public static class CardRegistry
         SetEffects(builder, "083", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 3)]);
 
-		// 084: Trans-Neptune Probe — VP only
+        // 084: Trans-Neptune Probe — 1 VP, no on-play effects.
+        SetEffects(builder, "084");
 
-		// Tested OK
-		// 085: Commercial District — -1 energy prod, +4 MC prod, place special tile
+        // Tested OK
+        // 085: Commercial District — -1 energy prod, +4 MC prod, place special tile
 		SetEffects(builder, "085", onPlayEffects:
         [
             new ChangeProductionEffect(ResourceType.Energy, -1),
