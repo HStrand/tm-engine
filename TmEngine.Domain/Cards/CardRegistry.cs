@@ -1092,6 +1092,7 @@ public static class CardRegistry
         SetEffects(builder, "083", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 3)]);
 
+        // Tested OK
         // 084: Trans-Neptune Probe — 1 VP, no on-play effects.
         SetEffects(builder, "084");
 
@@ -1179,6 +1180,7 @@ public static class CardRegistry
             new RaiseTemperatureEffect(2),
         ]);
 
+        // Tested OK
         // 098: Tropical Resort — -2 heat prod, +3 MC prod
         SetEffects(builder, "098", onPlayEffects:
         [
@@ -1197,6 +1199,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Energy, 1),
         ]);
 
+        // Tested OK
         // 101: Ironworks — Action: spend 4 energy, gain 1 steel, raise O2 1
         SetEffects(builder, "101",
             action: new CardAction(new SpendEnergyCost(4), [
@@ -1209,6 +1212,7 @@ public static class CardRegistry
         SetEffects(builder, "102", onPlayEffects:
             [new ChangeProductionPerTagEffect(ResourceType.Energy, Tag.Power, 1)]);
 
+        // Tested OK
         // 103: Steelworks — Action: spend 4 energy, gain 2 steel, raise O2 1
         SetEffects(builder, "103",
             action: new CardAction(new SpendEnergyCost(4), [
@@ -1216,6 +1220,7 @@ public static class CardRegistry
                 new RaiseOxygenEffect(1),
             ]));
 
+        // Tested OK
         // 104: Ore Processor — Action: spend 4 energy, gain 1 titanium, raise O2 1
         SetEffects(builder, "104",
             action: new CardAction(new SpendEnergyCost(4), [
@@ -1236,6 +1241,7 @@ public static class CardRegistry
         // 107: Media Archives — Gain 1 MC per event ever played by all players
         // Dynamic count — deferred
 
+        // Tested OK
         // 108: Open City — +2 plants, place city, -1 energy prod, +4 MC prod
         SetEffects(builder, "108", onPlayEffects:
         [
@@ -1245,6 +1251,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.MegaCredits, 4),
         ]);
 
+        // Tested OK
         // 109: Media Group — Effect: after you play event, gain 3 MC
         SetEffects(builder, "109",
             ongoingEffects: [new WhenYouEffect(TriggerCondition.PlayEventTag,
@@ -1267,6 +1274,7 @@ public static class CardRegistry
         SetEffects(builder, "113", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 1)]);
 
+        // Tested OK
         // 114: Breathing Filters — Requires 7% O2, 2 VP. No effects.
         SetEffects(builder, "114");
 
@@ -1281,6 +1289,7 @@ public static class CardRegistry
             ]),
         ]);
 
+        // Tested OK
         // 116: Artificial Lake — Place ocean on a non-ocean land area
         SetEffects(builder, "116", onPlayEffects:
             [new PlaceTileEffect(TileType.Ocean, PlacementConstraint.OceanOnLand)]);
@@ -1332,6 +1341,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Plants, 1),
         ]);
 
+        // Tested OK
         // 123: Industrial Center — Action: spend 7 MC, +1 steel prod. Place tile adjacent to city
         SetEffects(builder, "123",
             onPlayEffects: [new PlaceTileEffect(TileType.IndustrialCenter)],
@@ -1391,7 +1401,6 @@ public static class CardRegistry
 
         // 131: Decomposers — Effect: when you play animal/plant/microbe tag (including this), add microbe. 1VP/3
         SetEffects(builder, "131",
-            onPlayEffects: [new AddCardResourceEffect(CardResourceType.Microbe, 1, "131")], // self-trigger for microbe tag
             ongoingEffects:
             [
                 new WhenYouEffect(TriggerCondition.PlayAnimalTag, new AddCardResourceEffect(CardResourceType.Microbe, 1, "131")),
@@ -1675,6 +1684,7 @@ public static class CardRegistry
             new ChangeResourceEffect(ResourceType.Plants, 2),
         ]);
 
+        // Tested OK
         // 177: Water Splitting Plant — Action: spend 3 energy, raise O2 1
         SetEffects(builder, "177",
             action: new CardAction(new SpendEnergyCost(3), [new RaiseOxygenEffect(1)]));
