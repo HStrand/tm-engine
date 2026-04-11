@@ -100,7 +100,19 @@ public static class RequirementChecker
     /// Verifies production decreases won't go below minimums and resource costs are affordable.
     /// Returns null if all effects are affordable, or an error message.
     /// </summary>
-    public static string? CanAffordEffects(GameState state, int playerId, CardEntry entry)
+    public static string? CanAffordEffects(GameState state, int playerId, CardEntry entry) =>
+        CanAffordEffectsList(state, playerId, entry.OnPlayEffects);
+
+    /// <summary>
+    /// Check if a player can perform the effects of a card action (blue card action).
+    /// Verifies production decreases won't go below minimums. Returns null if OK,
+    /// or an error message.
+    /// </summary>
+    public static string? CanAffordActionEffects(GameState state, int playerId, CardAction action) =>
+        CanAffordEffectsList(state, playerId, action.Effects);
+
+    private static string? CanAffordEffectsList(
+        GameState state, int playerId, ImmutableArray<Effect> effects)
     {
         var player = state.GetPlayer(playerId);
 
@@ -112,7 +124,7 @@ public static class RequirementChecker
         int energyProdChange = 0;
         int heatProdChange = 0;
 
-        foreach (var effect in entry.OnPlayEffects)
+        foreach (var effect in effects)
         {
             // Self production decreases
             if (effect is ChangeProductionEffect prod && prod.Amount < 0)

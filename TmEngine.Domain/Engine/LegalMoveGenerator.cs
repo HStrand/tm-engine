@@ -478,8 +478,12 @@ public static class LegalMoveGenerator
                 if (!preconditionMet) continue;
             }
 
-            // Check affordability
+            // Check affordability of the explicit cost
             if (!CanAffordActionCost(player, entry.Action))
+                continue;
+
+            // Check affordability of the effects (production floors etc.)
+            if (RequirementChecker.CanAffordActionEffects(state, player.PlayerId, entry.Action) != null)
                 continue;
 
             result.Add(new UsableCardAction(cardId));
@@ -500,7 +504,9 @@ public static class LegalMoveGenerator
                     _ => true,
                 };
             }
-            if (preconditionMet && CanAffordActionCost(player, corpEntry.Action))
+            if (preconditionMet
+                && CanAffordActionCost(player, corpEntry.Action)
+                && RequirementChecker.CanAffordActionEffects(state, player.PlayerId, corpEntry.Action) == null)
                 result.Add(new UsableCardAction(player.CorporationId));
         }
 

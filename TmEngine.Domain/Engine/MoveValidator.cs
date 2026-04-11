@@ -439,6 +439,15 @@ public static class MoveValidator
                 return preconditionError;
         }
 
+        // Check that action effects don't take production below their floors
+        // (e.g., Equatorial Magnetizer: -1 energy prod requires ≥1 energy prod).
+        if (entry?.Action != null)
+        {
+            var effectsError = RequirementChecker.CanAffordActionEffects(state, move.PlayerId, entry.Action);
+            if (effectsError != null)
+                return effectsError;
+        }
+
         return null;
     }
 

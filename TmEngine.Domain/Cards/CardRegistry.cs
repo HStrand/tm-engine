@@ -886,6 +886,7 @@ public static class CardRegistry
 		SetEffects(builder, "051", onPlayEffects:
             [new ChangeProductionPerTagEffect(ResourceType.MegaCredits, Tag.Earth, 1)]);
 
+        // Tested OK
         // 052: Fish — Action: add 1 animal. -1 plant prod (any). 1VP/animal
         SetEffects(builder, "052",
             onPlayEffects: [new ReduceAnyProductionEffect(ResourceType.Plants, 1)],
@@ -896,6 +897,7 @@ public static class CardRegistry
         SetEffects(builder, "053", onPlayEffects:
             [new PlaceOceanEffect(1), new PlaceOceanEffect(1)]);
 
+        // Tested OK
         // 054: Small Animals — Action: add 1 animal. -1 plant prod (any). 1VP/2 animals
         SetEffects(builder, "054",
             onPlayEffects: [new ReduceAnyProductionEffect(ResourceType.Plants, 1)],
@@ -1006,6 +1008,7 @@ public static class CardRegistry
                 new TitaniumValueModifierEffect(1),
             ]);
 
+        // Tested OK
         // 072: Birds — Action: add 1 animal. -2 plant prod (any). 1VP/animal
         SetEffects(builder, "072",
             onPlayEffects: [new ReduceAnyProductionEffect(ResourceType.Plants, 2)],
@@ -1141,6 +1144,7 @@ public static class CardRegistry
             onPlayEffects: [new ChangeProductionEffect(ResourceType.Energy, 6)],
             ongoingEffects: [new TagDiscountEffect(Tag.Space, 2)]);
 
+        // Tested OK
         // 095: Physics Complex — Action: spend 6 energy, add science resource. 2VP/science
         SetEffects(builder, "095",
             action: new CardAction(new SpendEnergyCost(6),

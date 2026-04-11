@@ -1059,4 +1059,57 @@ public class GameEngineTests
         // Urbanized Area should appear in the list of playable cards
         Assert.Contains(moves.Actions!.PlayableCards, c => c.CardId == "120");
     }
+
+    // ── Equatorial Magnetizer ──────────────────────────────────
+
+    [Fact]
+    public void EquatorialMagnetizer_NotUsable_WhenEnergyProductionIsZero()
+    {
+        // Equatorial Magnetizer (015) action: -1 energy prod, +1 TR.
+        // Must not be usable when the player has 0 energy production, since
+        // production can't go below 0.
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = ImmutableList.Create("015"),
+            Production = p.Production with { Energy = 0 },
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.NotNull(moves.Actions);
+
+        // Should not be in the list of usable card actions
+        Assert.DoesNotContain(moves.Actions!.UsableCardActions, a => a.CardId == "015");
+    }
+
+    [Fact]
+    public void EquatorialMagnetizer_UseCardActionMove_Rejected_WhenEnergyProductionIsZero()
+    {
+        // Submitting the move directly should also be rejected by the validator.
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = ImmutableList.Create("015"),
+            Production = p.Production with { Energy = 0 },
+        });
+
+        var (_, result) = GameEngine.Apply(state, new UseCardActionMove(0, "015"));
+        Assert.True(result.IsError, "Expected UseCardActionMove to be rejected when energy production is 0.");
+    }
+
+    [Fact]
+    public void EquatorialMagnetizer_IsUsable_WhenEnergyProductionIsAtLeastOne()
+    {
+        // Sanity check: with +1 energy production, the action should still be usable.
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = ImmutableList.Create("015"),
+            Production = p.Production with { Energy = 1 },
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.NotNull(moves.Actions);
+        Assert.Contains(moves.Actions!.UsableCardActions, a => a.CardId == "015");
+    }
 }
