@@ -266,6 +266,11 @@ public static class LegalMoveGenerator
         }
 
         // Normal action phase — enumerate all available actions
+        var plantGreeneryLocations = player.Resources.Plants >= RequirementChecker.GetPlantConversionCost(player)
+            ? BoardLogic.FilterAffordablePlacements(state, playerId,
+                BoardLogic.GetValidGreeneryPlacements(state, playerId))
+            : [];
+
         return new AvailableMoves
         {
             Actions = new ActionPhaseOptions
@@ -274,11 +279,9 @@ public static class LegalMoveGenerator
                 CanEndTurn = player.ActionsThisTurn >= 1,
                 CanConvertHeat = player.Resources.Heat >= Constants.HeatPerTemperature
                                  && state.Temperature < map.MaxTemperature,
-                CanConvertPlants = player.Resources.Plants >= RequirementChecker.GetPlantConversionCost(player)
-                                   && BoardLogic.GetValidGreeneryPlacements(state, playerId).Length > 0,
+                CanConvertPlants = plantGreeneryLocations.Length > 0,
                 PlantConversionCost = RequirementChecker.GetPlantConversionCost(player),
-                ValidGreeneryLocations = player.Resources.Plants >= RequirementChecker.GetPlantConversionCost(player)
-                    ? BoardLogic.GetValidGreeneryPlacements(state, playerId) : [],
+                ValidGreeneryLocations = plantGreeneryLocations,
                 CanPerformFirstAction = false,
                 PlayableCards = GetPlayableCards(state, player),
                 StandardProjects = GetStandardProjects(state, player, map),
@@ -296,7 +299,9 @@ public static class LegalMoveGenerator
 
         var player = state.GetPlayer(playerId);
         var greeneryLocations = player.Resources.Plants >= RequirementChecker.GetPlantConversionCost(player)
-            ? BoardLogic.GetValidGreeneryPlacements(state, playerId) : [];
+            ? BoardLogic.FilterAffordablePlacements(state, playerId,
+                BoardLogic.GetValidGreeneryPlacements(state, playerId))
+            : [];
         bool canConvert = greeneryLocations.Length > 0;
 
         return new AvailableMoves
@@ -379,13 +384,16 @@ public static class LegalMoveGenerator
         result.Add(new StandardProjectOption(StandardProject.Aquifer,
             mc >= Constants.AquiferCost && oceanLocations.Length > 0, Constants.AquiferCost, oceanLocations));
 
-        // Greenery
+        // Greenery: filter out hexes where the extra placement cost can't be
+        // paid from MC left after the project cost (Hellas South Pole: +6 MC).
         var greeneryLocations = BoardLogic.GetValidGreeneryPlacements(state, player.PlayerId);
+        greeneryLocations = FilterAffordableAfterSpending(state, greeneryLocations, mc - Constants.GreeneryCost);
         result.Add(new StandardProjectOption(StandardProject.Greenery,
             mc >= Constants.GreeneryCost && greeneryLocations.Length > 0, Constants.GreeneryCost, greeneryLocations));
 
         // City
         var cityLocations = BoardLogic.GetValidCityPlacements(state);
+        cityLocations = FilterAffordableAfterSpending(state, cityLocations, mc - Constants.CityCost);
         result.Add(new StandardProjectOption(StandardProject.City,
             mc >= Constants.CityCost && cityLocations.Length > 0, Constants.CityCost, cityLocations));
 
@@ -499,6 +507,24 @@ public static class LegalMoveGenerator
         return result.ToImmutable();
     }
 
+    /// <summary>
+    /// Filter placements by whether an extra placement cost (Hellas South Pole)
+    /// can be paid from the MC balance the player will have after already
+    /// spending `mcAfterCost` on the action itself.
+    /// </summary>
+    private static ImmutableArray<HexCoord> FilterAffordableAfterSpending(
+        GameState state, ImmutableArray<HexCoord> locations, int mcAfterCost)
+    {
+        var builder = ImmutableArray.CreateBuilder<HexCoord>();
+        foreach (var loc in locations)
+        {
+            var extra = BoardLogic.GetExtraPlacementCost(state, loc);
+            if (extra == 0 || mcAfterCost >= extra)
+                builder.Add(loc);
+        }
+        return builder.ToImmutable();
+    }
+
     private static bool HasValidPlacements(GameState state, int playerId, CardEntry entry)
     {
         foreach (var effect in entry.OnPlayEffects)
@@ -525,6 +551,10 @@ public static class LegalMoveGenerator
                         _ => locations,
                     };
                 }
+                // Filter out hexes whose extra placement cost (Hellas South Pole)
+                // the player can't afford.
+                if (tileEffect.TileType != TileType.Ocean)
+                    locations = BoardLogic.FilterAffordablePlacements(state, playerId, locations);
                 if (locations.Length == 0) return false;
             }
             else if (effect is PlaceOceanEffect)

@@ -403,4 +403,54 @@ public class BoardLogicTests
         Assert.Contains(PlacementBonus.Ocean, southPole.Bonuses);
         Assert.Equal("South Pole", southPole.ReservedFor);
     }
+
+    [Fact]
+    public void Hellas_PlacingTileOnSouthPole_TriggersOceanPlacementPendingAction()
+    {
+        // Placing any tile on the Hellas South Pole (5,9) should grant a free ocean
+        // placement: a PlaceTilePending for TileType.Ocean, letting the player pick
+        // any open ocean-reserved hex.
+        var state = CreateTestState(MapName.Hellas);
+        var southPole = new HexCoord(5, 9);
+
+        // Give player 0 enough MC for the standard greenery project (23 MC)
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Resources = p.Resources with { MegaCredits = 50 },
+        });
+
+        var (newState, result) = GameEngine.Apply(state, new Moves.GreeneryMove(0, southPole));
+        Assert.True(result.IsSuccess, $"Expected success but got: {result}");
+
+        // Greenery should be placed on the South Pole
+        Assert.True(newState.PlacedTiles.ContainsKey(southPole));
+        Assert.Equal(TileType.Greenery, newState.PlacedTiles[southPole].Type);
+
+        // The Ocean placement bonus should have triggered a pending action
+        Assert.NotNull(newState.PendingAction);
+        var pending = Assert.IsType<PlaceTilePending>(newState.PendingAction);
+        Assert.Equal(TileType.Ocean, pending.TileType);
+        Assert.NotEmpty(pending.ValidLocations);
+
+        // The player should have been charged: 23 MC (greenery SP) + 6 MC (South Pole bonus) = 29
+        Assert.Equal(50 - 23 - 6, newState.Players[0].Resources.MegaCredits);
+    }
+
+    [Fact]
+    public void Hellas_SouthPole_ExcludedFromGreeneryProject_WhenPlayerCannotAffordExtraCost()
+    {
+        // Player has just enough MC to cover the greenery standard project (23 MC)
+        // but NOT the extra 6 MC for the South Pole bonus → (5,9) should not be a
+        // valid greenery placement location.
+        var state = CreateTestState(MapName.Hellas);
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Resources = p.Resources with { MegaCredits = 28 }, // 23 + 5 — one short
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.NotNull(moves.Actions);
+        var greenery = moves.Actions!.StandardProjects.First(sp => sp.Project == StandardProject.Greenery);
+        Assert.DoesNotContain(new HexCoord(5, 9), greenery.ValidLocations);
+    }
 }

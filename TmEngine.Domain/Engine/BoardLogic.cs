@@ -388,6 +388,7 @@ public static class BoardLogic
 
         // Hex-printed bonuses
         bool gainedMineral = false;
+        bool gainedOceanBonus = false;
 
         foreach (var bonus in hex.Bonuses)
         {
@@ -402,12 +403,14 @@ public static class BoardLogic
                 PlacementBonus.Heat => state.UpdatePlayer(playerId, p => p with
                     { Resources = p.Resources.Add(ResourceType.Heat, 1) }),
                 PlacementBonus.Cards => DrawCardForPlayer(state, playerId),
-                PlacementBonus.Ocean => state, // Hellas south pole: handled by special logic
+                PlacementBonus.Ocean => state, // Handled after the loop (may create a pending action)
                 _ => state,
             };
 
             if (bonus is PlacementBonus.Steel or PlacementBonus.Titanium)
                 gainedMineral = true;
+            if (bonus is PlacementBonus.Ocean)
+                gainedOceanBonus = true;
         }
 
         // Fire triggered effect once per tile placement if any mineral was gained (Mining Guild)
@@ -425,7 +428,64 @@ public static class BoardLogic
             });
         }
 
+        // Ocean placement bonus (Hellas South Pole): charge 6 MC and grant a
+        // pending ocean placement. Caller is responsible for ensuring the player
+        // can afford the cost via GetExtraPlacementCost / FilterAffordablePlacements.
+        if (gainedOceanBonus)
+        {
+            state = state.UpdatePlayer(playerId, p => p with
+            {
+                Resources = p.Resources.Add(ResourceType.MegaCredits, -Constants.HellasSouthPoleCost),
+            });
+
+            var oceanMap = MapDefinitions.GetMap(state.Map);
+            if (state.OceansPlaced < oceanMap.MaxOceans)
+            {
+                var validOceanHexes = GetValidOceanPlacements(state);
+                if (validOceanHexes.Length > 0)
+                {
+                    state = state with
+                    {
+                        PendingAction = new PlaceTilePending(TileType.Ocean, validOceanHexes),
+                    };
+                }
+            }
+        }
+
         return state;
+    }
+
+    /// <summary>
+    /// Returns the extra MC cost (beyond any card or standard project cost) the
+    /// player must pay to place a tile on this hex. Currently only Hellas South
+    /// Pole (hex with the Ocean placement bonus): 6 MC.
+    /// </summary>
+    public static int GetExtraPlacementCost(GameState state, HexCoord location)
+    {
+        var map = MapDefinitions.GetMap(state.Map);
+        if (!map.Hexes.TryGetValue(location, out var hex))
+            return 0;
+        if (hex.Bonuses.Contains(PlacementBonus.Ocean))
+            return Constants.HellasSouthPoleCost;
+        return 0;
+    }
+
+    /// <summary>
+    /// Filters a list of candidate placements, removing hexes whose extra
+    /// placement cost the player cannot afford.
+    /// </summary>
+    public static ImmutableArray<HexCoord> FilterAffordablePlacements(
+        GameState state, int playerId, ImmutableArray<HexCoord> locations)
+    {
+        var player = state.GetPlayer(playerId);
+        var builder = ImmutableArray.CreateBuilder<HexCoord>();
+        foreach (var loc in locations)
+        {
+            var extra = GetExtraPlacementCost(state, loc);
+            if (extra == 0 || player.Resources.MegaCredits >= extra)
+                builder.Add(loc);
+        }
+        return builder.ToImmutable();
     }
 
     // ── Helpers ─────────────────────────────────────────────────

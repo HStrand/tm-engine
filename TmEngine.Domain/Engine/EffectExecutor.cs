@@ -366,6 +366,11 @@ public static class EffectExecutor
             ? BoardLogic.GetValidLandPlacements(state, playerId)
             : BoardLogic.GetValidTilePlacements(state, tileType, playerId);
 
+        // Filter out hexes whose extra placement cost the player can't afford
+        // (Hellas South Pole: 6 MC). Does not apply to ocean placements.
+        if (tileType != TileType.Ocean)
+            basePlacements = BoardLogic.FilterAffordablePlacements(state, playerId, basePlacements);
+
         if (constraint == null)
             return basePlacements;
 

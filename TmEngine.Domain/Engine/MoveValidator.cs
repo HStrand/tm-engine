@@ -178,6 +178,11 @@ public static class MoveValidator
         if (!validPlacements.Contains(move.Location))
             return "Invalid greenery placement location.";
 
+        // Hellas South Pole: the 6 MC extra placement cost must also be covered
+        var extra = BoardLogic.GetExtraPlacementCost(state, move.Location);
+        if (extra > 0 && player.Resources.MegaCredits < extra)
+            return $"Need {extra} MC for Hellas South Pole ocean bonus, have {player.Resources.MegaCredits}.";
+
         return null;
     }
 
@@ -245,8 +250,10 @@ public static class MoveValidator
     private static string? ValidateGreeneryProject(GameState state, GreeneryMove move)
     {
         var player = state.GetPlayer(move.PlayerId);
-        if (player.Resources.MegaCredits < Constants.GreeneryCost)
-            return $"Need {Constants.GreeneryCost} MC for Greenery, have {player.Resources.MegaCredits}.";
+        var extra = BoardLogic.GetExtraPlacementCost(state, move.Location);
+        var total = Constants.GreeneryCost + extra;
+        if (player.Resources.MegaCredits < total)
+            return $"Need {total} MC for Greenery{(extra > 0 ? " (incl. South Pole 6 MC)" : "")}, have {player.Resources.MegaCredits}.";
 
         var validPlacements = BoardLogic.GetValidGreeneryPlacements(state, move.PlayerId);
         return validPlacements.Contains(move.Location) ? null : "Invalid greenery placement location.";
@@ -255,8 +262,10 @@ public static class MoveValidator
     private static string? ValidateCityProject(GameState state, CityMove move)
     {
         var player = state.GetPlayer(move.PlayerId);
-        if (player.Resources.MegaCredits < Constants.CityCost)
-            return $"Need {Constants.CityCost} MC for City, have {player.Resources.MegaCredits}.";
+        var extra = BoardLogic.GetExtraPlacementCost(state, move.Location);
+        var total = Constants.CityCost + extra;
+        if (player.Resources.MegaCredits < total)
+            return $"Need {total} MC for City{(extra > 0 ? " (incl. South Pole 6 MC)" : "")}, have {player.Resources.MegaCredits}.";
 
         var validPlacements = BoardLogic.GetValidCityPlacements(state);
         return validPlacements.Contains(move.Location) ? null : "Invalid city placement location.";

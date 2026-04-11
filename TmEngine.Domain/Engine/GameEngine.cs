@@ -766,6 +766,11 @@ public static class GameEngine
     {
         if (state.PendingAction is PlaceTilePending pending)
         {
+            // Clear the pending BEFORE placement so that any new pending action
+            // produced by the placement (e.g., Hellas South Pole ocean bonus,
+            // raising temperature to 0°C) is preserved instead of clobbered.
+            state = state with { PendingAction = null };
+
             // Use the appropriate placement method based on tile type
             // so that greeneries raise oxygen and oceans raise TR
             state = pending.TileType switch
@@ -780,7 +785,7 @@ public static class GameEngine
             if (pending.TileType is TileType.MiningRights or TileType.MiningArea)
                 state = ApplyMiningProductionBonus(state, move.PlayerId, move.Location);
 
-            return state with { PendingAction = null };
+            return state;
         }
 
         if (state.PendingAction is ClaimLandPending)
