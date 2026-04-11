@@ -304,14 +304,19 @@ public class EffectExecutorTests
     [Fact]
     public void ReduceAnyProduction_SingleQualifyingPlayer_ReducesAutomatically()
     {
+        // Use Steel (floor 0) so only the player who has ≥1 steel prod qualifies.
+        // (MC production has a floor of -5, so both players would qualify there.)
         var state = CreateTestState();
-        // Only player 1 has MC production (2)
-        var effect = new ReduceAnyProductionEffect(ResourceType.MegaCredits, 1);
+        state = state.UpdatePlayer(1, p => p with
+        {
+            Production = p.Production with { Steel = 2 },
+        });
+        var effect = new ReduceAnyProductionEffect(ResourceType.Steel, 1);
 
         var (newState, pending) = EffectExecutor.Execute(state, 0, effect);
 
         Assert.Null(pending);
-        Assert.Equal(1, newState.Players[1].Production.MegaCredits); // 2 - 1
+        Assert.Equal(1, newState.Players[1].Production.Steel); // 2 - 1
     }
 
     [Fact]

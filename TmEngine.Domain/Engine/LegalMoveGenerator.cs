@@ -505,7 +505,11 @@ public static class LegalMoveGenerator
         {
             if (effect is PlaceTileEffect tileEffect)
             {
-                var locations = BoardLogic.GetValidTilePlacements(state, tileEffect.TileType, playerId);
+                // For AdjacentTo2Cities, start from open land (not the default city
+                // placement which excludes hexes adjacent to any city).
+                var locations = tileEffect.Constraint == PlacementConstraint.AdjacentTo2Cities
+                    ? BoardLogic.GetValidLandPlacements(state, playerId)
+                    : BoardLogic.GetValidTilePlacements(state, tileEffect.TileType, playerId);
                 // Apply constraint filter if present
                 if (tileEffect.Constraint != null)
                 {

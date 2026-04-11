@@ -1281,6 +1281,7 @@ public static class CardRegistry
         // 119: Dust Seals — Requires max 3 oceans, 1 VP. No effects.
         SetEffects(builder, "119");
 
+        // Tested OK
         // 120: Urbanized Area — -1 energy prod, +2 MC prod, place city adjacent to 2 cities
         SetEffects(builder, "120", onPlayEffects:
         [
@@ -1420,6 +1421,7 @@ public static class CardRegistry
         SetEffects(builder, "139", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 1)]);
 
+        // Tested OK
         // 140: Lava Flows — Raise temp 2, place Lava Flows tile
         SetEffects(builder, "140", onPlayEffects:
         [
@@ -1564,6 +1566,7 @@ public static class CardRegistry
         SetEffects(builder, "164", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Heat, 1)]);
 
+        // Tested OK
         // 165: Magnetic Field Generators — -4 energy prod, +2 plant prod, +3 TR
         SetEffects(builder, "165", onPlayEffects:
         [
@@ -1587,6 +1590,7 @@ public static class CardRegistry
         SetEffects(builder, "167", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Heat, 2)]);
 
+        // Tested OK
         // 168: Windmills — +1 energy prod
         SetEffects(builder, "168", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 1)]);
@@ -1600,6 +1604,7 @@ public static class CardRegistry
             new ChangeResourceEffect(ResourceType.Plants, 1),
         ]);
 
+        // Tested OK
         // 170: Aerobraked Ammonia Asteroid — Add 2 microbes to another card, +3 heat prod, +1 plant prod
         SetEffects(builder, "170", onPlayEffects:
         [
@@ -1608,6 +1613,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Plants, 1),
         ]);
 
+        // Tested OK
         // 171: Magnetic Field Dome — -2 energy prod, +1 plant prod, +1 TR
         SetEffects(builder, "171", onPlayEffects:
         [
@@ -1616,6 +1622,7 @@ public static class CardRegistry
             new ChangeTREffect(1),
         ]);
 
+        // Tested OK
         // 172: Pets — Effect: when any city is placed, add animal. +1 animal on play. 1VP/2 animals
         SetEffects(builder, "172",
             onPlayEffects: [new AddCardResourceEffect(CardResourceType.Animal, 1, "172")],

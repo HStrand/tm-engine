@@ -998,4 +998,65 @@ public class GameEngineTests
         Assert.Equal(7, s3.GetPlayer(1).Resources.Plants);
         Assert.Null(s3.PendingAction);
     }
+
+    // ── Urbanized Area ─────────────────────────────────────────
+
+    [Fact]
+    public void UrbanizedArea_IsPlayable_OnHellas_WithCitiesAt6_7And8_8()
+    {
+        // Mirrors a real CLI-reported scenario: Hellas map, Vitor, 37 MC, 8 steel,
+        // energy prod 3, cities at (6,7) P0 and (8,8) P0, Urbanized Area in hand.
+        // Hexes (7,7) and (7,8) are adjacent to both cities, so the card must be playable.
+        var state = CreateTestGame() with { Map = MapName.Hellas };
+
+        state = state with
+        {
+            PlacedTiles = state.PlacedTiles
+                .Add(new HexCoord(6, 7), new PlacedTile(TileType.City, 0, new HexCoord(6, 7)))
+                .Add(new HexCoord(8, 8), new PlacedTile(TileType.City, 0, new HexCoord(8, 8))),
+        };
+
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = ImmutableList.Create("120"),
+            Resources = new ResourceSet(MegaCredits: 37, Steel: 8, Titanium: 4, Plants: 3, Energy: 3, Heat: 0),
+            Production = p.Production with { Energy = 3 },
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.NotNull(moves.Actions);
+        Assert.Contains(moves.Actions!.PlayableCards, c => c.CardId == "120");
+    }
+
+    [Fact]
+    public void UrbanizedArea_IsPlayable_WhenHexIsAdjacentToTwoCities()
+    {
+        // Urbanized Area (120) must be placed adjacent to ≥2 cities, which inherently
+        // means it's adjacent to cities — the normal "no adjacent cities" rule for
+        // cities must be overridden for this constraint.
+        //
+        // Scenario: place cities at (3,3) and (5,3). Hex (4,3) is adjacent to both.
+        var state = CreateTestGame();
+
+        // Place cities at (3,3) and (5,3), both owned by player 1 (other player)
+        state = state with
+        {
+            PlacedTiles = state.PlacedTiles
+                .Add(new HexCoord(3, 3), new PlacedTile(TileType.City, 1, new HexCoord(3, 3)))
+                .Add(new HexCoord(5, 3), new PlacedTile(TileType.City, 1, new HexCoord(5, 3))),
+        };
+
+        // Put Urbanized Area in player 0's hand and give them energy production to reduce
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = ImmutableList.Create("120"),
+            Production = p.Production with { Energy = 1 },
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.NotNull(moves.Actions);
+
+        // Urbanized Area should appear in the list of playable cards
+        Assert.Contains(moves.Actions!.PlayableCards, c => c.CardId == "120");
+    }
 }

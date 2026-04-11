@@ -360,8 +360,11 @@ public static class EffectExecutor
     private static ImmutableArray<HexCoord> GetConstrainedPlacements(
         GameState state, TileType tileType, int playerId, PlacementConstraint? constraint)
     {
-        // Get base valid placements for the tile type
-        var basePlacements = BoardLogic.GetValidTilePlacements(state, tileType, playerId);
+        // For AdjacentTo2Cities (Urbanized Area), start from all open land rather than
+        // the default city placements which exclude hexes adjacent to any city.
+        var basePlacements = constraint == PlacementConstraint.AdjacentTo2Cities
+            ? BoardLogic.GetValidLandPlacements(state, playerId)
+            : BoardLogic.GetValidTilePlacements(state, tileType, playerId);
 
         if (constraint == null)
             return basePlacements;
@@ -484,8 +487,26 @@ public static class EffectExecutor
 
     private static bool CardHasResourceType(string cardId, CardResourceType resourceType)
     {
-        // TODO: Check card definition for resource type compatibility
-        // For now, return false — will be implemented when cards are registered
+        if (!CardRegistry.TryGet(cardId, out var entry))
+            return false;
+
+        // A card can hold a resource type if any of its effects references itself
+        // as the target of an AddCardResourceEffect of that type.
+        bool Scan(Effect effect) => effect switch
+        {
+            AddCardResourceEffect add => add.TargetCardId == cardId && add.ResourceType == resourceType,
+            WhenYouEffect wy => Scan(wy.Effect),
+            WhenAnyoneEffect wa => Scan(wa.Effect),
+            CompoundEffect cp => cp.Effects.Any(Scan),
+            ChooseEffect ch => ch.Options.Any(o => o.Effects.Any(Scan)),
+            _ => false,
+        };
+
+        if (entry.OnPlayEffects.Any(Scan)) return true;
+        if (entry.OngoingEffects.Any(Scan)) return true;
+        if (entry.FirstActionEffects.Any(Scan)) return true;
+        if (entry.Action != null && entry.Action.Effects.Any(Scan)) return true;
+
         return false;
     }
 
