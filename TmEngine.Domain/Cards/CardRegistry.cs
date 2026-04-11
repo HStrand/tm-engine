@@ -640,10 +640,12 @@ public static class CardRegistry
             [new ChangeProductionEffect(ResourceType.Titanium, 1)],
             action: new CardAction(new SpendSteelCost(1), [new ChangeResourceEffect(ResourceType.MegaCredits, 5)]));
 
+        // Tested OK
         // 014: Development Center — Action: spend 1 energy, draw a card
         SetEffects(builder, "014",
             action: new CardAction(new SpendEnergyCost(1), [new DrawCardsEffect(1)]));
 
+        // Tested OK
         // 015: Equatorial Magnetizer — Action: -1 energy prod, +1 TR
         SetEffects(builder, "015",
             action: new CardAction(null, [
@@ -678,6 +680,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Plants, 2),
         ]);
 
+        // Tested OK
         // 019: Imported Hydrogen — +3 plants OR +3 microbes OR +2 animals to another card, place ocean
         SetEffects(builder, "019", onPlayEffects:
         [
@@ -696,6 +699,7 @@ public static class CardRegistry
             onPlayEffects: [new PlaceTileEffect(TileType.City, PlacementConstraint.Isolated)],
             ongoingEffects: [new GlobalDiscountEffect(1)]);
 
+        // Tested OK
         // 021: Phobos Space Haven — +1 titanium prod, place off-map city
         SetEffects(builder, "021", onPlayEffects:
         [
@@ -712,6 +716,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Heat, 3),
         ]);
 
+        // Tested OK
         // 023: Arctic Algae — Effect: when anyone places ocean, gain 2 plants. Gain 1 plant
         SetEffects(builder, "023",
             onPlayEffects: [new ChangeResourceEffect(ResourceType.Plants, 1)],
@@ -737,10 +742,11 @@ public static class CardRegistry
             new AddCardResourceEffect(CardResourceType.Animal, 1),
         ]);
 
-		// 027: Interstellar Colony Ship — VP only (event, 4 VP)
+        // 027: Interstellar Colony Ship — 4 VP, requires 5 science tags. No on-play effects.
+        SetEffects(builder, "027");
 
-		// Tested OK
-		// 028: Security Fleet — Action: spend 1 titanium, add 1 fighter resource. 1VP/fighter
+        // Tested OK
+        // 028: Security Fleet — Action: spend 1 titanium, add 1 fighter resource. 1VP/fighter
 		SetEffects(builder, "028",
             action: new CardAction(new SpendTitaniumCost(1),
                 [new AddCardResourceEffect(CardResourceType.Fighter, 1, "028")]));
@@ -1141,6 +1147,7 @@ public static class CardRegistry
             new ChangeResourceEffect(ResourceType.Plants, 2),
         ]);
 
+        // Tested OK
         // 094: Mass Converter — Effect: space cards cost 2 less. +6 energy prod (requires 5 science)
         SetEffects(builder, "094",
             onPlayEffects: [new ChangeProductionEffect(ResourceType.Energy, 6)],
@@ -1829,6 +1836,7 @@ public static class CardRegistry
         // Dynamic: floor(building_tags / 2) MC prod
         // Deferred — needs "per N tags" variant
 
+        // Tested OK
         // 208: AI Central — Action: draw 2 cards. -1 energy prod
         SetEffects(builder, "208",
             onPlayEffects: [new ChangeProductionEffect(ResourceType.Energy, -1)],
@@ -1856,11 +1864,12 @@ public static class CardRegistry
         SetEffects(builder, "P39",
             action: new CardAction(null, [new AddCardResourceEffect(CardResourceType.Microbe, 1, "P39")]));
 
-		// P40: Research Coordination — no effects (wild tag only)
+        // P40: Research Coordination — Wild tag only, no on-play effects.
+        SetEffects(builder, "P40");
 
-		// Tested OK
-		// P41: SF Memorial — Draw 1 card
-		SetEffects(builder, "P41", onPlayEffects: [new DrawCardsEffect(1)]);
+        // Tested OK
+        // P41: SF Memorial — Draw 1 card
+        SetEffects(builder, "P41", onPlayEffects: [new DrawCardsEffect(1)]);
 
         // P42: Space Hotels — +4 MC prod
         SetEffects(builder, "P42", onPlayEffects:

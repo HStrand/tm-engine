@@ -56,20 +56,21 @@ public static class RequirementChecker
             "max_oceans" when state.OceansPlaced > req.Count + modifier =>
                 $"Must have {req.Count} or fewer oceans.",
 
-            // Tag requirements (NOT affected by global modifiers)
-            "science_tag" when CountPlayerTags(player, Tag.Science) < req.Count =>
+            // Tag requirements (NOT affected by global modifiers).
+            // Wild tags count as any tag for the purpose of meeting requirements.
+            "science_tag" when CountTagsForRequirement(player, Tag.Science) < req.Count =>
                 $"Need {req.Count} Science tags.",
-            "earth_tag" when CountPlayerTags(player, Tag.Earth) < req.Count =>
+            "earth_tag" when CountTagsForRequirement(player, Tag.Earth) < req.Count =>
                 $"Need {req.Count} Earth tags.",
-            "jovian_tag" when CountPlayerTags(player, Tag.Jovian) < req.Count =>
+            "jovian_tag" when CountTagsForRequirement(player, Tag.Jovian) < req.Count =>
                 $"Need {req.Count} Jovian tags.",
-            "power_tag" when CountPlayerTags(player, Tag.Power) < req.Count =>
+            "power_tag" when CountTagsForRequirement(player, Tag.Power) < req.Count =>
                 $"Need {req.Count} Power tags.",
-            "plant_tag" when CountPlayerTags(player, Tag.Plant) < req.Count =>
+            "plant_tag" when CountTagsForRequirement(player, Tag.Plant) < req.Count =>
                 $"Need {req.Count} Plant tags.",
-            "microbe_tag" when CountPlayerTags(player, Tag.Microbe) < req.Count =>
+            "microbe_tag" when CountTagsForRequirement(player, Tag.Microbe) < req.Count =>
                 $"Need {req.Count} Microbe tags.",
-            "animal_tag" when CountPlayerTags(player, Tag.Animal) < req.Count =>
+            "animal_tag" when CountTagsForRequirement(player, Tag.Animal) < req.Count =>
                 $"Need {req.Count} Animal tags.",
 
             // Production requirements
@@ -399,6 +400,14 @@ public static class RequirementChecker
 
     private static int CountPlayerTags(PlayerState player, Tag tag) =>
         player.CountTag(tag, CardRegistry.GetTags);
+
+    /// <summary>
+    /// Count tags for the purpose of satisfying a card requirement.
+    /// Wild tags count as any tag the player needs, so they are added to the
+    /// specific tag count.
+    /// </summary>
+    private static int CountTagsForRequirement(PlayerState player, Tag tag) =>
+        CountPlayerTags(player, tag) + CountPlayerTags(player, Tag.Wild);
 
     private static int SumModifiers<T>(ImmutableArray<Effect> effects) where T : Effect
     {

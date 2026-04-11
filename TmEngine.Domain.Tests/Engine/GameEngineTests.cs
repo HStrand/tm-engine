@@ -1097,6 +1097,85 @@ public class GameEngineTests
         Assert.True(result.IsError, "Expected UseCardActionMove to be rejected when energy production is 0.");
     }
 
+    // ── Wild tag requirement counting ──────────────────────────
+
+    [Fact]
+    public void WildTag_CountsTowardScienceTagRequirement()
+    {
+        // Mass Converter (094) requires 5 science tags. Player has 4 science tags
+        // from played cards plus 1 wild tag, which should satisfy the requirement.
+        //
+        // Cards used:
+        //   "090" Research — 2 Science tags
+        //   "155" Designed Microorganisms — 1 Science, 1 Microbe
+        //   "071" Advanced Alloys — 1 Science
+        //   "P40" Research Coordination — 1 Wild
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = ImmutableList.Create("094"),
+            PlayedCards = ImmutableList.Create("090", "155", "071", "P40"),
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.NotNull(moves.Actions);
+
+        // Mass Converter should be playable: 4 science tags + 1 wild >= 5
+        Assert.Contains(moves.Actions!.PlayableCards, c => c.CardId == "094");
+    }
+
+    [Fact]
+    public void WildTag_NotNeeded_WhenSpecificTagAlreadySatisfiesRequirement()
+    {
+        // Player has exactly 5 science tags and no wild tags — should still be playable.
+        // Research (090)=2 + Designed Microorganisms (155)=1 + Advanced Alloys (071)=1
+        // + Lagrange Observatory (196)=1 → 5 science total
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = ImmutableList.Create("094"),
+            PlayedCards = ImmutableList.Create("090", "155", "071", "196"),
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.Contains(moves.Actions!.PlayableCards, c => c.CardId == "094");
+    }
+
+    [Fact]
+    public void WildTag_NotEnough_WhenTotalBelowRequirement()
+    {
+        // 3 science (Research=2, Designed Microorganisms=1) + 1 wild = 4 total, short of 5.
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = ImmutableList.Create("094"),
+            PlayedCards = ImmutableList.Create("090", "155", "P40"),
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.DoesNotContain(moves.Actions!.PlayableCards, c => c.CardId == "094");
+    }
+
+    [Fact]
+    public void MultipleWildTags_EachCountsIndividuallyTowardRequirement()
+    {
+        // 3 science tags + 2 wild tags = 5 total, satisfies Mass Converter's requirement.
+        //   "090" Research — 2 Science
+        //   "155" Designed Microorganisms — 1 Science
+        //   "P28" Research Network — 1 Wild (prelude)
+        //   "P40" Research Coordination — 1 Wild
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = ImmutableList.Create("094"),
+            PlayedCards = ImmutableList.Create("090", "155", "P28", "P40"),
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.NotNull(moves.Actions);
+        Assert.Contains(moves.Actions!.PlayableCards, c => c.CardId == "094");
+    }
+
     // ── Colonizer Training Camp ────────────────────────────────
 
     [Fact]
