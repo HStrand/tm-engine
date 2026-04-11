@@ -1097,6 +1097,59 @@ public class GameEngineTests
         Assert.True(result.IsError, "Expected UseCardActionMove to be rejected when energy production is 0.");
     }
 
+    // ── Colonizer Training Camp ────────────────────────────────
+
+    [Fact]
+    public void ColonizerTrainingCamp_IsPlayable_WhenOxygenAtMost5Percent()
+    {
+        // 001: cost 8, requires max_oxygen 5, gives 2 VP.
+        var state = CreateTestGame() with { Oxygen = 5 };
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = ImmutableList.Create("001"),
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.NotNull(moves.Actions);
+        Assert.Contains(moves.Actions!.PlayableCards, c => c.CardId == "001");
+    }
+
+    [Fact]
+    public void ColonizerTrainingCamp_NotPlayable_WhenOxygenAbove5Percent()
+    {
+        var state = CreateTestGame() with { Oxygen = 6 };
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = ImmutableList.Create("001"),
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.NotNull(moves.Actions);
+        Assert.DoesNotContain(moves.Actions!.PlayableCards, c => c.CardId == "001");
+    }
+
+    [Fact]
+    public void ColonizerTrainingCamp_PlaysSuccessfully_AndScores2VP()
+    {
+        var state = CreateTestGame() with { Oxygen = 3 };
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = ImmutableList.Create("001"),
+        });
+
+        var (newState, result) = GameEngine.Apply(state,
+            new PlayCardMove(0, "001", new PaymentInfo(MegaCredits: 8)));
+
+        Assert.True(result.IsSuccess, $"Expected success but got: {result}");
+        Assert.Contains("001", newState.Players[0].PlayedCards);
+        Assert.Equal(100 - 8, newState.Players[0].Resources.MegaCredits);
+
+        // Scoring: 2 VP from the card
+        var scores = Scoring.CalculateFinalScores(newState);
+        var player0Score = scores.First(s => s.PlayerId == 0);
+        Assert.Equal(2, player0Score.CardPoints);
+    }
+
     [Fact]
     public void EquatorialMagnetizer_IsUsable_WhenEnergyProductionIsAtLeastOne()
     {

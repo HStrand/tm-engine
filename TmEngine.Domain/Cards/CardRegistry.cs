@@ -557,7 +557,9 @@ public static class CardRegistry
 
     private static void RegisterProjectCardEffects(ImmutableDictionary<string, CardEntry>.Builder builder)
     {
-        // 001: Colonizer Training Camp — VP only (automated, no effects)
+        // Tested OK
+        // 001: Colonizer Training Camp — 2 VP, requires ≤5% oxygen. No on-play effects.
+        SetEffects(builder, "001");
 
         // Tested OK
         // 002: Asteroid Mining Consortium — Decrease any titanium prod 1, increase own 1
