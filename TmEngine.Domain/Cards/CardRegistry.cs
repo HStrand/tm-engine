@@ -1399,6 +1399,7 @@ public static class CardRegistry
         // 130: Worms — +1 plant prod per 2 microbe tags you have
         // Dynamic count — deferred
 
+        // Tested OK
         // 131: Decomposers — Effect: when you play animal/plant/microbe tag (including this), add microbe. 1VP/3
         SetEffects(builder, "131",
             ongoingEffects:
@@ -1408,14 +1409,17 @@ public static class CardRegistry
                 new WhenYouEffect(TriggerCondition.PlayMicrobeTag, new AddCardResourceEffect(CardResourceType.Microbe, 1, "131")),
             ]);
 
+        // Tested OK
         // 132: Fusion Power — +3 energy prod
         SetEffects(builder, "132", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 3)]);
 
+        // Tested OK
         // 133: Symbiotic Fungus — Action: add microbe to ANOTHER card
         SetEffects(builder, "133",
             action: new CardAction(null, [new AddCardResourceEffect(CardResourceType.Microbe, 1)]));
 
+        // Tested OK
         // 134: Extreme-Cold Fungus — Action: gain 1 plant or add 2 microbes to another card
         SetEffects(builder, "134",
             action: new CardAction(null, [
@@ -1473,6 +1477,7 @@ public static class CardRegistry
             new PlaceTileEffect(TileType.MoholeArea, PlacementConstraint.OceanReserved),
         ]);
 
+        // Tested OK
         // 143: Large Convoy — Place ocean, draw 2 cards, gain 5 plants or add 4 animals to another
         SetEffects(builder, "143", onPlayEffects:
         [
@@ -1489,6 +1494,7 @@ public static class CardRegistry
         SetEffects(builder, "144", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Titanium, 1)]);
 
+        // Tested OK
         // 145: Tectonic Stress Power — +3 energy prod
         SetEffects(builder, "145", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Energy, 3)]);
@@ -1501,9 +1507,15 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Plants, 2),
         ]);
 
-        // 147: Herbivores — Effect: when you place greenery, add animal. -1 plant prod (any). 1VP/2 animals
+        // Tested OK
+        // 147: Herbivores — On play: -1 plant prod (any), +1 animal to self.
+        // Effect: when you place a greenery tile, add an animal to this card. 1VP/2 animals.
         SetEffects(builder, "147",
-            onPlayEffects: [new ReduceAnyProductionEffect(ResourceType.Plants, 1)],
+            onPlayEffects:
+            [
+                new ReduceAnyProductionEffect(ResourceType.Plants, 1),
+                new AddCardResourceEffect(CardResourceType.Animal, 1, "147"),
+            ],
             ongoingEffects:
                 [new WhenYouEffect(TriggerCondition.PlaceGreeneryTile, new AddCardResourceEffect(CardResourceType.Animal, 1, "147"))]);
 
@@ -1875,6 +1887,7 @@ public static class CardRegistry
             new PlaceTileEffect(TileType.City, PlacementConstraint.Volcanic),
         ]);
 
+        // Tested OK
         // P38: Martian Survey — Draw 2 cards
         SetEffects(builder, "P38", onPlayEffects: [new DrawCardsEffect(2)]);
 

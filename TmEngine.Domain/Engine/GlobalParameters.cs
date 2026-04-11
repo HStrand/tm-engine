@@ -133,6 +133,7 @@ public static class GlobalParameters
     public static GameState PlaceGreenery(GameState state, int playerId, HexCoord location)
     {
         state = PlaceTileOnBoard(state, TileType.Greenery, playerId, location);
+        state = TriggerSystem.FireTrigger(state, playerId, TriggerCondition.PlaceGreeneryTile);
         state = RaiseOxygen(state, playerId);
         return state;
     }

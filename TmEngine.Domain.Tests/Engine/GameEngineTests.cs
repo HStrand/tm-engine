@@ -1097,6 +1097,55 @@ public class GameEngineTests
         Assert.True(result.IsError, "Expected UseCardActionMove to be rejected when energy production is 0.");
     }
 
+    // ── Herbivores ─────────────────────────────────────────────
+
+    [Fact]
+    public void Herbivores_AddsOneAnimalToItself_OnPlay()
+    {
+        // Herbivores (147) on-play: "Add 1 Animal to this card. Decrease any
+        // Plant production 1 step." Requires 8% oxygen.
+        var state = CreateTestGame() with { Oxygen = 8 };
+        // Give player 1 some plant production so the ReduceAnyProductionEffect
+        // has a target and doesn't fail / create a pending action.
+        state = state.UpdatePlayer(1, p => p with
+        {
+            Production = p.Production with { Plants = 2 },
+        });
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = ImmutableList.Create("147"),
+        });
+
+        var (newState, result) = GameEngine.Apply(state,
+            new PlayCardMove(0, "147", new PaymentInfo(MegaCredits: 12)));
+
+        Assert.True(result.IsSuccess, $"Expected success but got: {result}");
+        Assert.Contains("147", newState.Players[0].PlayedCards);
+        Assert.Equal(1, newState.Players[0].CardResources.GetValueOrDefault("147", 0));
+    }
+
+    [Fact]
+    public void Herbivores_GainsAnimal_WhenPlayerPlacesGreenery()
+    {
+        // Herbivores already in play with 1 animal. When the player places a
+        // greenery (e.g., via the Greenery standard project), the WhenYouEffect
+        // trigger should fire and add another animal to Herbivores.
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = ImmutableList.Create("147"),
+            CardResources = p.CardResources.SetItem("147", 1),
+        });
+
+        // Place a greenery via the standard project at any valid location
+        var greeneryLocations = BoardLogic.GetValidGreeneryPlacements(state, 0);
+        Assert.NotEmpty(greeneryLocations);
+        var (newState, result) = GameEngine.Apply(state, new GreeneryMove(0, greeneryLocations[0]));
+
+        Assert.True(result.IsSuccess, $"Expected success but got: {result}");
+        Assert.Equal(2, newState.Players[0].CardResources.GetValueOrDefault("147", 0));
+    }
+
     // ── Wild tag requirement counting ──────────────────────────
 
     [Fact]
