@@ -107,6 +107,12 @@ public static class CardNameResolver
                 case BuyCardsPending p:
                     ids.UnionWith(p.AvailableCardIds);
                     break;
+                case DrawKeepPending p:
+                    ids.UnionWith(p.DrawnCardIds);
+                    break;
+                case RemoveCardResourcePending p:
+                    ids.UnionWith(p.ValidCardIds);
+                    break;
             }
         }
 

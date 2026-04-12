@@ -37,6 +37,7 @@ public static class EffectExecutor
 
             // Cards
             DrawCardsEffect e => (ApplyDrawCards(state, playerId, e), null),
+            DrawKeepEffect e => ApplyDrawKeep(state, playerId, e),
             DiscardCardsEffect e => (state, new DiscardCardsPending(e.Count)),
 
             // Card resources
@@ -432,6 +433,29 @@ public static class EffectExecutor
             state = state.UpdatePlayer(playerId, p => p with { Hand = p.Hand.Add(cardId) });
         }
         return state;
+    }
+
+    private static (GameState, PendingAction?) ApplyDrawKeep(GameState state, int playerId, DrawKeepEffect e)
+    {
+        var drawn = ImmutableArray.CreateBuilder<string>();
+        for (int i = 0; i < e.Draw; i++)
+        {
+            if (state.DrawPile.IsEmpty) break;
+            drawn.Add(state.DrawPile[0]);
+            state = state with { DrawPile = state.DrawPile.RemoveAt(0) };
+        }
+
+        if (drawn.Count <= e.Keep)
+        {
+            // Drew fewer than or equal to keep count — just add all to hand
+            state = state.UpdatePlayer(playerId, p => p with
+            {
+                Hand = p.Hand.AddRange(drawn),
+            });
+            return (state, null);
+        }
+
+        return (state, new DrawKeepPending(drawn.ToImmutable(), e.Keep));
     }
 
     // ── Card Resources ─────────────────────────────────────────

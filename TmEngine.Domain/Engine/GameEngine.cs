@@ -659,6 +659,21 @@ public static class GameEngine
 
     private static GameState ApplyBuyCards(GameState state, BuyCardsMove move)
     {
+        // DrawKeepPending: player picks cards to keep (free), rest are discarded
+        if (state.PendingAction is DrawKeepPending drawKeep)
+        {
+            state = state.UpdatePlayer(move.PlayerId, p => p with
+            {
+                Hand = p.Hand.AddRange(move.CardIds),
+            });
+            var discarded = drawKeep.DrawnCardIds.Where(id => !move.CardIds.Contains(id));
+            return state with
+            {
+                PendingAction = null,
+                DiscardPile = state.DiscardPile.AddRange(discarded),
+            };
+        }
+
         var cost = move.CardIds.Length * Constants.CardBuyCost;
         var playerIndex = state.GetPlayerIndex(move.PlayerId);
 

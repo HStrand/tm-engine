@@ -1287,7 +1287,7 @@ public static class CardRegistry
 		// Action deferred — complex
 
 		// 111: Business Contacts — Look at top 4 cards, keep 2 discard 2
-		// Complex — deferred
+        SetEffects(builder, "111", onPlayEffects: [new DrawKeepEffect(4, 2)]);
 
 		// Tested OK
 		// 112: Bribed Committee — +2 TR
@@ -1590,6 +1590,7 @@ public static class CardRegistry
         SetEffects(builder, "155", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.Plants, 2)]);
 
+        // Tested OK
         // 156: Standard Technology — Effect: after paying for standard project (not sell patents), gain 3 MC
         SetEffects(builder, "156",
             ongoingEffects: [new WhenYouEffect(TriggerCondition.PlayStandardProject,

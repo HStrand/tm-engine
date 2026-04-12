@@ -587,6 +587,20 @@ public class MovePresenter
                     return move;
                 }
             }
+            case "DrawKeep":
+            {
+                var cards = pending["drawnCardIds"]?.ToObject<List<string>>() ?? new();
+                var keepCount = pending["keepCount"]?.Value<int>() ?? 0;
+                Console.WriteLine($"Choose {keepCount} cards to keep:");
+                for (int i = 0; i < cards.Count; i++)
+                    Console.WriteLine($"  {i + 1}. {CardName(cards[i])}");
+                Console.Write($"Enter {keepCount} choices (comma-separated): ");
+                var picks = ReadMultiChoice(cards.Count, keepCount, keepCount);
+                var kept = picks.Select(i => cards[i - 1]).ToList();
+                var move = MakeMove("BuyCards");
+                move["cardIds"] = new JArray(kept);
+                return move;
+            }
         }
 
         Console.WriteLine("Unknown pending action type. Passing.");

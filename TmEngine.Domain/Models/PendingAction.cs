@@ -43,6 +43,13 @@ public sealed record RemoveCardResourcePending(
     ImmutableArray<string> ValidCardIds) : PendingAction;
 
 /// <summary>
+/// Player must choose cards to keep from a drawn set. Unchosen cards are discarded.
+/// </summary>
+public sealed record DrawKeepPending(
+    ImmutableArray<string> DrawnCardIds,
+    int KeepCount) : PendingAction;
+
+/// <summary>
 /// Player must choose between multiple options (e.g., "gain 3 plants OR add 2 animals").
 /// </summary>
 public sealed record ChooseOptionPending(

@@ -378,6 +378,12 @@ public sealed record ChangeTRPerTagEffect(Tag Tag, int AmountPerTag) : Effect;
 public sealed record ConvertProductionEffect(ResourceType From, ResourceType To) : Effect;
 
 /// <summary>
+/// Draw cards and keep a subset, discarding the rest.
+/// E.g., Business Contacts: draw 4, keep 2.
+/// </summary>
+public sealed record DrawKeepEffect(int Draw, int Keep) : Effect;
+
+/// <summary>
 /// Player must play a card from hand immediately with special rules.
 /// E.g., Ecology Experts (ignore global requirements), Eccentric Sponsor (25 MC discount).
 /// </summary>

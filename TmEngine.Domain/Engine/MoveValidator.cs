@@ -658,6 +658,13 @@ public static class MoveValidator
                     ? "That option is not available."
                     : ValidateChosenOptionEffects(state, choose),
 
+            (DrawKeepPending pending, BuyCardsMove buy) =>
+                buy.CardIds.Length != pending.KeepCount
+                    ? $"Must keep exactly {pending.KeepCount} cards."
+                    : buy.CardIds.Any(id => !pending.DrawnCardIds.Contains(id))
+                    ? "Selected card is not among the drawn cards."
+                    : null,
+
             (ReduceProductionPending pending, ChooseTargetPlayerMove choose) =>
                 pending.ValidTargetPlayerIds.Contains(choose.TargetPlayerId)
                     ? null

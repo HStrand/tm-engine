@@ -364,6 +364,16 @@ public class BotPlayer
                 move["effectIndex"] = -1;
                 return (move, "auto-resolves remaining effects");
             }
+            case "DrawKeep":
+            {
+                var cards = pending["drawnCardIds"]?.ToObject<List<string>>() ?? new();
+                var keepCount = pending["keepCount"]?.Value<int>() ?? 0;
+                // Keep the first N cards (simple heuristic)
+                var kept = cards.Take(keepCount).ToList();
+                var move = MakeMove("BuyCards");
+                move["cardIds"] = new JArray(kept);
+                return (move, $"keeps {keepCount} of {cards.Count} drawn cards");
+            }
         }
 
         return (MakeMove("Pass"), "passes (unhandled pending action)");
