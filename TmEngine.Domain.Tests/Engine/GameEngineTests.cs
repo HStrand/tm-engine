@@ -1312,6 +1312,32 @@ public class GameEngineTests
         Assert.Null(s2.PendingAction);
     }
 
+    // ── Energy Saving (189) ─────────────────────────────────────
+
+    [Fact]
+    public void EnergySaving_CountsOffMapCities()
+    {
+        // Place Ganymede Colony and Phobos Space Haven as off-map cities,
+        // plus one on-map city — Energy Saving should count all three.
+        var state = CreateTestGame();
+        state = state with
+        {
+            PlacedTiles = state.PlacedTiles
+                .Add(new HexCoord(4, 4), new PlacedTile(TileType.City, 1, new HexCoord(4, 4))),
+            OffMapTiles = state.OffMapTiles
+                .Add(new OffMapTile("Ganymede Colony", TileType.City, 0))
+                .Add(new OffMapTile("Phobos Space Haven", TileType.City, 1)),
+        };
+        state = state.UpdatePlayer(0, p => p with { Hand = p.Hand.Add("189") });
+
+        var initialEnergyProd = state.Players[0].Production.Energy;
+
+        var (newState, result) = GameEngine.Apply(state, new PlayCardMove(0, "189", new PaymentInfo(MegaCredits: 15)));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(initialEnergyProd + 3, newState.Players[0].Production.Energy);
+    }
+
     // ── Herbivores ─────────────────────────────────────────────
 
     [Fact]

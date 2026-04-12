@@ -1774,12 +1774,15 @@ public static class CardRegistry
         SetEffects(builder, "187",
             action: new CardAction(new SpendMCOrSteelCost(8), [new PlaceOceanEffect(1)]));
 
+        // Tested OK
         // 188: Flooding — Place ocean. May remove 4 MC from owner of adjacent tile
         SetEffects(builder, "188", onPlayEffects:
             [new PlaceOceanEffect(1, RemoveAdjacentMC: 4)]);
 
+        // Tested OK
         // 189: Energy Saving — +1 energy prod per city in play
-        // Dynamic count — deferred
+        SetEffects(builder, "189", onPlayEffects:
+            [new ChangeProductionPerCityEffect(ResourceType.Energy, 1)]);
 
         // Tested OK
         // 190: Local Heat Trapping — Spend 5 heat, gain 4 plants or add 2 animals to another

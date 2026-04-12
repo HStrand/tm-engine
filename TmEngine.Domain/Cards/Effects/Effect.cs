@@ -344,6 +344,13 @@ public sealed record PlaceOffMapCityEffect(string CityName) : Effect;
 public sealed record ChangeProductionPerTagEffect(ResourceType Resource, Tag Tag, int AmountPerTag) : Effect;
 
 /// <summary>
+/// Change production based on the total number of city tiles in play (all players).
+/// Counts on-map cities/capitals and off-map cities.
+/// E.g., Energy Saving: +1 energy production per city tile in play.
+/// </summary>
+public sealed record ChangeProductionPerCityEffect(ResourceType Resource, int AmountPerCity) : Effect;
+
+/// <summary>
 /// Claim a non-reserved land hex — only this player may place tiles there.
 /// The player chooses the hex (triggers a pending action).
 /// </summary>

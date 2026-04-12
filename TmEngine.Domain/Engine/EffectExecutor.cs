@@ -52,6 +52,7 @@ public static class EffectExecutor
             RevealUntilTagEffect e => (ApplyRevealUntilTag(state, playerId, e), null),
             PlaceOffMapCityEffect e => ApplyPlaceOffMapCity(state, playerId, e),
             ChangeProductionPerTagEffect e => (ApplyChangeProductionPerTag(state, playerId, e), null),
+            ChangeProductionPerCityEffect e => (ApplyChangeProductionPerCity(state, playerId, e), null),
             ChangeTRPerTagEffect e => (ApplyChangeTRPerTag(state, playerId, e), null),
             ClaimLandEffect => ApplyClaimLand(state, playerId),
             NextCardDiscountEffect e => (state.UpdatePlayer(playerId, p => p with
@@ -198,6 +199,7 @@ public static class EffectExecutor
         StealResourceEffect e => $"Steal up to {e.Amount} {e.Resource} from any player",
         ReduceAnyProductionEffect e => $"Reduce any player's {e.Resource} production by {e.Amount}",
         ChangeProductionEffect e => e.Amount >= 0 ? $"+{e.Amount} {e.Resource} production" : $"{e.Amount} {e.Resource} production",
+        ChangeProductionPerCityEffect e => $"+{e.AmountPerCity} {e.Resource} production per city in play",
         ChangeResourceEffect e => e.Amount >= 0 ? $"Gain {e.Amount} {e.Resource}" : $"Lose {-e.Amount} {e.Resource}",
         DrawCardsEffect e => e.Count == 1 ? "Draw 1 card" : $"Draw {e.Count} cards",
         DrawAndPlayOneEffect e => $"Draw {e.DrawCount} cards and play 1",
@@ -567,6 +569,21 @@ public static class EffectExecutor
         var tagCount = player.CountTag(e.Tag, CardRegistry.GetTags);
         var totalAmount = tagCount * e.AmountPerTag;
 
+        if (totalAmount == 0)
+            return state;
+
+        return state.UpdatePlayer(playerId, p => p with
+        {
+            Production = p.Production.Add(e.Resource, totalAmount),
+        });
+    }
+
+    private static GameState ApplyChangeProductionPerCity(GameState state, int playerId, ChangeProductionPerCityEffect e)
+    {
+        var cityCount = state.PlacedTiles.Values.Count(t => t.Type == TileType.City || t.Type == TileType.Capital)
+                      + state.OffMapTiles.Count(t => t.Type == TileType.City);
+
+        var totalAmount = cityCount * e.AmountPerCity;
         if (totalAmount == 0)
             return state;
 
