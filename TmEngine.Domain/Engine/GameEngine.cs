@@ -1172,11 +1172,6 @@ public static class GameEngine
         foreach (var effect in entry.OnPlayEffects)
         {
             if (effect is Cards.Effects.ChooseEffect ce) return ce;
-            if (effect is Cards.Effects.CompoundEffect comp)
-            {
-                foreach (var inner in comp.Effects)
-                    if (inner is Cards.Effects.ChooseEffect innerCe) return innerCe;
-            }
         }
         foreach (var effect in entry.FirstActionEffects)
         {

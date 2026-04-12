@@ -771,9 +771,6 @@ public static class MoveValidator
         foreach (var effect in entry.OnPlayEffects)
         {
             if (effect is ChooseEffect ce) return ce;
-            if (effect is CompoundEffect comp)
-                foreach (var inner in comp.Effects)
-                    if (inner is ChooseEffect innerCe) return innerCe;
         }
         foreach (var effect in entry.FirstActionEffects)
             if (effect is ChooseEffect ce) return ce;

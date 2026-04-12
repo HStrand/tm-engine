@@ -239,43 +239,6 @@ public class EffectExecutorTests
         Assert.Equal(17, newState.Players[0].TerraformRating); // 20 - 3
     }
 
-    // ── Compound Effects ───────────────────────────────────────
-
-    [Fact]
-    public void CompoundEffect_ExecutesAll()
-    {
-        var state = CreateTestState();
-        var effect = new CompoundEffect([
-            new ChangeProductionEffect(ResourceType.Energy, 1),
-            new ChangeProductionEffect(ResourceType.Heat, 2),
-            new ChangeResourceEffect(ResourceType.MegaCredits, 5),
-        ]);
-
-        var (newState, pending) = EffectExecutor.Execute(state, 0, effect);
-
-        Assert.Null(pending);
-        Assert.Equal(1, newState.Players[0].Production.Energy);
-        Assert.Equal(2, newState.Players[0].Production.Heat);
-        Assert.Equal(55, newState.Players[0].Resources.MegaCredits);
-    }
-
-    [Fact]
-    public void CompoundEffect_StopsAtPendingAction()
-    {
-        var state = CreateTestState();
-        var effect = new CompoundEffect([
-            new ChangeResourceEffect(ResourceType.MegaCredits, 5),
-            new PlaceOceanEffect(1), // This triggers a pending action
-            new ChangeResourceEffect(ResourceType.Steel, 3), // This won't execute yet
-        ]);
-
-        var (newState, pending) = EffectExecutor.Execute(state, 0, effect);
-
-        Assert.NotNull(pending);
-        Assert.Equal(55, newState.Players[0].Resources.MegaCredits); // First effect applied
-        Assert.Equal(5, newState.Players[0].Resources.Steel); // Third effect NOT applied
-    }
-
     // ── Passive Modifiers (no-op at execution) ─────────────────
 
     [Fact]

@@ -67,9 +67,6 @@ public static class EffectExecutor
             // Choices
             ChooseEffect e => ApplyChoose(state, e, sourceCardId),
 
-            // Compound
-            CompoundEffect e => ApplyCompound(state, playerId, e, sourceCardId),
-
             // Passive modifiers (these are stored on the card entry, not executed at play time)
             // They take effect by being present in OngoingEffects and queried by RequirementChecker.
             RequirementModifierEffect or SteelValueModifierEffect or TitaniumValueModifierEffect
@@ -183,7 +180,6 @@ public static class EffectExecutor
         AddCardResourceEffect e => e.TargetCardId == null, // only if target not specified
         PlayCardFromHandEffect => true,
         DiscardCardsEffect => true,
-        CompoundEffect => true,
         _ => false,
     };
 
@@ -211,7 +207,6 @@ public static class EffectExecutor
         PlayCardFromHandEffect => "Play a card from hand",
         DiscardCardsEffect e => $"Discard {e.Count} card(s)",
         ChangeTREffect e => $"{(e.Amount >= 0 ? "+" : "")}{e.Amount} TR",
-        CompoundEffect e => string.Join("; ", e.Effects.Select(DescribeEffect)),
         _ => effect.GetType().Name,
     };
 
@@ -528,7 +523,6 @@ public static class EffectExecutor
             AddCardResourceEffect add => add.TargetCardId == cardId && add.ResourceType == resourceType,
             WhenYouEffect wy => Scan(wy.Effect),
             WhenAnyoneEffect wa => Scan(wa.Effect),
-            CompoundEffect cp => cp.Effects.Any(Scan),
             ChooseEffect ch => ch.Options.Any(o => o.Effects.Any(Scan)),
             _ => false,
         };
@@ -834,13 +828,4 @@ public static class EffectExecutor
         return true;
     }
 
-    // ── Compound ────────────────────────────────────────────────
-
-    private static (GameState, PendingAction?) ApplyCompound(
-        GameState state, int playerId, CompoundEffect e, string? sourceCardId)
-    {
-        // CompoundEffect is treated as a single unit — sub-effects execute sequentially
-        var indices = Enumerable.Range(0, e.Effects.Length).ToImmutableArray();
-        return ExecuteSequential(state, playerId, e.Effects, indices, sourceCardId);
-    }
 }

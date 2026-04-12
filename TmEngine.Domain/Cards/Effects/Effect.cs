@@ -147,13 +147,6 @@ public sealed record EffectOption(
     ImmutableArray<Effect> Effects);
 
 // ═══════════════════════════════════════════════════════════
-//  COMPOUND / SEQUENTIAL
-// ═══════════════════════════════════════════════════════════
-
-/// <summary>Execute multiple effects in sequence.</summary>
-public sealed record CompoundEffect(ImmutableArray<Effect> Effects) : Effect;
-
-// ═══════════════════════════════════════════════════════════
 //  TRIGGERED / ONGOING EFFECTS (for blue cards and corporations)
 // ═══════════════════════════════════════════════════════════
 

@@ -776,11 +776,10 @@ public static class CardRegistry
 
         // 031: Optimal Aerobraking — Effect: when you play space event, gain 3 MC + 3 heat
         SetEffects(builder, "031",
-            ongoingEffects: [new WhenYouEffect(TriggerCondition.PlaySpaceEventTag,
-                new CompoundEffect([
-                    new ChangeResourceEffect(ResourceType.MegaCredits, 3),
-                    new ChangeResourceEffect(ResourceType.Heat, 3),
-                ]))]);
+            ongoingEffects: [
+                new WhenYouEffect(TriggerCondition.PlaySpaceEventTag, new ChangeResourceEffect(ResourceType.MegaCredits, 3)),
+                new WhenYouEffect(TriggerCondition.PlaySpaceEventTag, new ChangeResourceEffect(ResourceType.Heat, 3)),
+            ]);
 
         // Tested OK
         // 032: Underground City — place city, -2 energy prod, +2 steel prod
