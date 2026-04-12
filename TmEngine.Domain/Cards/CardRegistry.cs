@@ -1593,8 +1593,14 @@ public static class CardRegistry
         // 156: Standard Technology — Effect: after paying for standard project (not sell patents), gain 3 MC
         // Complex triggered effect — deferred
 
-        // 157: Nitrite Reducing Bacteria — Action: add 1 microbe, or remove 3 to +1 TR
-        // Complex action with choice — deferred
+        // Tested OK
+        // 157: Nitrite Reducing Bacteria — Add 3 microbes on play. Action: add 1 microbe, or remove 3 to +1 TR
+        SetEffects(builder, "157",
+            onPlayEffects: [new AddCardResourceEffect(CardResourceType.Microbe, 3, "157")],
+            action: new CardAction(null, [new ChooseEffect([
+                new EffectOption("Add 1 microbe", [new AddCardResourceEffect(CardResourceType.Microbe, 1, "157")]),
+                new EffectOption("Remove 3 microbes to gain 1 TR", [new AddCardResourceEffect(CardResourceType.Microbe, -3, "157"), new ChangeTREffect(1)]),
+            ])]));
 
         // Tested OK
         // 158: Industrial Microbes — +1 energy prod, +1 steel prod
