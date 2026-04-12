@@ -1472,7 +1472,48 @@ public class GameEngineTests
         Assert.Equal(Constants.DefaultMaxOxygen, s2.Oxygen);
     }
 
-    // ── Predators (024) ──────────────────────────────────────────
+    // ── Insulation (152) ────────────────���─────────────────────────
+
+    [Fact]
+    public void Insulation_ConvertsHeatProdToMCProd()
+    {
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = p.Hand.Add("152"),
+            Production = p.Production with { Heat = 5, MegaCredits = 0 },
+        });
+
+        var (s1, r1) = GameEngine.Apply(state, new PlayCardMove(0, "152", new PaymentInfo(MegaCredits: 2)));
+        Assert.True(r1.IsSuccess);
+        var pending = Assert.IsType<ChooseOptionPending>(s1.PendingAction);
+        Assert.Equal(6, pending.Options.Length); // 0 through 5
+
+        // Choose to convert 3 steps
+        var (s2, r2) = GameEngine.Apply(s1, new ChooseOptionMove(0, 3));
+        Assert.True(r2.IsSuccess);
+        Assert.Equal(2, s2.GetPlayer(0).Production.Heat);
+        Assert.Equal(3, s2.GetPlayer(0).Production.MegaCredits);
+    }
+
+    [Fact]
+    public void Insulation_ZeroSteps_NoChange()
+    {
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = p.Hand.Add("152"),
+            Production = p.Production with { Heat = 3, MegaCredits = 2 },
+        });
+
+        var (s1, _) = GameEngine.Apply(state, new PlayCardMove(0, "152", new PaymentInfo(MegaCredits: 2)));
+        var (s2, r2) = GameEngine.Apply(s1, new ChooseOptionMove(0, 0));
+        Assert.True(r2.IsSuccess);
+        Assert.Equal(3, s2.GetPlayer(0).Production.Heat);
+        Assert.Equal(2, s2.GetPlayer(0).Production.MegaCredits);
+    }
+
+    // ── Predators (024) ───────────��────────────────��─────────────
 
     [Fact]
     public void Predators_Action_RemovesAnimalFromAnotherCard()

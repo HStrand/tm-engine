@@ -374,6 +374,13 @@ public sealed record ClaimLandEffect : Effect;
 public sealed record ChangeTRPerTagEffect(Tag Tag, int AmountPerTag) : Effect;
 
 /// <summary>
+/// Convert production from one resource to another any number of steps.
+/// E.g., Insulation: decrease heat production N steps, increase MC production N steps.
+/// The player chooses N (0 to current production of the source resource).
+/// </summary>
+public sealed record ConvertProductionEffect(ResourceType From, ResourceType To) : Effect;
+
+/// <summary>
 /// Player must play a card from hand immediately with special rules.
 /// E.g., Ecology Experts (ignore global requirements), Eccentric Sponsor (25 MC discount).
 /// </summary>

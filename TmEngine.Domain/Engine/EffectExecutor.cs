@@ -55,6 +55,7 @@ public static class EffectExecutor
             ChangeProductionPerOpponentTagEffect e => (ApplyChangeProductionPerOpponentTag(state, playerId, e), null),
             ChangeProductionPerCityEffect e => (ApplyChangeProductionPerCity(state, playerId, e), null),
             ChangeTRPerTagEffect e => (ApplyChangeTRPerTag(state, playerId, e), null),
+            ConvertProductionEffect e => ApplyConvertProduction(state, playerId, e, sourceCardId),
             ClaimLandEffect => ApplyClaimLand(state, playerId),
             NextCardDiscountEffect e => (state.UpdatePlayer(playerId, p => p with
                 { NextCardDiscount = p.NextCardDiscount + e.Discount }), null),
@@ -639,6 +640,24 @@ public static class EffectExecutor
         {
             Production = p.Production.Add(e.Resource, totalAmount),
         });
+    }
+
+    private static (GameState, PendingAction?) ApplyConvertProduction(GameState state, int playerId, ConvertProductionEffect e, string? sourceCardId)
+    {
+        var player = state.GetPlayer(playerId);
+        var maxSteps = player.Production.Get(e.From);
+
+        if (maxSteps <= 0)
+            return (state, null); // Nothing to convert
+
+        // Build options: 0 steps through maxSteps
+        var options = ImmutableArray.CreateBuilder<string>();
+        for (int i = 0; i <= maxSteps; i++)
+            options.Add(i == 0 ? "Convert 0 (no change)" : $"Convert {i} {e.From} prod → {i} {e.To} prod");
+
+        return (state, new ChooseOptionPending(
+            $"How much {e.From} production to convert to {e.To}?", options.ToImmutable(),
+            SourceCardId: sourceCardId));
     }
 
     private static GameState ApplyChangeTRPerTag(GameState state, int playerId, ChangeTRPerTagEffect e)

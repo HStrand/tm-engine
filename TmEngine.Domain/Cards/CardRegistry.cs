@@ -1414,6 +1414,7 @@ public static class CardRegistry
                 new WhenYouEffect(TriggerCondition.PlayPlantTag, new AddCardResourceEffect(CardResourceType.Animal, 1, "128")),
             ]);
 
+        // Tested OK
         // 129: Zeppelins — +1 MC prod per city on Mars
         SetEffects(builder, "129", onPlayEffects:
             [new ChangeProductionPerCityEffect(ResourceType.MegaCredits, 1, OnMarsOnly: true)]);
@@ -1453,7 +1454,9 @@ public static class CardRegistry
                 ]),
             ]));
 
-        // 135: Advanced Ecosystems — VP only (3 VP, requires plant+microbe+animal tags)
+        // Tested OK
+        // 135: Advanced Ecosystems — 3 VP, no on-play effects.
+        SetEffects(builder, "135");
 
         // Tested OK
         // 136: Great Dam — +2 energy prod
@@ -1564,8 +1567,10 @@ public static class CardRegistry
             new ChangeResourceEffect(ResourceType.MegaCredits, 10),
         ]);
 
+        // Tested OK
         // 152: Insulation — Decrease heat prod any number, increase MC prod same amount
-        // Complex — deferred (variable amount choice)
+        SetEffects(builder, "152", onPlayEffects:
+            [new ConvertProductionEffect(ResourceType.Heat, ResourceType.MegaCredits)]);
 
         // Tested OK
         // 153: Adaptation Technology — Effect: global requirements +/- 2

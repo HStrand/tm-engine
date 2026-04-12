@@ -1098,9 +1098,26 @@ public static class GameEngine
         if (move.OptionIndex < 0 || move.OptionIndex >= pending.Options.Length)
             return state;
 
-        // Try to find a ChooseEffect on the source card
+        // Try to find a matching effect on the source card
         if (pending.SourceCardId != null && CardRegistry.TryGet(pending.SourceCardId, out var entry))
         {
+            // ConvertProductionEffect: option index = number of steps to convert
+            var convertEffect = FindEffect<Cards.Effects.ConvertProductionEffect>(entry);
+            if (convertEffect != null)
+            {
+                var steps = move.OptionIndex;
+                if (steps > 0)
+                {
+                    state = state.UpdatePlayer(move.PlayerId, p => p with
+                    {
+                        Production = p.Production
+                            .Add(convertEffect.From, -steps)
+                            .Add(convertEffect.To, steps),
+                    });
+                }
+                return state;
+            }
+
             var chooseEffect = FindChooseEffect(entry);
             if (chooseEffect != null && move.OptionIndex < chooseEffect.Options.Length)
             {
@@ -1131,6 +1148,18 @@ public static class GameEngine
         }
 
         return state;
+    }
+
+    private static T? FindEffect<T>(Cards.CardEntry entry) where T : Cards.Effects.Effect
+    {
+        foreach (var effect in entry.OnPlayEffects)
+            if (effect is T e) return e;
+        foreach (var effect in entry.FirstActionEffects)
+            if (effect is T e) return e;
+        if (entry.Action != null)
+            foreach (var effect in entry.Action.Effects)
+                if (effect is T e) return e;
+        return null;
     }
 
     private static Cards.Effects.ChooseEffect? FindChooseEffect(Cards.CardEntry entry)
