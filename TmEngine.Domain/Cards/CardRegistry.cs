@@ -1286,6 +1286,7 @@ public static class CardRegistry
             onPlayEffects: [new ChangeProductionEffect(ResourceType.MegaCredits, -1)]);
 		// Action deferred — complex
 
+        // Tested OK
 		// 111: Business Contacts — Look at top 4 cards, keep 2 discard 2
         SetEffects(builder, "111", onPlayEffects: [new DrawKeepEffect(4, 2)]);
 
@@ -1840,7 +1841,7 @@ public static class CardRegistry
         SetEffects(builder, "191", onPlayEffects: [new PlaceOceanEffect(1)]);
 
         // 192: Invention Contest — Look at top 3 cards, take 1, discard 2
-        // Complex — deferred
+        SetEffects(builder, "192", onPlayEffects: [new DrawKeepEffect(3, 1)]);
 
         // Tested OK
         // 193: Plantation — Place greenery, raise O2
