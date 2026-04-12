@@ -187,6 +187,9 @@ public enum TriggerCondition
     PlayCityTag,
     PlayEventTag,
 
+    // Compound tag triggers
+    PlaySpaceEventTag, // card has both Space and Event tags
+
     // Tile triggers (on Mars = placed on the hex grid)
     PlaceCityTileOnMars,
     PlaceAnyCityTile, // includes off-map cities (Ganymede, Phobos)

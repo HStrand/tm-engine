@@ -920,6 +920,10 @@ public static class GameEngine
                 state = TriggerSystem.FireTrigger(state, move.PlayerId, condition.Value);
         }
 
+        // Compound tag triggers
+        if (card.Tags.Contains(Tag.Space) && card.Tags.Contains(Tag.Event))
+            state = TriggerSystem.FireTrigger(state, move.PlayerId, TriggerCondition.PlaySpaceEventTag);
+
         if (pending != null)
             return state with { PendingAction = pending };
 
