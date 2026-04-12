@@ -355,10 +355,11 @@ public sealed record ChangeProductionPerOpponentTagEffect(ResourceType Resource,
 
 /// <summary>
 /// Change production based on the total number of city tiles in play (all players).
-/// Counts on-map cities/capitals and off-map cities.
+/// Counts on-map cities/capitals and, unless OnMarsOnly, off-map cities.
 /// E.g., Energy Saving: +1 energy production per city tile in play.
+/// Zeppelins: +1 MC production per city ON MARS (OnMarsOnly = true).
 /// </summary>
-public sealed record ChangeProductionPerCityEffect(ResourceType Resource, int AmountPerCity) : Effect;
+public sealed record ChangeProductionPerCityEffect(ResourceType Resource, int AmountPerCity, bool OnMarsOnly = false) : Effect;
 
 /// <summary>
 /// Claim a non-reserved land hex — only this player may place tiles there.

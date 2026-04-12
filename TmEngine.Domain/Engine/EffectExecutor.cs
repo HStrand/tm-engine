@@ -629,7 +629,7 @@ public static class EffectExecutor
     private static GameState ApplyChangeProductionPerCity(GameState state, int playerId, ChangeProductionPerCityEffect e)
     {
         var cityCount = state.PlacedTiles.Values.Count(t => t.Type == TileType.City || t.Type == TileType.Capital)
-                      + state.OffMapTiles.Count(t => t.Type == TileType.City);
+                      + (e.OnMarsOnly ? 0 : state.OffMapTiles.Count(t => t.Type == TileType.City));
 
         var totalAmount = cityCount * e.AmountPerCity;
         if (totalAmount == 0)

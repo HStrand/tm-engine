@@ -1415,7 +1415,8 @@ public static class CardRegistry
             ]);
 
         // 129: Zeppelins — +1 MC prod per city on Mars
-        // Dynamic count — deferred
+        SetEffects(builder, "129", onPlayEffects:
+            [new ChangeProductionPerCityEffect(ResourceType.MegaCredits, 1, OnMarsOnly: true)]);
 
         // Tested OK
         // 130: Worms — +1 plant prod per 2 microbe tags you have (including this)
