@@ -1031,9 +1031,12 @@ public static class CardRegistry
             [new ChangeProductionEffect(ResourceType.MegaCredits, 2)]);
 
         // 069: Electro Catapult — Action: spend 1 plant or 1 steel for 7 MC. -1 energy prod
-        // Complex action (choice of cost) — deferred
-        SetEffects(builder, "069", onPlayEffects:
-            [new ChangeProductionEffect(ResourceType.Energy, -1)]);
+        SetEffects(builder, "069",
+            onPlayEffects: [new ChangeProductionEffect(ResourceType.Energy, -1)],
+            action: new CardAction(null, [new ChooseEffect([
+                new EffectOption("Spend 1 plant for 7 MC", [new ChangeResourceEffect(ResourceType.Plants, -1), new ChangeResourceEffect(ResourceType.MegaCredits, 7)]),
+                new EffectOption("Spend 1 steel for 7 MC", [new ChangeResourceEffect(ResourceType.Steel, -1), new ChangeResourceEffect(ResourceType.MegaCredits, 7)]),
+            ])]));
 
         // Tested OK
         // 070: Earth Catapult — Effect: cards cost 2 MC less
@@ -1858,6 +1861,7 @@ public static class CardRegistry
         SetEffects(builder, "193", onPlayEffects:
             [new PlaceTileEffect(TileType.Greenery)]);
 
+        // Tested OK
 		// 194: Power Infrastructure — Action: spend any energy, gain that much MC
         SetEffects(builder, "194",
             action: new CardAction(null, [new ConvertResourceEffect(ResourceType.Energy, ResourceType.MegaCredits)]));

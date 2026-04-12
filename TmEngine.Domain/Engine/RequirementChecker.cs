@@ -143,6 +143,15 @@ public static class RequirementChecker
                     return $"No player can have their {reduce.Resource} production reduced by {reduce.Amount}.";
             }
 
+            // ChooseEffect — at least one option must be affordable
+            if (effect is ChooseEffect choose)
+            {
+                bool anyAffordable = choose.Options.Any(o =>
+                    EffectExecutor.CanAffordOptionEffects(player, o.Effects));
+                if (!anyAffordable)
+                    return "No available option can be afforded.";
+            }
+
             // RemoveCardResourceEffect — at least one valid target card must exist
             if (effect is RemoveCardResourceEffect removeCard)
             {

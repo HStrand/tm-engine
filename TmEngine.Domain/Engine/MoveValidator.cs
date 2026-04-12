@@ -769,12 +769,16 @@ public static class MoveValidator
 
         foreach (var effect in chosenEffects)
         {
-            // Check negative AddCardResourceEffect (removing resources from a card)
             if (effect is AddCardResourceEffect add && add.Amount < 0 && add.TargetCardId != null)
             {
                 var current = player.CardResources.GetValueOrDefault(add.TargetCardId, 0);
                 if (current < -add.Amount)
                     return $"Not enough {add.ResourceType} on card: have {current}, need {-add.Amount}.";
+            }
+            if (effect is ChangeResourceEffect res && res.Amount < 0)
+            {
+                if (player.Resources.Get(res.Resource) < -res.Amount)
+                    return $"Not enough {res.Resource}: have {player.Resources.Get(res.Resource)}, need {-res.Amount}.";
             }
         }
 

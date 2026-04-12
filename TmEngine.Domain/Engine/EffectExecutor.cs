@@ -872,7 +872,7 @@ public static class EffectExecutor
             ValidOptionIndices: validIndices.ToImmutable()));
     }
 
-    private static bool CanAffordOptionEffects(PlayerState player, ImmutableArray<Effect> effects)
+    public static bool CanAffordOptionEffects(PlayerState player, ImmutableArray<Effect> effects)
     {
         foreach (var effect in effects)
         {
@@ -880,6 +880,11 @@ public static class EffectExecutor
             {
                 var current = player.CardResources.GetValueOrDefault(add.TargetCardId, 0);
                 if (current < -add.Amount)
+                    return false;
+            }
+            if (effect is ChangeResourceEffect res && res.Amount < 0)
+            {
+                if (player.Resources.Get(res.Resource) < -res.Amount)
                     return false;
             }
         }
