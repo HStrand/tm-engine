@@ -14,7 +14,8 @@ public abstract record PendingAction;
 /// </summary>
 public sealed record PlaceTilePending(
     TileType TileType,
-    ImmutableArray<HexCoord> ValidLocations) : PendingAction;
+    ImmutableArray<HexCoord> ValidLocations,
+    int RemoveAdjacentMC = 0) : PendingAction;
 
 /// <summary>
 /// Player must choose which opponent (or self) to remove resources from.
@@ -22,7 +23,8 @@ public sealed record PlaceTilePending(
 public sealed record RemoveResourcePending(
     ResourceType Resource,
     int Amount,
-    ImmutableArray<int> ValidTargetPlayerIds) : PendingAction;
+    ImmutableArray<int> ValidTargetPlayerIds,
+    bool IsOptional = false) : PendingAction;
 
 /// <summary>
 /// Player must choose a card to add resources to.

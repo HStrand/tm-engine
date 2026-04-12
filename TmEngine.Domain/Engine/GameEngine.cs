@@ -217,8 +217,11 @@ public static class GameEngine
 
     private static GameState ApplyPass(GameState state, PassMove move)
     {
-        // Pass can also be used to skip a PlayCardFromHandPending
+        // Pass can also be used to skip optional pending actions
         if (state.PendingAction is PlayCardFromHandPending)
+            return state with { PendingAction = null };
+
+        if (state.PendingAction is RemoveResourcePending { IsOptional: true })
             return state with { PendingAction = null };
 
         state = state.UpdatePlayer(move.PlayerId, p => p with { Passed = true });
@@ -785,6 +788,10 @@ public static class GameEngine
             if (pending.TileType is TileType.MiningRights or TileType.MiningArea)
                 state = ApplyMiningProductionBonus(state, move.PlayerId, move.Location);
 
+            // Flooding: after placing ocean, may remove 4 MC from adjacent tile owner
+            if (pending.RemoveAdjacentMC > 0 && state.PendingAction == null)
+                state = ApplyFloodingEffect(state, move.PlayerId, move.Location, pending.RemoveAdjacentMC);
+
             return state;
         }
 
@@ -819,6 +826,24 @@ public static class GameEngine
         }
 
         return state;
+    }
+
+    private static GameState ApplyFloodingEffect(GameState state, int playerId, HexCoord location, int amount)
+    {
+        var adjacentOwners = location.GetAdjacentCoords()
+            .Where(adj => state.PlacedTiles.TryGetValue(adj, out var tile) && tile.OwnerId.HasValue)
+            .Select(adj => state.PlacedTiles[adj].OwnerId!.Value)
+            .Distinct()
+            .ToImmutableArray();
+
+        if (adjacentOwners.Length == 0)
+            return state;
+
+        return state with
+        {
+            PendingAction = new RemoveResourcePending(
+                ResourceType.MegaCredits, amount, adjacentOwners, IsOptional: true),
+        };
     }
 
     // ── Card Playing ─────────────────────────────────────────────

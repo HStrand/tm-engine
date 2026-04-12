@@ -608,6 +608,8 @@ public static class MoveValidator
                     ? null
                     : "Invalid tile placement location.",
 
+            (RemoveResourcePending pending, PassMove) when pending.IsOptional => null,
+
             (RemoveResourcePending pending, ChooseTargetPlayerMove choose) =>
                 pending.ValidTargetPlayerIds.Contains(choose.TargetPlayerId)
                     ? null

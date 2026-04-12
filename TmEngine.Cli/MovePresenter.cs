@@ -457,14 +457,19 @@ public class MovePresenter
             {
                 var resource = pending["resource"]?.Value<string>() ?? "";
                 var amount = pending["amount"]?.Value<int>() ?? 0;
+                var isOptional = pending["isOptional"]?.Value<bool>() == true;
                 var targets = pending["validTargetPlayerIds"]?.ToObject<List<int>>() ?? new();
-                Console.WriteLine($"Choose target to {(type == "RemoveResource" ? "remove" : "reduce")} " +
-                    $"{amount} {resource} from:");
+                var verb = type == "RemoveResource" ? "remove" : "reduce";
+                Console.WriteLine($"Choose target to {verb} {amount} {resource} from:");
                 for (int i = 0; i < targets.Count; i++)
                     Console.WriteLine($"  {i + 1}. Player {targets[i]}");
-                int choice = ReadChoice(targets.Count) - 1;
+                if (isOptional)
+                    Console.WriteLine($"  0. Skip (do not {verb})");
+                int choice = isOptional ? ReadChoiceWithZero(targets.Count) : ReadChoice(targets.Count);
+                if (isOptional && choice == 0)
+                    return MakeMove("Pass");
                 var move = MakeMove("ChooseTargetPlayer");
-                move["targetPlayerId"] = targets[choice];
+                move["targetPlayerId"] = targets[choice - 1];
                 return move;
             }
             case "AddCardResource":
@@ -700,6 +705,18 @@ public class MovePresenter
             if (int.TryParse(input, out int val) && val >= 1 && val <= max)
                 return val;
             Console.WriteLine($"Please enter a number between 1 and {max}.");
+        }
+    }
+
+    private static int ReadChoiceWithZero(int max)
+    {
+        while (true)
+        {
+            Console.Write($"Choice (0-{max}): ");
+            var input = Console.ReadLine()?.Trim() ?? "";
+            if (int.TryParse(input, out int val) && val >= 0 && val <= max)
+                return val;
+            Console.WriteLine($"Please enter a number between 0 and {max}.");
         }
     }
 

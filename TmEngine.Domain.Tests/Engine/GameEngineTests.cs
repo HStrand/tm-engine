@@ -954,16 +954,21 @@ public class GameEngineTests
         var (s2, r2) = GameEngine.Apply(s1, new ChooseEffectOrderMove(0, removeIdx));
         Assert.IsType<Success>(r2);
 
-        // Plants removed (auto-applied to only opponent)
-        Assert.Equal(7, s2.GetPlayer(1).Resources.Plants);
+        // Remove plants is now optional — pending action to choose target
+        Assert.IsType<RemoveResourcePending>(s2.PendingAction);
+        var removePending = (RemoveResourcePending)s2.PendingAction!;
+        Assert.True(removePending.IsOptional);
+
+        // Choose to remove from player 1
+        var (s2b, _) = GameEngine.Apply(s2, new ChooseTargetPlayerMove(0, 1));
+        Assert.Equal(7, s2b.GetPlayer(1).Resources.Plants);
 
         // Last remaining effect (ocean) auto-executes → PlaceTilePending
-        Assert.NotNull(s2.PendingAction);
-        Assert.IsType<PlaceTilePending>(s2.PendingAction);
+        Assert.IsType<PlaceTilePending>(s2b.PendingAction);
 
         // Place the ocean
-        var oceanPending = (PlaceTilePending)s2.PendingAction;
-        var (s3, _) = GameEngine.Apply(s2, new PlaceTileMove(0, oceanPending.ValidLocations[0]));
+        var oceanPending = (PlaceTilePending)s2b.PendingAction;
+        var (s3, _) = GameEngine.Apply(s2b, new PlaceTileMove(0, oceanPending.ValidLocations[0]));
         Assert.Null(s3.PendingAction);
         Assert.Equal(1, s3.OceansPlaced);
     }
@@ -1000,9 +1005,11 @@ public class GameEngineTests
         // Place ocean
         var (s3, _) = GameEngine.Apply(s2, new PlaceTileMove(0, oceanPending.ValidLocations[0]));
 
-        // Plants should have been removed after ocean
-        Assert.Equal(7, s3.GetPlayer(1).Resources.Plants);
-        Assert.Null(s3.PendingAction);
+        // Remove plants is now optional — pending to choose target
+        Assert.IsType<RemoveResourcePending>(s3.PendingAction);
+        var (s4, _) = GameEngine.Apply(s3, new ChooseTargetPlayerMove(0, 1));
+        Assert.Equal(7, s4.GetPlayer(1).Resources.Plants);
+        Assert.Null(s4.PendingAction);
     }
 
     // ── Urbanized Area ─────────────────────────────────────────
@@ -1174,6 +1181,135 @@ public class GameEngineTests
         Assert.True(result.IsSuccess);
         Assert.Equal(2, newState.Players[0].Resources.MegaCredits);
         Assert.Equal(5, newState.Players[0].Resources.Steel);
+    }
+
+    // ── Flooding (188) ──────────────────────────────────────────
+
+    [Fact]
+    public void Flooding_PlacesOcean_ThenOffersOptionalMCRemoval()
+    {
+        // Place a greenery owned by player 1 adjacent to an ocean-reserved hex
+        var adjacentHex = new HexCoord(5, 0); // adjacent to ocean hex (4,1) on Tharsis
+        var state = CreateTestGame();
+        state = state with
+        {
+            PlacedTiles = ImmutableDictionary<HexCoord, PlacedTile>.Empty
+                .Add(adjacentHex, new PlacedTile(TileType.Greenery, 1, adjacentHex)),
+        };
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = p.Hand.Add("188"),
+        });
+
+        // Play Flooding — first it should create a PlaceTilePending for the ocean
+        var (s1, r1) = GameEngine.Apply(state, new PlayCardMove(0, "188", new PaymentInfo(MegaCredits: 7)));
+        Assert.True(r1.IsSuccess);
+        Assert.IsType<PlaceTilePending>(s1.PendingAction);
+
+        // Place the ocean adjacent to player 1's tile
+        var oceanHex = new HexCoord(4, 1);
+        var (s2, r2) = GameEngine.Apply(s1, new PlaceTileMove(0, oceanHex));
+        Assert.True(r2.IsSuccess);
+
+        // Should now have a RemoveResourcePending that is optional
+        Assert.IsType<RemoveResourcePending>(s2.PendingAction);
+        var pending = (RemoveResourcePending)s2.PendingAction!;
+        Assert.True(pending.IsOptional);
+        Assert.Contains(1, pending.ValidTargetPlayerIds);
+    }
+
+    [Fact]
+    public void Flooding_CanChooseToRemoveMCFromAdjacentOwner()
+    {
+        var adjacentHex = new HexCoord(5, 0);
+        var state = CreateTestGame();
+        state = state with
+        {
+            PlacedTiles = ImmutableDictionary<HexCoord, PlacedTile>.Empty
+                .Add(adjacentHex, new PlacedTile(TileType.Greenery, 1, adjacentHex)),
+        };
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = p.Hand.Add("188"),
+        });
+        var initialMC = state.Players[1].Resources.MegaCredits;
+
+        var (s1, _) = GameEngine.Apply(state, new PlayCardMove(0, "188", new PaymentInfo(MegaCredits: 7)));
+        var (s2, _) = GameEngine.Apply(s1, new PlaceTileMove(0, new HexCoord(4, 1)));
+
+        // Choose to remove 4 MC from player 1
+        var (s3, r3) = GameEngine.Apply(s2, new ChooseTargetPlayerMove(0, 1));
+        Assert.True(r3.IsSuccess);
+        Assert.Equal(initialMC - 4, s3.Players[1].Resources.MegaCredits);
+    }
+
+    [Fact]
+    public void Flooding_CanSkipMCRemoval()
+    {
+        var adjacentHex = new HexCoord(5, 0);
+        var state = CreateTestGame();
+        state = state with
+        {
+            PlacedTiles = ImmutableDictionary<HexCoord, PlacedTile>.Empty
+                .Add(adjacentHex, new PlacedTile(TileType.Greenery, 1, adjacentHex)),
+        };
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = p.Hand.Add("188"),
+        });
+        var initialMC = state.Players[1].Resources.MegaCredits;
+
+        var (s1, _) = GameEngine.Apply(state, new PlayCardMove(0, "188", new PaymentInfo(MegaCredits: 7)));
+        var (s2, _) = GameEngine.Apply(s1, new PlaceTileMove(0, new HexCoord(4, 1)));
+
+        // Skip — pass to decline
+        var (s3, r3) = GameEngine.Apply(s2, new PassMove(0));
+        Assert.True(r3.IsSuccess);
+        Assert.Equal(initialMC, s3.Players[1].Resources.MegaCredits);
+    }
+
+    [Fact]
+    public void Flooding_CanSkipWhenAdjacentToOwnTile()
+    {
+        // Place a tile owned by the active player (player 0) adjacent to the ocean
+        var adjacentHex = new HexCoord(5, 0);
+        var state = CreateTestGame();
+        state = state with
+        {
+            PlacedTiles = ImmutableDictionary<HexCoord, PlacedTile>.Empty
+                .Add(adjacentHex, new PlacedTile(TileType.Greenery, 0, adjacentHex)),
+        };
+        state = state.UpdatePlayer(0, p => p with { Hand = p.Hand.Add("188") });
+        var initialMC = state.Players[0].Resources.MegaCredits;
+
+        var (s1, _) = GameEngine.Apply(state, new PlayCardMove(0, "188", new PaymentInfo(MegaCredits: 7)));
+        var (s2, _) = GameEngine.Apply(s1, new PlaceTileMove(0, new HexCoord(4, 1)));
+
+        // Should have optional pending with player 0 as target
+        Assert.IsType<RemoveResourcePending>(s2.PendingAction);
+        var pending = (RemoveResourcePending)s2.PendingAction!;
+        Assert.True(pending.IsOptional);
+        Assert.Contains(0, pending.ValidTargetPlayerIds);
+
+        // Player can skip — they shouldn't be forced to lose their own MC
+        var (s3, r3) = GameEngine.Apply(s2, new PassMove(0));
+        Assert.True(r3.IsSuccess);
+        Assert.Null(s3.PendingAction);
+    }
+
+    [Fact]
+    public void Flooding_NoPromptWhenNoAdjacentTiles()
+    {
+        // No tiles on the board — ocean placed with nothing adjacent
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with { Hand = p.Hand.Add("188") });
+
+        var (s1, _) = GameEngine.Apply(state, new PlayCardMove(0, "188", new PaymentInfo(MegaCredits: 7)));
+        var (s2, r2) = GameEngine.Apply(s1, new PlaceTileMove(0, new HexCoord(4, 1)));
+        Assert.True(r2.IsSuccess);
+
+        // No adjacent tiles → no pending, action should be complete
+        Assert.Null(s2.PendingAction);
     }
 
     // ── Herbivores ─────────────────────────────────────────────

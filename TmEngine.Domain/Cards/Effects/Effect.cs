@@ -32,6 +32,7 @@ public sealed record RemoveResourceEffect(ResourceType Resource, int Amount) : E
 /// </summary>
 public sealed record StealResourceEffect(ResourceType Resource, int Amount) : Effect;
 
+
 /// <summary>
 /// Reduce any one player's production (red-bordered production icon).
 /// Unlike RemoveResource, this MUST be performed. If no opponent has the production,
@@ -50,7 +51,7 @@ public sealed record RaiseOxygenEffect(int Steps = 1) : Effect;
 public sealed record RaiseTemperatureEffect(int Steps = 1) : Effect;
 
 /// <summary>Place ocean tile(s).</summary>
-public sealed record PlaceOceanEffect(int Count = 1) : Effect;
+public sealed record PlaceOceanEffect(int Count = 1, int RemoveAdjacentMC = 0) : Effect;
 
 // ═══════════════════════════════════════════════════════════
 //  TILES

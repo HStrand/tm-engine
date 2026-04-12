@@ -235,19 +235,11 @@ public static class EffectExecutor
             .ToImmutableArray();
 
         if (validTargets.Length == 0)
-            return (state, null); // No valid targets, effect is optional
+            return (state, null); // No valid targets
 
-        if (validTargets.Length == 1)
-        {
-            // Only one valid target, apply directly
-            return (state.UpdatePlayer(validTargets[0], p => p with
-            {
-                Resources = p.Resources.Add(e.Resource, -Math.Min(e.Amount, p.Resources.Get(e.Resource))),
-            }), null);
-        }
-
-        // Multiple valid targets — player must choose
-        return (state, new RemoveResourcePending(e.Resource, e.Amount, validTargets));
+        // Removing resources from opponents is optional per the rules.
+        // With 1 target, still present the choice so the player can decline.
+        return (state, new RemoveResourcePending(e.Resource, e.Amount, validTargets, IsOptional: true));
     }
 
     private static (GameState, PendingAction?) ApplyStealResource(
@@ -341,7 +333,7 @@ public static class EffectExecutor
 
         // If placing multiple oceans, place first one and queue the rest
         // For now, trigger a pending action for the player to choose location
-        return (state, new PlaceTilePending(TileType.Ocean, validLocations));
+        return (state, new PlaceTilePending(TileType.Ocean, validLocations, RemoveAdjacentMC: e.RemoveAdjacentMC));
     }
 
     // ── Tiles ──────────────────────────────────────────────────

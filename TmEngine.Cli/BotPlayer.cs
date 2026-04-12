@@ -265,13 +265,30 @@ public class BotPlayer
             case "RemoveResource":
             case "ReduceProduction":
             {
+                var isOptional = pending["isOptional"]?.Value<bool>() == true;
                 var targets = pending["validTargetPlayerIds"]?.ToObject<List<int>>() ?? new();
+
+                // If optional and the only targets are ourselves, skip
+                if (isOptional && targets.All(t => t == PlayerId))
+                {
+                    var move = MakeMove("Pass");
+                    return (move, "declines to remove resources");
+                }
+
                 if (targets.Count > 0)
                 {
-                    var target = PickRandom(targets);
+                    // If optional, prefer targeting opponents
+                    var opponents = targets.Where(t => t != PlayerId).ToList();
+                    var target = opponents.Count > 0 ? PickRandom(opponents) : PickRandom(targets);
                     var move = MakeMove("ChooseTargetPlayer");
                     move["targetPlayerId"] = target;
                     return (move, $"targets player {target}");
+                }
+
+                if (isOptional)
+                {
+                    var move = MakeMove("Pass");
+                    return (move, "declines to remove resources");
                 }
                 break;
             }

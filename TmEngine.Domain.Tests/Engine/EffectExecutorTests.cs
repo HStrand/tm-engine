@@ -88,7 +88,7 @@ public class EffectExecutorTests
     // ── Remove Resource (red-bordered) ─────────────────────────
 
     [Fact]
-    public void RemoveResource_SingleTarget_RemovesAutomatically()
+    public void RemoveResource_SingleTarget_CreatesOptionalPending()
     {
         var state = CreateTestState();
         // Only player 1 has plants (besides player 0)
@@ -96,8 +96,11 @@ public class EffectExecutorTests
 
         var (newState, pending) = EffectExecutor.Execute(state, 0, effect);
 
-        Assert.Null(pending);
-        Assert.Equal(5, newState.Players[1].Resources.Plants); // 8 - 3
+        Assert.NotNull(pending);
+        var removePending = Assert.IsType<RemoveResourcePending>(pending);
+        Assert.True(removePending.IsOptional);
+        Assert.Contains(1, removePending.ValidTargetPlayerIds);
+        Assert.Equal(8, newState.Players[1].Resources.Plants); // not yet removed
     }
 
     [Fact]

@@ -1775,8 +1775,8 @@ public static class CardRegistry
             action: new CardAction(new SpendMCOrSteelCost(8), [new PlaceOceanEffect(1)]));
 
         // 188: Flooding — Place ocean. May remove 4 MC from owner of adjacent tile
-        SetEffects(builder, "188", onPlayEffects: [new PlaceOceanEffect(1)]);
-        // MC removal from adjacent tile owner — deferred
+        SetEffects(builder, "188", onPlayEffects:
+            [new PlaceOceanEffect(1, RemoveAdjacentMC: 4)]);
 
         // 189: Energy Saving — +1 energy prod per city in play
         // Dynamic count — deferred
