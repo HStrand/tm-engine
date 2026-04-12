@@ -1338,6 +1338,140 @@ public class GameEngineTests
         Assert.Equal(initialEnergyProd + 3, newState.Players[0].Production.Energy);
     }
 
+    // ── GHG Producing Bacteria (034) ──────────────────────────────
+
+    [Fact]
+    public void GHGBacteria_Action_AddMicrobe_AutoSelectsWhenNotEnoughToRemove()
+    {
+        // With 0 microbes, only "add 1 microbe" is valid — auto-selected, no choice needed
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("034"),
+            CardResources = p.CardResources.Add("034", 0),
+        });
+
+        var (newState, result) = GameEngine.Apply(state, new UseCardActionMove(0, "034"));
+        Assert.True(result.IsSuccess);
+        Assert.Null(newState.PendingAction);
+        Assert.Equal(1, newState.GetPlayer(0).CardResources["034"]);
+    }
+
+    [Fact]
+    public void GHGBacteria_Action_PresentsChoice_WhenEnoughMicrobes()
+    {
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("034"),
+            CardResources = p.CardResources.Add("034", 2),
+        });
+
+        var (s1, r1) = GameEngine.Apply(state, new UseCardActionMove(0, "034"));
+        Assert.True(r1.IsSuccess);
+        var pending = Assert.IsType<ChooseOptionPending>(s1.PendingAction);
+        Assert.Equal(2, pending.ValidOptionIndices!.Value.Length);
+
+        // Choose option 0: add 1 microbe
+        var (s2, r2) = GameEngine.Apply(s1, new ChooseOptionMove(0, 0));
+        Assert.True(r2.IsSuccess);
+        Assert.Equal(3, s2.GetPlayer(0).CardResources["034"]);
+    }
+
+    [Fact]
+    public void GHGBacteria_Action_Remove2Microbes_RaisesTemperature()
+    {
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("034"),
+            CardResources = p.CardResources.Add("034", 3),
+        });
+        var initialTemp = state.Temperature;
+        var initialTR = state.Players[0].TerraformRating;
+
+        var (s1, _) = GameEngine.Apply(state, new UseCardActionMove(0, "034"));
+        // Choose option 1: remove 2 microbes, raise temperature
+        var (s2, r2) = GameEngine.Apply(s1, new ChooseOptionMove(0, 1));
+        Assert.True(r2.IsSuccess);
+        Assert.Equal(1, s2.GetPlayer(0).CardResources["034"]);
+        Assert.Equal(initialTemp + Constants.TemperatureStep, s2.Temperature);
+        Assert.Equal(initialTR + 1, s2.GetPlayer(0).TerraformRating);
+    }
+
+    [Fact]
+    public void GHGBacteria_Action_Remove2Rejected_WhenNotEnoughMicrobes()
+    {
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("034"),
+            CardResources = p.CardResources.Add("034", 1),
+        });
+
+        var (s1, _) = GameEngine.Apply(state, new UseCardActionMove(0, "034"));
+        // Try option 1 with only 1 microbe — should be rejected
+        var (_, r2) = GameEngine.Apply(s1, new ChooseOptionMove(0, 1));
+        Assert.True(r2.IsError);
+    }
+
+    [Fact]
+    public void GHGBacteria_Action_Remove2Allowed_WhenTempMaxed()
+    {
+        var state = CreateTestGame() with { Temperature = Constants.DefaultMaxTemperature };
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("034"),
+            CardResources = p.CardResources.Add("034", 2),
+        });
+
+        var (s1, _) = GameEngine.Apply(state, new UseCardActionMove(0, "034"));
+        var (s2, r2) = GameEngine.Apply(s1, new ChooseOptionMove(0, 1));
+        Assert.True(r2.IsSuccess);
+        // Microbes removed, temp stays maxed, no TR gain
+        Assert.Equal(0, s2.GetPlayer(0).CardResources["034"]);
+        Assert.Equal(Constants.DefaultMaxTemperature, s2.Temperature);
+    }
+
+    // ── Regolith Eaters (033) ───────────────────────────────────
+
+    [Fact]
+    public void RegolithEaters_Action_Remove2Microbes_RaisesOxygen()
+    {
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("033"),
+            CardResources = p.CardResources.Add("033", 4),
+        });
+        var initialO2 = state.Oxygen;
+        var initialTR = state.Players[0].TerraformRating;
+
+        var (s1, _) = GameEngine.Apply(state, new UseCardActionMove(0, "033"));
+        var (s2, r2) = GameEngine.Apply(s1, new ChooseOptionMove(0, 1));
+        Assert.True(r2.IsSuccess);
+        Assert.Equal(2, s2.GetPlayer(0).CardResources["033"]);
+        Assert.Equal(initialO2 + 1, s2.Oxygen);
+        Assert.Equal(initialTR + 1, s2.GetPlayer(0).TerraformRating);
+    }
+
+    [Fact]
+    public void RegolithEaters_Action_Remove2Allowed_WhenOxygenMaxed()
+    {
+        var state = CreateTestGame() with { Oxygen = Constants.DefaultMaxOxygen };
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("033"),
+            CardResources = p.CardResources.Add("033", 2),
+        });
+
+        var (s1, _) = GameEngine.Apply(state, new UseCardActionMove(0, "033"));
+        var (s2, r2) = GameEngine.Apply(s1, new ChooseOptionMove(0, 1));
+        Assert.True(r2.IsSuccess);
+        Assert.Equal(0, s2.GetPlayer(0).CardResources["033"]);
+        Assert.Equal(Constants.DefaultMaxOxygen, s2.Oxygen);
+    }
+
     // ── Predators (024) ──────────────────────────────────────────
 
     [Fact]

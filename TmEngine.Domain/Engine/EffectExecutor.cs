@@ -760,7 +760,41 @@ public static class EffectExecutor
     private static (GameState, PendingAction?) ApplyChoose(GameState state, ChooseEffect e, string? sourceCardId)
     {
         var options = e.Options.Select(o => o.Description).ToImmutableArray();
-        return (state, new ChooseOptionPending("Choose one:", options, sourceCardId));
+
+        // Filter out options the player can't afford (e.g., not enough card resources to remove)
+        var player = state.GetActivePlayer();
+        var validIndices = ImmutableArray.CreateBuilder<int>();
+        for (int i = 0; i < e.Options.Length; i++)
+        {
+            if (CanAffordOptionEffects(player, e.Options[i].Effects))
+                validIndices.Add(i);
+        }
+
+        // If only one valid option, auto-select it
+        if (validIndices.Count == 1)
+        {
+            var autoIndex = validIndices[0];
+            var chosenEffects = e.Options[autoIndex].Effects;
+            var indices = Enumerable.Range(0, chosenEffects.Length).ToImmutableArray();
+            return ExecuteSequential(state, player.PlayerId, chosenEffects, indices, sourceCardId);
+        }
+
+        return (state, new ChooseOptionPending("Choose one:", options, sourceCardId,
+            ValidOptionIndices: validIndices.ToImmutable()));
+    }
+
+    private static bool CanAffordOptionEffects(PlayerState player, ImmutableArray<Effect> effects)
+    {
+        foreach (var effect in effects)
+        {
+            if (effect is AddCardResourceEffect add && add.Amount < 0 && add.TargetCardId != null)
+            {
+                var current = player.CardResources.GetValueOrDefault(add.TargetCardId, 0);
+                if (current < -add.Amount)
+                    return false;
+            }
+        }
+        return true;
     }
 
     // ── Compound ────────────────────────────────────────────────

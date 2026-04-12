@@ -48,7 +48,8 @@ public sealed record RemoveCardResourcePending(
 public sealed record ChooseOptionPending(
     string Description,
     ImmutableArray<string> Options,
-    string? SourceCardId = null) : PendingAction;
+    string? SourceCardId = null,
+    ImmutableArray<int>? ValidOptionIndices = null) : PendingAction;
 
 /// <summary>
 /// Player must choose which opponent to reduce production for.

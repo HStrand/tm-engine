@@ -652,9 +652,11 @@ public static class MoveValidator
                     : "Invalid hex for land claim.",
 
             (ChooseOptionPending pending, ChooseOptionMove choose) =>
-                choose.OptionIndex >= 0 && choose.OptionIndex < pending.Options.Length
-                    ? null
-                    : "Invalid option index.",
+                choose.OptionIndex < 0 || choose.OptionIndex >= pending.Options.Length
+                    ? "Invalid option index."
+                    : pending.ValidOptionIndices != null && !pending.ValidOptionIndices.Value.Contains(choose.OptionIndex)
+                    ? "That option is not available."
+                    : ValidateChosenOptionEffects(state, choose),
 
             (ReduceProductionPending pending, ChooseTargetPlayerMove choose) =>
                 pending.ValidTargetPlayerIds.Contains(choose.TargetPlayerId)
@@ -729,6 +731,55 @@ public static class MoveValidator
         if (totalValue < effectiveCost)
             return $"Payment ({totalValue} MC value) does not cover card cost ({effectiveCost} MC).";
 
+        return null;
+    }
+
+    /// <summary>
+    /// Validate that the chosen option's effects can be afforded (e.g., enough card resources to remove).
+    /// </summary>
+    private static string? ValidateChosenOptionEffects(GameState state, ChooseOptionMove move)
+    {
+        if (state.PendingAction is not ChooseOptionPending pending || pending.SourceCardId == null)
+            return null;
+
+        if (!CardRegistry.TryGet(pending.SourceCardId, out var entry))
+            return null;
+
+        var chooseEffect = FindChooseEffect(entry);
+        if (chooseEffect == null || move.OptionIndex >= chooseEffect.Options.Length)
+            return null;
+
+        var chosenEffects = chooseEffect.Options[move.OptionIndex].Effects;
+        var player = state.GetPlayer(move.PlayerId);
+
+        foreach (var effect in chosenEffects)
+        {
+            // Check negative AddCardResourceEffect (removing resources from a card)
+            if (effect is AddCardResourceEffect add && add.Amount < 0 && add.TargetCardId != null)
+            {
+                var current = player.CardResources.GetValueOrDefault(add.TargetCardId, 0);
+                if (current < -add.Amount)
+                    return $"Not enough {add.ResourceType} on card: have {current}, need {-add.Amount}.";
+            }
+        }
+
+        return null;
+    }
+
+    private static ChooseEffect? FindChooseEffect(CardEntry entry)
+    {
+        foreach (var effect in entry.OnPlayEffects)
+        {
+            if (effect is ChooseEffect ce) return ce;
+            if (effect is CompoundEffect comp)
+                foreach (var inner in comp.Effects)
+                    if (inner is ChooseEffect innerCe) return innerCe;
+        }
+        foreach (var effect in entry.FirstActionEffects)
+            if (effect is ChooseEffect ce) return ce;
+        if (entry.Action != null)
+            foreach (var effect in entry.Action.Effects)
+                if (effect is ChooseEffect ce) return ce;
         return null;
     }
 }

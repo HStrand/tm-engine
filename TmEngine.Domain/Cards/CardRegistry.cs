@@ -787,12 +787,23 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Steel, 2),
         ]);
 
-        // 033: Nitrite Reducing Bacteria — Action: add 1 microbe, or remove 2 to raise O2 1 step
-        // Complex action — deferred
+        // Tested OK
+        // 033: Regolith Eaters — Action: add 1 microbe, or remove 2 to raise O2 1 step
+        SetEffects(builder, "033",
+            action: new CardAction(null, [new ChooseEffect([
+                new EffectOption("Add 1 microbe", [new AddCardResourceEffect(CardResourceType.Microbe, 1, "033")]),
+                new EffectOption("Remove 2 microbes to raise oxygen", [new AddCardResourceEffect(CardResourceType.Microbe, -2, "033"), new RaiseOxygenEffect()]),
+            ])]));
 
+        // Tested OK
         // 034: GHG Producing Bacteria — Action: add 1 microbe, or remove 2 to raise temp 1 step
-        // Complex action — deferred
+        SetEffects(builder, "034",
+            action: new CardAction(null, [new ChooseEffect([
+                new EffectOption("Add 1 microbe", [new AddCardResourceEffect(CardResourceType.Microbe, 1, "034")]),
+                new EffectOption("Remove 2 microbes to raise temperature", [new AddCardResourceEffect(CardResourceType.Microbe, -2, "034"), new RaiseTemperatureEffect()]),
+            ])]));
 
+        // Tested OK
         // 035: Ants — Action: remove 1 microbe from any to add 1 here. 1VP/2 microbes
         SetEffects(builder, "035",
             action: new CardAction(null, [
