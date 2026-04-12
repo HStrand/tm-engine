@@ -591,15 +591,38 @@ public class MovePresenter
             {
                 var cards = pending["drawnCardIds"]?.ToObject<List<string>>() ?? new();
                 var keepCount = pending["keepCount"]?.Value<int>() ?? 0;
-                Console.WriteLine($"Choose {keepCount} cards to keep:");
+                var costPerCard = pending["costPerCard"]?.Value<int>() ?? 0;
+                var costLabel = costPerCard > 0 ? $" ({costPerCard} MC each)" : "";
+                Console.WriteLine($"Choose up to {keepCount} cards to keep{costLabel}:");
                 for (int i = 0; i < cards.Count; i++)
                     Console.WriteLine($"  {i + 1}. {CardName(cards[i])}");
-                Console.Write($"Enter {keepCount} choices (comma-separated): ");
-                var picks = ReadMultiChoice(cards.Count, keepCount, keepCount);
-                var kept = picks.Select(i => cards[i - 1]).ToList();
-                var move = MakeMove("BuyCards");
-                move["cardIds"] = new JArray(kept);
-                return move;
+                if (costPerCard > 0)
+                {
+                    Console.WriteLine($"  0. Keep none");
+                    Console.Write($"Enter choice (0-{cards.Count}): ");
+                    var input = Console.ReadLine()?.Trim() ?? "0";
+                    if (input == "0")
+                    {
+                        var move = MakeMove("BuyCards");
+                        move["cardIds"] = new JArray();
+                        return move;
+                    }
+                    var picks = input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .Select(s => int.Parse(s)).ToList();
+                    var kept = picks.Select(i => cards[i - 1]).ToList();
+                    var move2 = MakeMove("BuyCards");
+                    move2["cardIds"] = new JArray(kept);
+                    return move2;
+                }
+                else
+                {
+                    Console.Write($"Enter {keepCount} choices (comma-separated): ");
+                    var picks = ReadMultiChoice(cards.Count, keepCount, keepCount);
+                    var kept = picks.Select(i => cards[i - 1]).ToList();
+                    var move = MakeMove("BuyCards");
+                    move["cardIds"] = new JArray(kept);
+                    return move;
+                }
             }
         }
 

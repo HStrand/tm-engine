@@ -47,7 +47,8 @@ public sealed record RemoveCardResourcePending(
 /// </summary>
 public sealed record DrawKeepPending(
     ImmutableArray<string> DrawnCardIds,
-    int KeepCount) : PendingAction;
+    int KeepCount,
+    int CostPerCard = 0) : PendingAction;
 
 /// <summary>
 /// Player must choose between multiple options (e.g., "gain 3 plants OR add 2 animals").

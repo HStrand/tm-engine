@@ -589,8 +589,10 @@ public static class CardRegistry
         // 005: Search for Life — Action: spend 1 MC, reveal top card, if microbe tag add science resource
         // Complex action — deferred
 
-        // 006: Inventors' Guild — Action: draw card, may buy it
-        // Complex action — deferred
+        // Tested OK
+        // 006: Inventors' Guild — Action: draw card, may buy it for 3 MC
+        SetEffects(builder, "006",
+            action: new CardAction(null, [new DrawKeepEffect(1, 1, CostPerCard: 3)]));
 
         // 007: Martian Rails — Action: spend 1 energy, gain 1 MC per city on Mars
         // Complex action — deferred
@@ -1840,6 +1842,7 @@ public static class CardRegistry
         // 191: Permafrost Extraction — Place 1 ocean
         SetEffects(builder, "191", onPlayEffects: [new PlaceOceanEffect(1)]);
 
+        // Tested OK
         // 192: Invention Contest — Look at top 3 cards, take 1, discard 2
         SetEffects(builder, "192", onPlayEffects: [new DrawKeepEffect(3, 1)]);
 

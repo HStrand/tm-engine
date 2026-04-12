@@ -659,11 +659,19 @@ public static class MoveValidator
                     : ValidateChosenOptionEffects(state, choose),
 
             (DrawKeepPending pending, BuyCardsMove buy) =>
-                buy.CardIds.Length != pending.KeepCount
-                    ? $"Must keep exactly {pending.KeepCount} cards."
-                    : buy.CardIds.Any(id => !pending.DrawnCardIds.Contains(id))
-                    ? "Selected card is not among the drawn cards."
-                    : null,
+                pending.CostPerCard > 0
+                    ? (buy.CardIds.Length > pending.KeepCount
+                        ? $"Can keep at most {pending.KeepCount} cards."
+                        : buy.CardIds.Any(id => !pending.DrawnCardIds.Contains(id))
+                        ? "Selected card is not among the drawn cards."
+                        : buy.CardIds.Length * pending.CostPerCard > state.GetPlayer(move.PlayerId).Resources.MegaCredits
+                        ? "Not enough MC to buy selected cards."
+                        : null)
+                    : (buy.CardIds.Length != pending.KeepCount
+                        ? $"Must keep exactly {pending.KeepCount} cards."
+                        : buy.CardIds.Any(id => !pending.DrawnCardIds.Contains(id))
+                        ? "Selected card is not among the drawn cards."
+                        : null),
 
             (ReduceProductionPending pending, ChooseTargetPlayerMove choose) =>
                 pending.ValidTargetPlayerIds.Contains(choose.TargetPlayerId)

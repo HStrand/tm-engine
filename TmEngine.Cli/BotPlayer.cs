@@ -368,11 +368,15 @@ public class BotPlayer
             {
                 var cards = pending["drawnCardIds"]?.ToObject<List<string>>() ?? new();
                 var keepCount = pending["keepCount"]?.Value<int>() ?? 0;
-                // Keep the first N cards (simple heuristic)
-                var kept = cards.Take(keepCount).ToList();
+                var costPerCard = pending["costPerCard"]?.Value<int>() ?? 0;
+                // If there's a cost, only buy if we can afford it
+                var affordable = costPerCard > 0
+                    ? Math.Min(keepCount, botState.Resources.MegaCredits / costPerCard)
+                    : keepCount;
+                var kept = cards.Take(affordable).ToList();
                 var move = MakeMove("BuyCards");
                 move["cardIds"] = new JArray(kept);
-                return (move, $"keeps {keepCount} of {cards.Count} drawn cards");
+                return (move, kept.Count > 0 ? $"keeps {kept.Count} of {cards.Count} drawn cards" : "declines to buy drawn card");
             }
         }
 

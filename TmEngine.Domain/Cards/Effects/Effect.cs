@@ -99,8 +99,12 @@ public enum PlacementConstraint
 /// <summary>Draw cards from the draw pile to the player's hand.</summary>
 public sealed record DrawCardsEffect(int Count) : Effect;
 
-/// <summary>Look at the top N cards, keep some, discard rest.</summary>
-public sealed record LookAtCardsEffect(int LookCount, int KeepCount) : Effect;
+/// <summary>
+/// Draw cards and keep a subset, discarding the rest.
+/// When CostPerCard > 0, buying is optional (player may keep 0 to KeepCount cards).
+/// E.g., Business Contacts: draw 4, keep 2 (free). Inventors' Guild: draw 1, buy for 3 MC.
+/// </summary>
+public sealed record DrawKeepEffect(int Draw, int Keep, int CostPerCard = 0) : Effect;
 
 /// <summary>Discard cards from hand. Triggers DiscardCardsPending.</summary>
 public sealed record DiscardCardsEffect(int Count) : Effect;
@@ -376,12 +380,6 @@ public sealed record ChangeTRPerTagEffect(Tag Tag, int AmountPerTag) : Effect;
 /// The player chooses N (0 to current production of the source resource).
 /// </summary>
 public sealed record ConvertProductionEffect(ResourceType From, ResourceType To) : Effect;
-
-/// <summary>
-/// Draw cards and keep a subset, discarding the rest.
-/// E.g., Business Contacts: draw 4, keep 2.
-/// </summary>
-public sealed record DrawKeepEffect(int Draw, int Keep) : Effect;
 
 /// <summary>
 /// Player must play a card from hand immediately with special rules.

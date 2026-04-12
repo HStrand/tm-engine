@@ -445,7 +445,7 @@ public static class EffectExecutor
             state = state with { DrawPile = state.DrawPile.RemoveAt(0) };
         }
 
-        if (drawn.Count <= e.Keep)
+        if (e.CostPerCard == 0 && drawn.Count <= e.Keep)
         {
             // Drew fewer than or equal to keep count — just add all to hand
             state = state.UpdatePlayer(playerId, p => p with
@@ -455,7 +455,7 @@ public static class EffectExecutor
             return (state, null);
         }
 
-        return (state, new DrawKeepPending(drawn.ToImmutable(), e.Keep));
+        return (state, new DrawKeepPending(drawn.ToImmutable(), e.Keep, e.CostPerCard));
     }
 
     // ── Card Resources ─────────────────────────────────────────
