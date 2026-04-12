@@ -38,10 +38,12 @@ public static class EffectExecutor
             // Cards
             DrawCardsEffect e => (ApplyDrawCards(state, playerId, e), null),
             DrawKeepEffect e => ApplyDrawKeep(state, playerId, e),
+            RevealAndAddResourceEffect e => (ApplyRevealAndAddResource(state, playerId, e), null),
             DiscardCardsEffect e => (state, new DiscardCardsPending(e.Count)),
 
             // Card resources
             AddCardResourceEffect e => ApplyAddCardResource(state, playerId, e),
+            AddResourceToAnyCardEffect => ApplyAddResourceToAnyCard(state, playerId),
             RemoveCardResourceEffect e => ApplyRemoveCardResource(state, playerId, e, sourceCardId),
 
             // TR
@@ -437,6 +439,28 @@ public static class EffectExecutor
         return state;
     }
 
+    private static GameState ApplyRevealAndAddResource(GameState state, int playerId, RevealAndAddResourceEffect e)
+    {
+        if (state.DrawPile.IsEmpty)
+            return state;
+
+        var cardId = state.DrawPile[0];
+        state = state with
+        {
+            DrawPile = state.DrawPile.RemoveAt(0),
+            DiscardPile = state.DiscardPile.Add(cardId),
+        };
+
+        // Check if the revealed card has the required tag
+        var tags = CardRegistry.GetTags(cardId);
+        if (tags.Contains(e.RequiredTag))
+        {
+            state = AddResourcesToCard(state, playerId, e.TargetCardId, 1);
+        }
+
+        return state;
+    }
+
     private static (GameState, PendingAction?) ApplyDrawKeep(GameState state, int playerId, DrawKeepEffect e)
     {
         var drawn = ImmutableArray.CreateBuilder<string>();
@@ -461,6 +485,27 @@ public static class EffectExecutor
     }
 
     // ── Card Resources ─────────────────────────────────────────
+
+    private static (GameState, PendingAction?) ApplyAddResourceToAnyCard(GameState state, int playerId)
+    {
+        var player = state.GetPlayer(playerId);
+
+        // Find all cards the player has with at least 1 resource
+        var validCards = player.CardResources
+            .Where(kv => kv.Value > 0)
+            .Select(kv => kv.Key)
+            .ToImmutableArray();
+
+        if (validCards.Length == 0)
+            return (state, null); // No cards with resources, skip
+
+        if (validCards.Length == 1)
+            return (AddResourcesToCard(state, playerId, validCards[0], 1), null);
+
+        // Use AddCardResourcePending — the resource type doesn't matter for resolution,
+        // it just needs valid card IDs. Use Science as a placeholder type.
+        return (state, new AddCardResourcePending(CardResourceType.Science, 1, validCards));
+    }
 
     private static (GameState, PendingAction?) ApplyAddCardResource(
         GameState state, int playerId, AddCardResourceEffect e)

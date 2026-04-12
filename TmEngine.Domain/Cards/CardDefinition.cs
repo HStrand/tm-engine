@@ -69,6 +69,13 @@ public sealed record PerResourceVictoryPoints(int PointsPer, int ResourcesPer, s
     }
 }
 
+/// <summary>Fixed VP if the card has at least one resource (e.g., Search for Life: 3 VP if any science resource).</summary>
+public sealed record HasResourceVictoryPoints(int Points, string CardId) : VictoryPoints
+{
+    public override int Calculate(VictoryPointContext context) =>
+        context.GetCardResources(CardId) > 0 ? Points : 0;
+}
+
 /// <summary>Victory points per tag of a certain type.</summary>
 public sealed record PerTagVictoryPoints(int PointsPer, Tag TagType) : VictoryPoints
 {

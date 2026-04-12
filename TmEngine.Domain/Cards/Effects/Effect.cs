@@ -120,6 +120,10 @@ public sealed record AddCardResourceEffect(
     /// <summary>Specific card ID, or null to let player choose (triggers PendingAction).</summary>
     string? TargetCardId = null) : Effect;
 
+/// <summary>Add 1 resource to any card that already has at least 1 resource (any type).
+/// E.g., CEO's Favorite Project. No-op if no cards have resources.</summary>
+public sealed record AddResourceToAnyCardEffect : Effect;
+
 /// <summary>Remove resources from any card with the given resource type.</summary>
 public sealed record RemoveCardResourceEffect(
     CardResourceType ResourceType,
@@ -393,6 +397,13 @@ public sealed record ConvertProductionEffect(ResourceType From, ResourceType To)
 /// The player chooses the amount (0 to current resources of the source type).
 /// </summary>
 public sealed record ConvertResourceEffect(ResourceType From, ResourceType To) : Effect;
+
+/// <summary>
+/// Reveal the top card of the draw deck. If it has a matching tag, add a resource to this card.
+/// The revealed card is discarded regardless.
+/// E.g., Search for Life: reveal card, if Microbe tag → add Science resource.
+/// </summary>
+public sealed record RevealAndAddResourceEffect(Tag RequiredTag, CardResourceType ResourceType, string TargetCardId) : Effect;
 
 /// <summary>
 /// Player must play a card from hand immediately with special rules.

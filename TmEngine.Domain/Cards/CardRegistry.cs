@@ -586,8 +586,11 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Plants, 2),
         ]);
 
+        // Tested OK
         // 005: Search for Life — Action: spend 1 MC, reveal top card, if microbe tag add science resource
-        // Complex action — deferred
+        SetEffects(builder, "005",
+            action: new CardAction(new SpendMCCost(1),
+                [new RevealAndAddResourceEffect(Tag.Microbe, CardResourceType.Science, "005")]));
 
         // Tested OK
         // 006: Inventors' Guild — Action: draw card, may buy it for 3 MC
@@ -1030,6 +1033,7 @@ public static class CardRegistry
 		SetEffects(builder, "068", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.MegaCredits, 2)]);
 
+        // Tested OK
         // 069: Electro Catapult — Action: spend 1 plant or 1 steel for 7 MC. -1 energy prod
         SetEffects(builder, "069",
             onPlayEffects: [new ChangeProductionEffect(ResourceType.Energy, -1)],
@@ -1568,7 +1572,7 @@ public static class CardRegistry
             [new ChangeProductionPerTagEffect(ResourceType.Plants, Tag.Plant, 1)]);
 
         // 149: CEO's Favorite Project — Add 1 resource to any card with resources
-        // Complex — deferred
+        SetEffects(builder, "149", onPlayEffects: [new AddResourceToAnyCardEffect()]);
 
         // Tested OK
         // 150: Anti-gravity Technology — Effect: cards cost 2 less

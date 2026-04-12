@@ -332,6 +332,7 @@ public static class RequirementChecker
         {
             FixedVictoryPoints f => f.Points > 0,
             PerResourceVictoryPoints => true, // resource-based VP is always potentially positive
+            HasResourceVictoryPoints => true,
             PerTagVictoryPoints => true,
             _ => false,
         };
