@@ -1193,8 +1193,10 @@ public static class CardRegistry
             action: new CardAction(new SpendEnergyCost(6),
                 [new AddCardResourceEffect(CardResourceType.Science, 1, "095")]));
 
+        // Tested OK
         // 096: Greenhouses — Gain 1 plant per city tile in play
-        // Dynamic count — deferred (needs "count tiles" effect)
+        SetEffects(builder, "096", onPlayEffects:
+            [new ChangeResourcePerCityEffect(ResourceType.Plants, 1)]);
 
         // Tested OK
         // 097: Nuclear Zone — Place tile, raise temp 2
@@ -1283,9 +1285,11 @@ public static class CardRegistry
             ongoingEffects: [new WhenYouEffect(TriggerCondition.PlayEventTag,
                 new ChangeResourceEffect(ResourceType.MegaCredits, 3))]);
 
+        // Tested OK
         // 110: Business Network — -1 MC prod. Action: look at top card, buy or discard
         SetEffects(builder, "110",
-            onPlayEffects: [new ChangeProductionEffect(ResourceType.MegaCredits, -1)]);
+            onPlayEffects: [new ChangeProductionEffect(ResourceType.MegaCredits, -1)],
+            action: new CardAction(null, [new DrawKeepEffect(1, 1, CostPerCard: 3)]));
 		// Action deferred — complex
 
         // Tested OK

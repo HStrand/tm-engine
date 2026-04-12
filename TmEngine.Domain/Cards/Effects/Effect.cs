@@ -363,6 +363,12 @@ public sealed record ChangeProductionPerOpponentTagEffect(ResourceType Resource,
 public sealed record ChangeProductionPerCityEffect(ResourceType Resource, int AmountPerCity, bool OnMarsOnly = false) : Effect;
 
 /// <summary>
+/// Gain resources based on the total number of city tiles in play (all players).
+/// E.g., Greenhouses: gain 1 plant per city tile in play.
+/// </summary>
+public sealed record ChangeResourcePerCityEffect(ResourceType Resource, int AmountPerCity) : Effect;
+
+/// <summary>
 /// Claim a non-reserved land hex — only this player may place tiles there.
 /// The player chooses the hex (triggers a pending action).
 /// </summary>

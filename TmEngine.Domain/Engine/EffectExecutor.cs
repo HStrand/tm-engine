@@ -55,6 +55,7 @@ public static class EffectExecutor
             ChangeProductionPerTagEffect e => (ApplyChangeProductionPerTag(state, playerId, e), null),
             ChangeProductionPerOpponentTagEffect e => (ApplyChangeProductionPerOpponentTag(state, playerId, e), null),
             ChangeProductionPerCityEffect e => (ApplyChangeProductionPerCity(state, playerId, e), null),
+            ChangeResourcePerCityEffect e => (ApplyChangeResourcePerCity(state, playerId, e), null),
             ChangeTRPerTagEffect e => (ApplyChangeTRPerTag(state, playerId, e), null),
             ConvertProductionEffect e => ApplyConvertProduction(state, playerId, e, sourceCardId),
             ClaimLandEffect => ApplyClaimLand(state, playerId),
@@ -657,6 +658,21 @@ public static class EffectExecutor
         return state.UpdatePlayer(playerId, p => p with
         {
             Production = p.Production.Add(e.Resource, totalAmount),
+        });
+    }
+
+    private static GameState ApplyChangeResourcePerCity(GameState state, int playerId, ChangeResourcePerCityEffect e)
+    {
+        var cityCount = state.PlacedTiles.Values.Count(t => t.Type == TileType.City || t.Type == TileType.Capital)
+                      + state.OffMapTiles.Count(t => t.Type == TileType.City);
+
+        var totalAmount = cityCount * e.AmountPerCity;
+        if (totalAmount == 0)
+            return state;
+
+        return state.UpdatePlayer(playerId, p => p with
+        {
+            Resources = p.Resources.Add(e.Resource, totalAmount),
         });
     }
 
