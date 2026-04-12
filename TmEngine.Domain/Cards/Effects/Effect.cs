@@ -342,9 +342,16 @@ public sealed record PlaceOffMapCityEffect(string CityName) : Effect;
 /// <summary>
 /// Change production based on the number of tags the player has.
 /// E.g., Miranda Resort: +1 MC production per Earth tag.
+/// Worms: +1 plant production per 2 Microbe tags (TagsPer = 2).
 /// The count is evaluated at the time the card is played.
 /// </summary>
-public sealed record ChangeProductionPerTagEffect(ResourceType Resource, Tag Tag, int AmountPerTag) : Effect;
+public sealed record ChangeProductionPerTagEffect(ResourceType Resource, Tag Tag, int AmountPerTag, int TagsPer = 1) : Effect;
+
+/// <summary>
+/// Change production based on the number of a specific tag opponents have.
+/// E.g., Toll Station: +1 MC production per Space tag opponents have.
+/// </summary>
+public sealed record ChangeProductionPerOpponentTagEffect(ResourceType Resource, Tag Tag, int AmountPerTag) : Effect;
 
 /// <summary>
 /// Change production based on the total number of city tiles in play (all players).

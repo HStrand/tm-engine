@@ -52,6 +52,7 @@ public static class EffectExecutor
             RevealUntilTagEffect e => (ApplyRevealUntilTag(state, playerId, e), null),
             PlaceOffMapCityEffect e => ApplyPlaceOffMapCity(state, playerId, e),
             ChangeProductionPerTagEffect e => (ApplyChangeProductionPerTag(state, playerId, e), null),
+            ChangeProductionPerOpponentTagEffect e => (ApplyChangeProductionPerOpponentTag(state, playerId, e), null),
             ChangeProductionPerCityEffect e => (ApplyChangeProductionPerCity(state, playerId, e), null),
             ChangeTRPerTagEffect e => (ApplyChangeTRPerTag(state, playerId, e), null),
             ClaimLandEffect => ApplyClaimLand(state, playerId),
@@ -596,7 +597,24 @@ public static class EffectExecutor
     private static GameState ApplyChangeProductionPerTag(GameState state, int playerId, ChangeProductionPerTagEffect e)
     {
         var player = state.GetPlayer(playerId);
-        var tagCount = player.CountTag(e.Tag, CardRegistry.GetTags);
+        var tagCount = player.CountTag(e.Tag, CardRegistry.GetTags)
+                     + player.CountTag(Tag.Wild, CardRegistry.GetTags);
+        var totalAmount = (tagCount / e.TagsPer) * e.AmountPerTag;
+
+        if (totalAmount == 0)
+            return state;
+
+        return state.UpdatePlayer(playerId, p => p with
+        {
+            Production = p.Production.Add(e.Resource, totalAmount),
+        });
+    }
+
+    private static GameState ApplyChangeProductionPerOpponentTag(GameState state, int playerId, ChangeProductionPerOpponentTagEffect e)
+    {
+        var tagCount = state.Players
+            .Where(p => p.PlayerId != playerId)
+            .Sum(p => p.CountTag(e.Tag, CardRegistry.GetTags));
         var totalAmount = tagCount * e.AmountPerTag;
 
         if (totalAmount == 0)

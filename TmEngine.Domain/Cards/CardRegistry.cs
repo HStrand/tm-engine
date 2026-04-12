@@ -1207,8 +1207,10 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.MegaCredits, 3),
         ]);
 
+        // Tested OK
         // 099: Toll Station — +1 MC prod per space tag opponents have
-        // Dynamic count of opponents' tags — deferred
+        SetEffects(builder, "099", onPlayEffects:
+            [new ChangeProductionPerOpponentTagEffect(ResourceType.MegaCredits, Tag.Space, 1)]);
 
         // Tested OK
         // 100: Fueled Generators — -1 MC prod, +1 energy prod
@@ -1415,8 +1417,10 @@ public static class CardRegistry
         // 129: Zeppelins — +1 MC prod per city on Mars
         // Dynamic count — deferred
 
-        // 130: Worms — +1 plant prod per 2 microbe tags you have
-        // Dynamic count — deferred
+        // Tested OK
+        // 130: Worms — +1 plant prod per 2 microbe tags you have (including this)
+        SetEffects(builder, "130", onPlayEffects:
+            [new ChangeProductionPerTagEffect(ResourceType.Plants, Tag.Microbe, 1, TagsPer: 2)]);
 
         // Tested OK
         // 131: Decomposers — Effect: when you play animal/plant/microbe tag (including this), add microbe. 1VP/3
