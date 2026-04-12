@@ -44,6 +44,7 @@ public static class EffectExecutor
             // Card resources
             AddCardResourceEffect e => ApplyAddCardResource(state, playerId, e),
             AddResourceToAnyCardEffect => ApplyAddResourceToAnyCard(state, playerId),
+            OlympusConferenceEffect e => ApplyOlympusConference(state, playerId, e),
             RemoveCardResourceEffect e => ApplyRemoveCardResource(state, playerId, e, sourceCardId),
 
             // TR
@@ -505,6 +506,25 @@ public static class EffectExecutor
         // Use AddCardResourcePending — the resource type doesn't matter for resolution,
         // it just needs valid card IDs. Use Science as a placeholder type.
         return (state, new AddCardResourcePending(CardResourceType.Science, 1, validCards));
+    }
+
+    private static (GameState, PendingAction?) ApplyOlympusConference(GameState state, int playerId, OlympusConferenceEffect e)
+    {
+        var player = state.GetPlayer(playerId);
+        var resources = player.CardResources.GetValueOrDefault(e.CardId, 0);
+
+        if (resources == 0)
+        {
+            // Forced to add
+            return (AddResourcesToCard(state, playerId, e.CardId, 1), null);
+        }
+
+        // Choice: add a resource or remove one to draw a card
+        var options = ImmutableArray.Create(
+            "Add 1 science resource",
+            "Remove 1 science resource to draw a card");
+
+        return (state, new ChooseOptionPending("Olympus Conference:", options, SourceCardId: e.CardId));
     }
 
     private static (GameState, PendingAction?) ApplyAddCardResource(

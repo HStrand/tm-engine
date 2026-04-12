@@ -63,8 +63,10 @@ public static class TriggerSystem
             }
             else if (!isAnyoneTrigger && effect is WhenYouEffect whenYou && whenYou.Trigger == condition)
             {
-                var (newState, _) = EffectExecutor.Execute(state, playerId, whenYou.Effect);
+                var (newState, pending) = EffectExecutor.Execute(state, playerId, whenYou.Effect);
                 state = newState;
+                if (pending != null && state.PendingAction == null)
+                    state = state with { PendingAction = pending };
             }
         }
 

@@ -1571,6 +1571,7 @@ public static class CardRegistry
         SetEffects(builder, "148", onPlayEffects:
             [new ChangeProductionPerTagEffect(ResourceType.Plants, Tag.Plant, 1)]);
 
+        // Tested OK
         // 149: CEO's Favorite Project — Add 1 resource to any card with resources
         SetEffects(builder, "149", onPlayEffects: [new AddResourceToAnyCardEffect()]);
 
@@ -1815,11 +1816,12 @@ public static class CardRegistry
             onPlayEffects: [new ChangeProductionEffect(ResourceType.Plants, -1)],
             action: new CardAction(null, [new AddCardResourceEffect(CardResourceType.Animal, 1, "184")]));
 
+        // Tested OK
         // 185: Olympus Conference — Effect: when you play science tag (including this),
-        // add science resource to this card OR draw a card
-        // Complex triggered choice — deferred
+        // add science resource to this card OR remove one to draw a card
         SetEffects(builder, "185",
-            onPlayEffects: [new AddCardResourceEffect(CardResourceType.Science, 1, "185")]);
+            ongoingEffects: [new WhenYouEffect(TriggerCondition.PlayScienceTag,
+                new OlympusConferenceEffect("185"))]);
 
         // Tested OK
         // 186: Rad-Suits — +1 MC prod

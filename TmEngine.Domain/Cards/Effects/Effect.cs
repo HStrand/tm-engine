@@ -120,6 +120,12 @@ public sealed record AddCardResourceEffect(
     /// <summary>Specific card ID, or null to let player choose (triggers PendingAction).</summary>
     string? TargetCardId = null) : Effect;
 
+/// <summary>
+/// Olympus Conference trigger: add a science resource to this card, or remove one to draw a card.
+/// If the card has no resources, forced to add.
+/// </summary>
+public sealed record OlympusConferenceEffect(string CardId) : Effect;
+
 /// <summary>Add 1 resource to any card that already has at least 1 resource (any type).
 /// E.g., CEO's Favorite Project. No-op if no cards have resources.</summary>
 public sealed record AddResourceToAnyCardEffect : Effect;

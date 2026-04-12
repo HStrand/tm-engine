@@ -950,6 +950,10 @@ public static class GameEngine
         if (pending != null)
             return state with { PendingAction = pending };
 
+        // A trigger may have set a pending action (e.g., Olympus Conference choice)
+        if (state.PendingAction != null)
+            return state;
+
         // If resolved from a pending action during setup, don't advance turn
         if (isFromPending)
             return state;
@@ -1162,6 +1166,36 @@ public static class GameEngine
                 return state;
             }
 
+            // OlympusConferenceEffect: 0 = add resource, 1 = remove resource + draw card
+            var olympusEffect = FindOngoingEffect<Cards.Effects.OlympusConferenceEffect>(entry);
+            if (olympusEffect != null)
+            {
+                if (move.OptionIndex == 0)
+                {
+                    state = state.UpdatePlayer(move.PlayerId, p =>
+                    {
+                        var current = p.CardResources.GetValueOrDefault(olympusEffect.CardId, 0);
+                        return p with { CardResources = p.CardResources.SetItem(olympusEffect.CardId, current + 1) };
+                    });
+                }
+                else
+                {
+                    state = state.UpdatePlayer(move.PlayerId, p =>
+                    {
+                        var current = p.CardResources.GetValueOrDefault(olympusEffect.CardId, 0);
+                        return p with { CardResources = p.CardResources.SetItem(olympusEffect.CardId, current - 1) };
+                    });
+                    // Draw a card
+                    if (!state.DrawPile.IsEmpty)
+                    {
+                        var cardId = state.DrawPile[0];
+                        state = state with { DrawPile = state.DrawPile.RemoveAt(0) };
+                        state = state.UpdatePlayer(move.PlayerId, p => p with { Hand = p.Hand.Add(cardId) });
+                    }
+                }
+                return state;
+            }
+
             var chooseEffect = FindChooseEffect(entry);
             if (chooseEffect != null && move.OptionIndex < chooseEffect.Options.Length)
             {
@@ -1203,6 +1237,17 @@ public static class GameEngine
         if (entry.Action != null)
             foreach (var effect in entry.Action.Effects)
                 if (effect is T e) return e;
+        return null;
+    }
+
+    private static T? FindOngoingEffect<T>(Cards.CardEntry entry) where T : Cards.Effects.Effect
+    {
+        foreach (var effect in entry.OngoingEffects)
+        {
+            if (effect is T e) return e;
+            if (effect is Cards.Effects.WhenYouEffect wy && wy.Effect is T inner) return inner;
+            if (effect is Cards.Effects.WhenAnyoneEffect wa && wa.Effect is T inner2) return inner2;
+        }
         return null;
     }
 
