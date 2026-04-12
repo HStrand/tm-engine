@@ -631,8 +631,10 @@ public static class CardRegistry
             new RemoveResourceEffect(ResourceType.Plants, 4),
         ]);
 
+        // Tested OK
         // 012: Water Import From Europa — Action: pay 12 MC to place ocean (titanium usable)
-        // Complex action — deferred
+        SetEffects(builder, "012",
+            action: new CardAction(new SpendMCOrTitaniumCost(12), [new PlaceOceanEffect(1)]));
 
         // Tested OK
         // 013: Space Elevator — +1 titanium prod. Action: spend 1 steel, gain 5 MC

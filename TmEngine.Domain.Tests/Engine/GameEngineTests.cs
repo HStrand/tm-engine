@@ -1338,6 +1338,71 @@ public class GameEngineTests
         Assert.Equal(initialEnergyProd + 3, newState.Players[0].Production.Energy);
     }
 
+    // ── Predators (024) ──────────────────────────────────────────
+
+    [Fact]
+    public void Predators_Action_RemovesAnimalFromAnotherCard()
+    {
+        // Player 0 has Predators (024) and Birds (072) in play, each with 1 animal.
+        // Using Predators should remove 1 animal from Birds and add 1 to Predators.
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("024").Add("072"),
+            CardResources = p.CardResources.Add("024", 1).Add("072", 1),
+        });
+
+        var (newState, result) = GameEngine.Apply(state, new UseCardActionMove(0, "024"));
+        Assert.True(result.IsSuccess);
+
+        // Predators should gain 1 animal (1 → 2)
+        Assert.Equal(2, newState.GetPlayer(0).CardResources["024"]);
+        // Birds should lose 1 animal (1 → 0)
+        Assert.Equal(0, newState.GetPlayer(0).CardResources["072"]);
+    }
+
+    [Fact]
+    public void Predators_Action_CannotBeUsed_WhenNoValidTargets()
+    {
+        // Player 0 has Predators with 1 animal but no other animal cards in play
+        // (on any player). The action should not be available.
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("024"),
+            CardResources = p.CardResources.Add("024", 3),
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.DoesNotContain(moves.Actions!.UsableCardActions, a => a.CardId == "024");
+    }
+
+    [Fact]
+    public void Predators_Action_CanTargetOpponentAnimalCards()
+    {
+        // Player 1 has Birds with 2 animals. Player 0 has Predators with 0 animals.
+        // Player 0 should be able to use Predators to steal from Player 1's Birds.
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("024"),
+            CardResources = p.CardResources.Add("024", 0),
+        });
+        state = state.UpdatePlayer(1, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("072"),
+            CardResources = p.CardResources.Add("072", 2),
+        });
+
+        var (newState, result) = GameEngine.Apply(state, new UseCardActionMove(0, "024"));
+        Assert.True(result.IsSuccess);
+
+        // Birds on player 1 should lose 1 animal (2 → 1)
+        Assert.Equal(1, newState.GetPlayer(1).CardResources["072"]);
+        // Predators on player 0 should gain 1 animal (0 → 1)
+        Assert.Equal(1, newState.GetPlayer(0).CardResources["024"]);
+    }
+
     // ── Herbivores ─────────────────────────────────────────────
 
     [Fact]

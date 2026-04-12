@@ -41,7 +41,7 @@ public static class EffectExecutor
 
             // Card resources
             AddCardResourceEffect e => ApplyAddCardResource(state, playerId, e),
-            RemoveCardResourceEffect e => ApplyRemoveCardResource(state, playerId, e),
+            RemoveCardResourceEffect e => ApplyRemoveCardResource(state, playerId, e, sourceCardId),
 
             // TR
             ChangeTREffect e => (ApplyChangeTR(state, playerId, e), null),
@@ -468,11 +468,41 @@ public static class EffectExecutor
     }
 
     private static (GameState, PendingAction?) ApplyRemoveCardResource(
-        GameState state, int playerId, RemoveCardResourceEffect e)
+        GameState state, int playerId, RemoveCardResourceEffect e, string? sourceCardId)
     {
-        // TODO: Find cards with the resource type and let player choose
-        // For now, return no pending action
-        return (state, null);
+        // Find all cards (on relevant players) that hold the resource type and have > 0 resources,
+        // excluding the source card itself (e.g., Predators can't remove from itself).
+        var validCards = ImmutableArray.CreateBuilder<string>();
+
+        var playersToCheck = e.AnyPlayer ? state.Players : [state.GetPlayer(playerId)];
+        foreach (var player in playersToCheck)
+        {
+            foreach (var cardId in player.PlayedCards)
+            {
+                if (cardId == sourceCardId) continue;
+                if (player.CardResources.GetValueOrDefault(cardId, 0) >= e.Amount
+                    && CardHasResourceType(cardId, e.ResourceType))
+                    validCards.Add(cardId);
+            }
+        }
+
+        if (validCards.Count == 0)
+            return (state, null);
+
+        if (validCards.Count == 1)
+        {
+            // Auto-remove from the only valid card
+            var targetCardId = validCards[0];
+            var owner = state.Players.First(p => p.CardResources.ContainsKey(targetCardId));
+            state = state.UpdatePlayer(owner.PlayerId, p =>
+            {
+                var current = p.CardResources.GetValueOrDefault(targetCardId, 0);
+                return p with { CardResources = p.CardResources.SetItem(targetCardId, current - e.Amount) };
+            });
+            return (state, null);
+        }
+
+        return (state, new RemoveCardResourcePending(e.ResourceType, e.Amount, validCards.ToImmutable()));
     }
 
     private static GameState AddResourcesToCard(GameState state, int playerId, string cardId, int amount)
@@ -484,7 +514,7 @@ public static class EffectExecutor
         });
     }
 
-    private static bool CardHasResourceType(string cardId, CardResourceType resourceType)
+    public static bool CardHasResourceType(string cardId, CardResourceType resourceType)
     {
         if (!CardRegistry.TryGet(cardId, out var entry))
             return false;

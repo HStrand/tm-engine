@@ -435,37 +435,48 @@ public static class MoveValidator
                 return preconditionError;
         }
 
-        // Validate payment for actions that accept steel (and heat for Helion)
-        if (entry?.Action?.Cost is SpendMCOrSteelCost steelCost)
+        // Validate payment for actions that accept steel or titanium (and heat for Helion)
+        if (entry?.Action?.Cost is SpendMCOrSteelCost or SpendMCOrTitaniumCost)
         {
-            var payment = move.Payment ?? new PaymentInfo(MegaCredits: steelCost.Amount);
+            var isSteel = entry.Action.Cost is SpendMCOrSteelCost;
+            var costAmount = isSteel
+                ? ((SpendMCOrSteelCost)entry.Action.Cost).Amount
+                : ((SpendMCOrTitaniumCost)entry.Action.Cost).Amount;
+            var payment = move.Payment ?? new PaymentInfo(MegaCredits: costAmount);
 
-            if (payment.Titanium > 0)
+            if (isSteel && payment.Titanium > 0)
                 return "Titanium cannot be used to pay for this action.";
+
+            if (!isSteel && payment.Steel > 0)
+                return "Steel cannot be used to pay for this action.";
 
             if (payment.Heat > 0 && !RequirementChecker.CanUseHeatAsPayment(player))
                 return "Cannot use heat to pay (requires Helion corporation).";
 
+            if (payment.MegaCredits > player.Resources.MegaCredits)
+                return $"Not enough MC: have {player.Resources.MegaCredits}, trying to spend {payment.MegaCredits}.";
+
             if (payment.Steel > player.Resources.Steel)
                 return $"Not enough steel: have {player.Resources.Steel}, trying to spend {payment.Steel}.";
 
-            if (payment.MegaCredits > player.Resources.MegaCredits)
-                return $"Not enough MC: have {player.Resources.MegaCredits}, trying to spend {payment.MegaCredits}.";
+            if (payment.Titanium > player.Resources.Titanium)
+                return $"Not enough titanium: have {player.Resources.Titanium}, trying to spend {payment.Titanium}.";
 
             if (payment.Heat > player.Resources.Heat)
                 return $"Not enough heat: have {player.Resources.Heat}, trying to spend {payment.Heat}.";
 
             var steelValue = RequirementChecker.GetSteelValue(player);
-            var totalValue = payment.TotalValue(steelValue);
-            if (totalValue < steelCost.Amount)
-                return $"Insufficient payment: need {steelCost.Amount}, total value is {totalValue}.";
+            var titaniumValue = RequirementChecker.GetTitaniumValue(player);
+            var totalValue = payment.TotalValue(steelValue, titaniumValue);
+            if (totalValue < costAmount)
+                return $"Insufficient payment: need {costAmount}, total value is {totalValue}.";
         }
 
         // Check that action effects don't take production below their floors
         // (e.g., Equatorial Magnetizer: -1 energy prod requires ≥1 energy prod).
         if (entry?.Action != null)
         {
-            var effectsError = RequirementChecker.CanAffordActionEffects(state, move.PlayerId, entry.Action);
+            var effectsError = RequirementChecker.CanAffordActionEffects(state, move.PlayerId, entry.Action, move.CardId);
             if (effectsError != null)
                 return effectsError;
         }
@@ -614,6 +625,11 @@ public static class MoveValidator
                 pending.ValidTargetPlayerIds.Contains(choose.TargetPlayerId)
                     ? null
                     : "Invalid target player.",
+
+            (RemoveCardResourcePending pending, SelectCardMove select) =>
+                pending.ValidCardIds.Contains(select.CardId)
+                    ? null
+                    : "Invalid card selection.",
 
             (AddCardResourcePending pending, SelectCardMove select) =>
                 pending.ValidCardIds.Contains(select.CardId)

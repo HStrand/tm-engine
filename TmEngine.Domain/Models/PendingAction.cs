@@ -35,6 +35,14 @@ public sealed record AddCardResourcePending(
     ImmutableArray<string> ValidCardIds) : PendingAction;
 
 /// <summary>
+/// Player must choose which card to remove resources from.
+/// </summary>
+public sealed record RemoveCardResourcePending(
+    CardResourceType ResourceType,
+    int Amount,
+    ImmutableArray<string> ValidCardIds) : PendingAction;
+
+/// <summary>
 /// Player must choose between multiple options (e.g., "gain 3 plants OR add 2 animals").
 /// </summary>
 public sealed record ChooseOptionPending(

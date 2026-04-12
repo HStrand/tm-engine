@@ -976,6 +976,17 @@ public static class GameEngine
                             .Add(ResourceType.Heat, -payment.Heat),
                     };
                 }),
+                SpendMCOrTitaniumCost => state.UpdatePlayer(move.PlayerId, p =>
+                {
+                    var payment = move.Payment ?? new PaymentInfo(MegaCredits: ((SpendMCOrTitaniumCost)action.Cost).Amount);
+                    return p with
+                    {
+                        Resources = p.Resources
+                            .Add(ResourceType.MegaCredits, -payment.MegaCredits)
+                            .Add(ResourceType.Titanium, -payment.Titanium)
+                            .Add(ResourceType.Heat, -payment.Heat),
+                    };
+                }),
                 SpendMCCost c => state.UpdatePlayer(move.PlayerId, p => p with
                     { Resources = p.Resources.Add(ResourceType.MegaCredits, -c.Amount) }),
                 SpendEnergyCost c => state.UpdatePlayer(move.PlayerId, p => p with
@@ -1041,6 +1052,18 @@ public static class GameEngine
             {
                 var current = p.CardResources.GetValueOrDefault(move.CardId, 0);
                 return p with { CardResources = p.CardResources.SetItem(move.CardId, current + addPending.Amount) };
+            });
+            return state with { PendingAction = null };
+        }
+
+        if (state.PendingAction is RemoveCardResourcePending removePending)
+        {
+            // Find the owner of the target card
+            var owner = state.Players.First(p => p.CardResources.ContainsKey(move.CardId));
+            state = state.UpdatePlayer(owner.PlayerId, p =>
+            {
+                var current = p.CardResources.GetValueOrDefault(move.CardId, 0);
+                return p with { CardResources = p.CardResources.SetItem(move.CardId, current - removePending.Amount) };
             });
             return state with { PendingAction = null };
         }

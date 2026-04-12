@@ -109,11 +109,11 @@ public static class RequirementChecker
     /// Verifies production decreases won't go below minimums. Returns null if OK,
     /// or an error message.
     /// </summary>
-    public static string? CanAffordActionEffects(GameState state, int playerId, CardAction action) =>
-        CanAffordEffectsList(state, playerId, action.Effects);
+    public static string? CanAffordActionEffects(GameState state, int playerId, CardAction action, string? sourceCardId = null) =>
+        CanAffordEffectsList(state, playerId, action.Effects, sourceCardId);
 
     private static string? CanAffordEffectsList(
-        GameState state, int playerId, ImmutableArray<Effect> effects)
+        GameState state, int playerId, ImmutableArray<Effect> effects, string? sourceCardId = null)
     {
         var player = state.GetPlayer(playerId);
 
@@ -149,6 +149,20 @@ public static class RequirementChecker
                     p.Production.Get(reduce.Resource) - reduce.Amount >= minProd);
                 if (!anyoneCanAbsorb)
                     return $"No player can have their {reduce.Resource} production reduced by {reduce.Amount}.";
+            }
+
+            // RemoveCardResourceEffect — at least one valid target card must exist
+            if (effect is RemoveCardResourceEffect removeCard)
+            {
+                var playersToCheck = removeCard.AnyPlayer ? state.Players : [state.GetPlayer(playerId)];
+                bool anyTarget = playersToCheck.Any(p =>
+                    p.PlayedCards.Any(cardId =>
+                        cardId != sourceCardId
+                        && p.CardResources.GetValueOrDefault(cardId, 0) >= removeCard.Amount
+                        && CardRegistry.TryGet(cardId, out var entry)
+                        && EffectExecutor.CardHasResourceType(cardId, removeCard.ResourceType)));
+                if (!anyTarget)
+                    return $"No card has {removeCard.ResourceType} resources to remove.";
             }
         }
 

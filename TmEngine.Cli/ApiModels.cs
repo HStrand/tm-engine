@@ -262,9 +262,11 @@ public class UsableCardActionDto
 {
     public string CardId { get; set; } = "";
     public bool AllowSteel { get; set; }
+    public bool AllowTitanium { get; set; }
     public bool CanUseHeat { get; set; }
     public int MCCost { get; set; }
     public int SteelValue { get; set; } = 2;
+    public int TitaniumValue { get; set; } = 3;
 }
 
 public class FinalGreeneryOptionsDto

@@ -239,6 +239,9 @@ public sealed record SpendMCCost(int Amount) : ActionCost;
 /// <summary>Spend MC to use the action, but steel may be used as if playing a Building card.</summary>
 public sealed record SpendMCOrSteelCost(int Amount) : ActionCost;
 
+/// <summary>Spend MC to use the action, but titanium may be used as if playing a Space card.</summary>
+public sealed record SpendMCOrTitaniumCost(int Amount) : ActionCost;
+
 /// <summary>Spend energy to use the action.</summary>
 public sealed record SpendEnergyCost(int Amount) : ActionCost;
 

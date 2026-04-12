@@ -329,20 +329,20 @@ public class MovePresenter
         foreach (var ca in actions.UsableCardActions)
         {
             var a = ca;
-            var steelLabel = a.AllowSteel ? " +Steel" : "";
-            options.Add(($"[ACTION] {CardName(a.CardId)}{steelLabel}", () =>
+            var altLabel = a.AllowSteel ? " +Steel" : a.AllowTitanium ? " +Titanium" : "";
+            options.Add(($"[ACTION] {CardName(a.CardId)}{altLabel}", () =>
             {
                 var move = MakeMove("UseCardAction");
                 move["cardId"] = a.CardId;
-                if (a.AllowSteel)
+                if (a.AllowSteel || a.AllowTitanium)
                 {
                     var payment = PromptActionPayment(a, playerState);
                     move["payment"] = new JObject
                     {
                         ["megaCredits"] = payment.MegaCredits,
                         ["steel"] = payment.Steel,
-                        ["titanium"] = 0,
-                        ["heat"] = 0,
+                        ["titanium"] = payment.Titanium,
+                        ["heat"] = payment.Heat,
                     };
                 }
                 return move;
@@ -647,18 +647,24 @@ public class MovePresenter
     private PaymentInfo PromptActionPayment(UsableCardActionDto action, PlayerStateDto player)
     {
         var auto = PaymentCalculator.Calculate(
-            action.MCCost, canUseSteel: true, canUseTitanium: false, canUseHeat: action.CanUseHeat,
-            player.Resources.MegaCredits, player.Resources.Steel, 0,
+            action.MCCost,
+            canUseSteel: action.AllowSteel, canUseTitanium: action.AllowTitanium, canUseHeat: action.CanUseHeat,
+            player.Resources.MegaCredits,
+            action.AllowSteel ? player.Resources.Steel : 0,
+            action.AllowTitanium ? player.Resources.Titanium : 0,
             action.CanUseHeat ? player.Resources.Heat : 0,
-            action.SteelValue);
+            action.SteelValue, action.TitaniumValue);
 
-        bool hasAlternative = player.Resources.Steel > 0 || (action.CanUseHeat && player.Resources.Heat > 0);
+        bool hasAlternative = (action.AllowSteel && player.Resources.Steel > 0)
+            || (action.AllowTitanium && player.Resources.Titanium > 0)
+            || (action.CanUseHeat && player.Resources.Heat > 0);
         if (!hasAlternative)
             return auto;
 
         Console.Write($"  Payment for {CardName(action.CardId)} action (cost {action.MCCost}): ");
         Console.Write($"{auto.MegaCredits} MC");
         if (auto.Steel > 0) Console.Write($", {auto.Steel} steel");
+        if (auto.Titanium > 0) Console.Write($", {auto.Titanium} titanium");
         if (auto.Heat > 0) Console.Write($", {auto.Heat} heat");
         Console.Write(" [Enter to accept, or 'c' to customize]: ");
 
@@ -667,15 +673,23 @@ public class MovePresenter
         {
             Console.Write($"  MC (have {player.Resources.MegaCredits}): ");
             int mc = int.Parse(Console.ReadLine()?.Trim() ?? "0");
-            Console.Write($"  Steel (have {player.Resources.Steel}, worth {action.SteelValue} MC each): ");
-            int steel = int.Parse(Console.ReadLine()?.Trim() ?? "0");
-            int heat = 0;
+            int steel = 0, titanium = 0, heat = 0;
+            if (action.AllowSteel)
+            {
+                Console.Write($"  Steel (have {player.Resources.Steel}, worth {action.SteelValue} MC each): ");
+                steel = int.Parse(Console.ReadLine()?.Trim() ?? "0");
+            }
+            if (action.AllowTitanium)
+            {
+                Console.Write($"  Titanium (have {player.Resources.Titanium}, worth {action.TitaniumValue} MC each): ");
+                titanium = int.Parse(Console.ReadLine()?.Trim() ?? "0");
+            }
             if (action.CanUseHeat)
             {
                 Console.Write($"  Heat (have {player.Resources.Heat}): ");
                 heat = int.Parse(Console.ReadLine()?.Trim() ?? "0");
             }
-            return new PaymentInfo(mc, steel, 0, heat);
+            return new PaymentInfo(mc, steel, titanium, heat);
         }
 
         return auto;
