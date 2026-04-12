@@ -435,6 +435,32 @@ public static class MoveValidator
                 return preconditionError;
         }
 
+        // Validate payment for actions that accept steel (and heat for Helion)
+        if (entry?.Action?.Cost is SpendMCOrSteelCost steelCost)
+        {
+            var payment = move.Payment ?? new PaymentInfo(MegaCredits: steelCost.Amount);
+
+            if (payment.Titanium > 0)
+                return "Titanium cannot be used to pay for this action.";
+
+            if (payment.Heat > 0 && !RequirementChecker.CanUseHeatAsPayment(player))
+                return "Cannot use heat to pay (requires Helion corporation).";
+
+            if (payment.Steel > player.Resources.Steel)
+                return $"Not enough steel: have {player.Resources.Steel}, trying to spend {payment.Steel}.";
+
+            if (payment.MegaCredits > player.Resources.MegaCredits)
+                return $"Not enough MC: have {player.Resources.MegaCredits}, trying to spend {payment.MegaCredits}.";
+
+            if (payment.Heat > player.Resources.Heat)
+                return $"Not enough heat: have {player.Resources.Heat}, trying to spend {payment.Heat}.";
+
+            var steelValue = RequirementChecker.GetSteelValue(player);
+            var totalValue = payment.TotalValue(steelValue);
+            if (totalValue < steelCost.Amount)
+                return $"Insufficient payment: need {steelCost.Amount}, total value is {totalValue}.";
+        }
+
         // Check that action effects don't take production below their floors
         // (e.g., Equatorial Magnetizer: -1 energy prod requires ≥1 energy prod).
         if (entry?.Action != null)

@@ -66,7 +66,7 @@ public sealed record GreeneryMove(int PlayerId, HexCoord Location) : Move(Player
 public sealed record CityMove(int PlayerId, HexCoord Location) : Move(PlayerId);
 
 /// <summary>Player uses the action on a blue (active) card.</summary>
-public sealed record UseCardActionMove(int PlayerId, string CardId) : Move(PlayerId);
+public sealed record UseCardActionMove(int PlayerId, string CardId, PaymentInfo? Payment = null) : Move(PlayerId);
 
 /// <summary>Player claims a milestone.</summary>
 public sealed record ClaimMilestoneMove(int PlayerId, string MilestoneName) : Move(PlayerId);

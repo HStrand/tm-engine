@@ -940,6 +940,17 @@ public static class GameEngine
         {
             state = action.Cost switch
             {
+                SpendMCOrSteelCost => state.UpdatePlayer(move.PlayerId, p =>
+                {
+                    var payment = move.Payment ?? new PaymentInfo(MegaCredits: ((SpendMCOrSteelCost)action.Cost).Amount);
+                    return p with
+                    {
+                        Resources = p.Resources
+                            .Add(ResourceType.MegaCredits, -payment.MegaCredits)
+                            .Add(ResourceType.Steel, -payment.Steel)
+                            .Add(ResourceType.Heat, -payment.Heat),
+                    };
+                }),
                 SpendMCCost c => state.UpdatePlayer(move.PlayerId, p => p with
                     { Resources = p.Resources.Add(ResourceType.MegaCredits, -c.Amount) }),
                 SpendEnergyCost c => state.UpdatePlayer(move.PlayerId, p => p with

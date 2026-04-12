@@ -1103,6 +1103,79 @@ public class GameEngineTests
         Assert.True(result.IsError, "Expected UseCardActionMove to be rejected when energy production is 0.");
     }
 
+    // ── Aquifer Pumping (187) ─────────────────────────────────
+
+    [Fact]
+    public void AquiferPumping_AcceptsSteelPayment()
+    {
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = ImmutableList.Create("187"),
+            Resources = p.Resources with { MegaCredits = 4, Steel = 2 },
+        });
+
+        // 4 MC + 2 steel (worth 2 MC each = 4 MC) = 8 total
+        var payment = new PaymentInfo(MegaCredits: 4, Steel: 2);
+        var (newState, result) = GameEngine.Apply(state, new UseCardActionMove(0, "187", payment));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(0, newState.Players[0].Resources.MegaCredits);
+        Assert.Equal(0, newState.Players[0].Resources.Steel);
+    }
+
+    [Fact]
+    public void AquiferPumping_RejectsInsufficientPayment()
+    {
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = ImmutableList.Create("187"),
+            Resources = p.Resources with { MegaCredits = 3, Steel = 2 },
+        });
+
+        // 3 MC + 2 steel (worth 4 MC) = 7 total, need 8
+        var payment = new PaymentInfo(MegaCredits: 3, Steel: 2);
+        var (_, result) = GameEngine.Apply(state, new UseCardActionMove(0, "187", payment));
+
+        Assert.True(result.IsError);
+    }
+
+    [Fact]
+    public void AquiferPumping_AllowsSteelInLegalMoves()
+    {
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = ImmutableList.Create("187"),
+            Resources = p.Resources with { MegaCredits = 4, Steel = 2 },
+        });
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, 0);
+        var action = moves.Actions!.UsableCardActions.FirstOrDefault(a => a.CardId == "187");
+        Assert.NotNull(action);
+        Assert.True(action!.AllowSteel);
+        Assert.Equal(8, action.MCCost);
+    }
+
+    [Fact]
+    public void AquiferPumping_PureMCPaymentWhenNoPaymentSpecified()
+    {
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = ImmutableList.Create("187"),
+            Resources = p.Resources with { MegaCredits = 10, Steel = 5 },
+        });
+
+        // No payment specified — defaults to full MC payment
+        var (newState, result) = GameEngine.Apply(state, new UseCardActionMove(0, "187"));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, newState.Players[0].Resources.MegaCredits);
+        Assert.Equal(5, newState.Players[0].Resources.Steel);
+    }
+
     // ── Herbivores ─────────────────────────────────────────────
 
     [Fact]

@@ -803,7 +803,7 @@ public static class CardRegistry
         // Tested OK
         // 038: Rover Construction — Effect: when any city is placed, gain 2 MC
         SetEffects(builder, "038",
-            ongoingEffects: [new WhenAnyoneEffect(TriggerCondition.PlaceCityTileOnMars, new ChangeResourceEffect(ResourceType.MegaCredits, 2))]);
+            ongoingEffects: [new WhenAnyoneEffect(TriggerCondition.PlaceAnyCityTile, new ChangeResourceEffect(ResourceType.MegaCredits, 2))]);
 
         // Tested OK
         // 039: Deimos Down — raise temp 3, +4 steel, remove up to 8 plants from any
@@ -1078,6 +1078,7 @@ public static class CardRegistry
             new RemoveResourceEffect(ResourceType.Plants, 6),
         ]);
 
+        // Tested OK
         // 081: Ganymede Colony — off-map city. 1VP per Jovian tag
         SetEffects(builder, "081", onPlayEffects:
             [new PlaceOffMapCityEffect("Ganymede Colony")]);
@@ -1598,6 +1599,7 @@ public static class CardRegistry
             new ChangeResourceEffect(ResourceType.Heat, 3),
         ]);
 
+        // Tested OK
         // 163: Imported Nitrogen — +1 TR, +4 plants, add 3 microbes + 2 animals to other cards
         SetEffects(builder, "163", onPlayEffects:
         [
@@ -1750,6 +1752,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Energy, 2),
         ]);
 
+        // Tested OK
         // 184: Livestock — Action: add 1 animal. -1 plant prod. 1VP/animal
         SetEffects(builder, "184",
             onPlayEffects: [new ChangeProductionEffect(ResourceType.Plants, -1)],
@@ -1766,10 +1769,10 @@ public static class CardRegistry
         SetEffects(builder, "186", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.MegaCredits, 1)]);
 
+        // Tested OK
         // 187: Aquifer Pumping — Action: spend 8 MC to place ocean (steel usable as building)
-        // Complex action (steel payment) — deferred
         SetEffects(builder, "187",
-            action: new CardAction(new SpendMCCost(8), [new PlaceOceanEffect(1)]));
+            action: new CardAction(new SpendMCOrSteelCost(8), [new PlaceOceanEffect(1)]));
 
         // 188: Flooding — Place ocean. May remove 4 MC from owner of adjacent tile
         SetEffects(builder, "188", onPlayEffects: [new PlaceOceanEffect(1)]);
@@ -1778,6 +1781,7 @@ public static class CardRegistry
         // 189: Energy Saving — +1 energy prod per city in play
         // Dynamic count — deferred
 
+        // Tested OK
         // 190: Local Heat Trapping — Spend 5 heat, gain 4 plants or add 2 animals to another
         SetEffects(builder, "190", onPlayEffects:
         [
@@ -1811,6 +1815,7 @@ public static class CardRegistry
         // 196: Lagrange Observatory — Draw 1 card
         SetEffects(builder, "196", onPlayEffects: [new DrawCardsEffect(1)]);
 
+        // Tested OK
         // 197: Terraforming Ganymede — +1 TR per Jovian tag including this
         SetEffects(builder, "197", onPlayEffects:
             [new ChangeTRPerTagEffect(Tag.Jovian, 1)]);
@@ -1820,11 +1825,13 @@ public static class CardRegistry
         SetEffects(builder, "198", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.MegaCredits, 5)]);
 
+        // Tested OK
         // 199: Restricted Area — Action: spend 2 MC, draw a card. Place tile
         SetEffects(builder, "199",
             onPlayEffects: [new PlaceTileEffect(TileType.RestrictedArea)],
             action: new CardAction(new SpendMCCost(2), [new DrawCardsEffect(1)]));
 
+        // Tested OK
         // 200: Immigrant City — Effect: when city is placed (including this), +1 MC prod. -1 energy prod, -2 MC prod. Place city
         SetEffects(builder, "200",
             onPlayEffects:
@@ -1834,8 +1841,9 @@ public static class CardRegistry
                 new PlaceTileEffect(TileType.City),
             ],
             ongoingEffects:
-                [new WhenAnyoneEffect(TriggerCondition.PlaceCityTileOnMars, new ChangeProductionEffect(ResourceType.MegaCredits, 1))]);
+                [new WhenAnyoneEffect(TriggerCondition.PlaceAnyCityTile, new ChangeProductionEffect(ResourceType.MegaCredits, 1))]);
 
+        // Tested OK
         // 201: Energy Tapping — Decrease any energy prod 1, +1 own energy prod
         SetEffects(builder, "201", onPlayEffects:
         [
@@ -1843,6 +1851,7 @@ public static class CardRegistry
             new ChangeProductionEffect(ResourceType.Energy, 1),
         ]);
 
+        // Tested OK
         // 202: Underground Detonations — Action: spend 10 MC, +2 heat prod
         SetEffects(builder, "202",
             action: new CardAction(new SpendMCCost(10), [new ChangeProductionEffect(ResourceType.Heat, 2)]));
@@ -1856,6 +1865,7 @@ public static class CardRegistry
         // 204: Technology Demonstration — Draw 2 cards
         SetEffects(builder, "204", onPlayEffects: [new DrawCardsEffect(2)]);
 
+        // Tested OK
         // 205: Rad-Chem Factory — -1 energy prod, +2 TR
         SetEffects(builder, "205", onPlayEffects:
         [

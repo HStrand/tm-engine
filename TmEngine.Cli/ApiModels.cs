@@ -261,6 +261,10 @@ public class FundableAwardDto
 public class UsableCardActionDto
 {
     public string CardId { get; set; } = "";
+    public bool AllowSteel { get; set; }
+    public bool CanUseHeat { get; set; }
+    public int MCCost { get; set; }
+    public int SteelValue { get; set; } = 2;
 }
 
 public class FinalGreeneryOptionsDto

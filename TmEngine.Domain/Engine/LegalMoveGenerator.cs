@@ -82,7 +82,7 @@ public sealed record ClaimableMilestone(string Name);
 
 public sealed record FundableAward(string Name, int Cost);
 
-public sealed record UsableCardAction(string CardId);
+public sealed record UsableCardAction(string CardId, bool AllowSteel = false, bool CanUseHeat = false, int MCCost = 0, int SteelValue = 0);
 
 public sealed record ActionPhaseOptions
 {
@@ -485,7 +485,13 @@ public static class LegalMoveGenerator
             if (RequirementChecker.CanAffordActionEffects(state, player.PlayerId, entry.Action) != null)
                 continue;
 
-            result.Add(new UsableCardAction(cardId));
+            var isSteelCost = entry.Action.Cost is SpendMCOrSteelCost;
+            var mcCost = entry.Action.Cost is SpendMCOrSteelCost sc ? sc.Amount
+                       : entry.Action.Cost is SpendMCCost mc ? mc.Amount : 0;
+            result.Add(new UsableCardAction(cardId, AllowSteel: isSteelCost,
+                CanUseHeat: isSteelCost && RequirementChecker.CanUseHeatAsPayment(player),
+                MCCost: mcCost,
+                SteelValue: isSteelCost ? RequirementChecker.GetSteelValue(player) : 0));
         }
 
         // Corporation action
@@ -506,7 +512,15 @@ public static class LegalMoveGenerator
             if (preconditionMet
                 && CanAffordActionCost(player, corpEntry.Action)
                 && RequirementChecker.CanAffordActionEffects(state, player.PlayerId, corpEntry.Action) == null)
-                result.Add(new UsableCardAction(player.CorporationId));
+            {
+                var isSteelCost2 = corpEntry.Action.Cost is SpendMCOrSteelCost;
+                var mcCost2 = corpEntry.Action.Cost is SpendMCOrSteelCost sc2 ? sc2.Amount
+                            : corpEntry.Action.Cost is SpendMCCost mc2 ? mc2.Amount : 0;
+                result.Add(new UsableCardAction(player.CorporationId, AllowSteel: isSteelCost2,
+                    CanUseHeat: isSteelCost2 && RequirementChecker.CanUseHeatAsPayment(player),
+                    MCCost: mcCost2,
+                    SteelValue: isSteelCost2 ? RequirementChecker.GetSteelValue(player) : 0));
+            }
         }
 
         return result.ToImmutable();
@@ -579,6 +593,11 @@ public static class LegalMoveGenerator
 
         return action.Cost switch
         {
+            SpendMCOrSteelCost c =>
+                player.Resources.MegaCredits
+                + (player.Resources.Steel * RequirementChecker.GetSteelValue(player))
+                + (RequirementChecker.CanUseHeatAsPayment(player) ? player.Resources.Heat : 0)
+                >= c.Amount,
             SpendMCCost c => player.Resources.MegaCredits >= c.Amount,
             SpendEnergyCost c => player.Resources.Energy >= c.Amount,
             SpendSteelCost c => player.Resources.Steel >= c.Amount,

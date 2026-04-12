@@ -152,6 +152,20 @@ public class BotPlayer
             {
                 var move = MakeMove("UseCardAction");
                 move["cardId"] = a.CardId;
+                if (a.AllowSteel)
+                {
+                    var payment = PaymentCalculator.Calculate(
+                        a.MCCost, canUseSteel: true, canUseTitanium: false, canUseHeat: a.CanUseHeat,
+                        botState.Resources.MegaCredits, botState.Resources.Steel, 0,
+                        a.CanUseHeat ? botState.Resources.Heat : 0);
+                    move["payment"] = new JObject
+                    {
+                        ["megaCredits"] = payment.MegaCredits,
+                        ["steel"] = payment.Steel,
+                        ["titanium"] = 0,
+                        ["heat"] = payment.Heat,
+                    };
+                }
                 return (move, $"uses action on {CardName(a.CardId)}");
             });
         }

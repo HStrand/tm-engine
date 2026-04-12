@@ -50,7 +50,8 @@ public class MoveJsonConverter : JsonConverter<Move>
             "greenery" => new GreeneryMove(playerId, ReadRequiredHexCoord(obj["location"])),
             "city" => new CityMove(playerId, ReadRequiredHexCoord(obj["location"])),
 
-            "usecardaction" => new UseCardActionMove(playerId, obj["cardId"]!.Value<string>()!),
+            "usecardaction" => new UseCardActionMove(playerId, obj["cardId"]!.Value<string>()!,
+                obj["payment"] != null && obj["payment"]!.Type != JTokenType.Null ? ReadPayment(obj["payment"]) : null),
 
             "claimmilestone" => new ClaimMilestoneMove(playerId, obj["milestoneName"]!.Value<string>()!),
 
