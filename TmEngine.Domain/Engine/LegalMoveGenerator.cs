@@ -277,8 +277,7 @@ public static class LegalMoveGenerator
             {
                 CanPass = player.ActionsThisTurn == 0,
                 CanEndTurn = player.ActionsThisTurn >= 1,
-                CanConvertHeat = player.Resources.Heat >= Constants.HeatPerTemperature
-                                 && state.Temperature < map.MaxTemperature,
+                CanConvertHeat = player.Resources.Heat >= Constants.HeatPerTemperature,
                 CanConvertPlants = plantGreeneryLocations.Length > 0,
                 PlantConversionCost = RequirementChecker.GetPlantConversionCost(player),
                 ValidGreeneryLocations = plantGreeneryLocations,

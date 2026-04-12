@@ -141,12 +141,18 @@ public class GameEngineTests
     }
 
     [Fact]
-    public void ConvertHeat_FailsWhenTemperatureMaxed()
+    public void ConvertHeat_WhenTemperatureMaxed_SpendsHeatButNoEffect()
     {
         var state = CreateTestGame() with { Temperature = Constants.DefaultMaxTemperature };
+        var initialHeat = state.Players[0].Resources.Heat;
+        var initialTR = state.Players[0].TerraformRating;
 
-        var (_, result) = GameEngine.Apply(state, new ConvertHeatMove(0));
-        Assert.True(result.IsError);
+        var (newState, result) = GameEngine.Apply(state, new ConvertHeatMove(0));
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(Constants.DefaultMaxTemperature, newState.Temperature);
+        Assert.Equal(initialHeat - Constants.HeatPerTemperature, newState.Players[0].Resources.Heat);
+        Assert.Equal(initialTR, newState.Players[0].TerraformRating);
     }
 
     // ── Convert Plants ─────────────────────────────────────────

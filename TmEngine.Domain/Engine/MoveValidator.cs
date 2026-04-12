@@ -143,10 +143,6 @@ public static class MoveValidator
         var firstActionErr = CheckFirstActionRequired(state, move.PlayerId);
         if (firstActionErr != null) return firstActionErr;
 
-        var map = MapDefinitions.GetMap(state.Map);
-        if (state.Temperature >= map.MaxTemperature)
-            return "Temperature is already at maximum.";
-
         var player = state.GetPlayer(move.PlayerId);
         if (player.Resources.Heat < Constants.HeatPerTemperature)
             return $"Need {Constants.HeatPerTemperature} heat, have {player.Resources.Heat}.";

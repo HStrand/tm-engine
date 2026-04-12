@@ -1543,10 +1543,12 @@ public static class CardRegistry
         // 152: Insulation — Decrease heat prod any number, increase MC prod same amount
         // Complex — deferred (variable amount choice)
 
+        // Tested OK
         // 153: Adaptation Technology — Effect: global requirements +/- 2
         SetEffects(builder, "153",
             ongoingEffects: [new RequirementModifierEffect(2)]);
 
+        // Tested OK
         // 154: Caretaker Contract — Action: spend 8 heat, +1 TR
         SetEffects(builder, "154",
             action: new CardAction(new SpendHeatCost(8), [new ChangeTREffect(1)]));
@@ -1588,6 +1590,7 @@ public static class CardRegistry
         SetEffects(builder, "161", onPlayEffects:
             [new PlaceOceanEffect(1), new DrawCardsEffect(1)]);
 
+        // Tested OK
         // 162: Imported GHG — +1 heat prod, +3 heat
         SetEffects(builder, "162", onPlayEffects:
         [
