@@ -199,6 +199,7 @@ public enum TriggerCondition
 
     // Other
     PlayAnyCard,
+    PlayStandardProject, // any standard project except Sell Patents
     GainPlantProduction,
 }
 

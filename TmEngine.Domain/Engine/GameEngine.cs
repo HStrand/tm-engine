@@ -296,12 +296,14 @@ public static class GameEngine
         var player = state.GetPlayer(move.PlayerId);
         var cost = RequirementChecker.GetPowerPlantCost(player);
 
-        return state.UpdatePlayer(move.PlayerId, p => p with
+        state = state.UpdatePlayer(move.PlayerId, p => p with
         {
             Resources = p.Resources.Add(ResourceType.MegaCredits, -cost),
             Production = p.Production.Add(ResourceType.Energy, 1),
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
+
+        return TriggerSystem.FireTrigger(state, move.PlayerId, TriggerCondition.PlayStandardProject);
     }
 
     private static GameState ApplyAsteroidProject(GameState state, AsteroidMove move)
@@ -312,6 +314,7 @@ public static class GameEngine
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
 
+        state = TriggerSystem.FireTrigger(state, move.PlayerId, TriggerCondition.PlayStandardProject);
         return GlobalParameters.RaiseTemperature(state, move.PlayerId);
     }
 
@@ -323,6 +326,7 @@ public static class GameEngine
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
 
+        state = TriggerSystem.FireTrigger(state, move.PlayerId, TriggerCondition.PlayStandardProject);
         return GlobalParameters.PlaceOcean(state, move.PlayerId, move.Location);
     }
 
@@ -336,6 +340,7 @@ public static class GameEngine
 
         // Rebate based on printed SP cost (Credicor)
         state = ApplyStandardProjectRebate(state, move.PlayerId, Constants.GreeneryCost);
+        state = TriggerSystem.FireTrigger(state, move.PlayerId, TriggerCondition.PlayStandardProject);
 
         return GlobalParameters.PlaceGreenery(state, move.PlayerId, move.Location);
     }
@@ -351,6 +356,7 @@ public static class GameEngine
 
         // Rebate based on printed SP cost (Credicor)
         state = ApplyStandardProjectRebate(state, move.PlayerId, Constants.CityCost);
+        state = TriggerSystem.FireTrigger(state, move.PlayerId, TriggerCondition.PlayStandardProject);
 
         return GlobalParameters.PlaceCity(state, move.PlayerId, move.Location);
     }

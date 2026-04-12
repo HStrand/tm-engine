@@ -1591,7 +1591,9 @@ public static class CardRegistry
             [new ChangeProductionEffect(ResourceType.Plants, 2)]);
 
         // 156: Standard Technology — Effect: after paying for standard project (not sell patents), gain 3 MC
-        // Complex triggered effect — deferred
+        SetEffects(builder, "156",
+            ongoingEffects: [new WhenYouEffect(TriggerCondition.PlayStandardProject,
+                new ChangeResourceEffect(ResourceType.MegaCredits, 3))]);
 
         // Tested OK
         // 157: Nitrite Reducing Bacteria — Add 3 microbes on play. Action: add 1 microbe, or remove 3 to +1 TR
