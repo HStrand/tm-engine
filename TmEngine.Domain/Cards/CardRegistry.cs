@@ -724,6 +724,7 @@ public static class CardRegistry
             onPlayEffects: [new ChangeResourceEffect(ResourceType.Plants, 1)],
             ongoingEffects: [new WhenAnyoneEffect(TriggerCondition.PlaceOceanTile, new ChangeResourceEffect(ResourceType.Plants, 2))]);
 
+        // Tested OK
         // 024: Predators — Action: remove 1 animal from any card, add to this. 1VP/animal
         SetEffects(builder, "024",
             action: new CardAction(null, [
@@ -793,7 +794,11 @@ public static class CardRegistry
         // Complex action — deferred
 
         // 035: Ants — Action: remove 1 microbe from any to add 1 here. 1VP/2 microbes
-        // Complex action — deferred
+        SetEffects(builder, "035",
+            action: new CardAction(null, [
+                new RemoveCardResourceEffect(CardResourceType.Microbe, 1, AnyPlayer: true),
+                new AddCardResourceEffect(CardResourceType.Microbe, 1, "035"),
+            ]));
 
         // Tested OK
         // 036: Release of Inert Gases — +2 TR
