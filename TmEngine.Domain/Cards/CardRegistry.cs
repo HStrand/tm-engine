@@ -594,8 +594,11 @@ public static class CardRegistry
         SetEffects(builder, "006",
             action: new CardAction(null, [new DrawKeepEffect(1, 1, CostPerCard: 3)]));
 
+        // Tested OK
         // 007: Martian Rails — Action: spend 1 energy, gain 1 MC per city on Mars
-        // Complex action — deferred
+        SetEffects(builder, "007",
+            action: new CardAction(new SpendEnergyCost(1),
+                [new ChangeResourcePerCityEffect(ResourceType.MegaCredits, 1, OnMarsOnly: true)]));
 
         // Tested OK
         // 008: Capital — -2 energy prod, +5 MC prod, place Capital city tile
@@ -1856,7 +1859,8 @@ public static class CardRegistry
             [new PlaceTileEffect(TileType.Greenery)]);
 
 		// 194: Power Infrastructure — Action: spend any energy, gain that much MC
-		// Variable amount action — deferred
+        SetEffects(builder, "194",
+            action: new CardAction(null, [new ConvertResourceEffect(ResourceType.Energy, ResourceType.MegaCredits)]));
 
 		// Tested OK
 		// 195: Indentured Workers — Next card this generation costs 8 MC less

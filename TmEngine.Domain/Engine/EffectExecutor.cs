@@ -58,6 +58,7 @@ public static class EffectExecutor
             ChangeResourcePerCityEffect e => (ApplyChangeResourcePerCity(state, playerId, e), null),
             ChangeTRPerTagEffect e => (ApplyChangeTRPerTag(state, playerId, e), null),
             ConvertProductionEffect e => ApplyConvertProduction(state, playerId, e, sourceCardId),
+            ConvertResourceEffect e => ApplyConvertResource(state, playerId, e, sourceCardId),
             ClaimLandEffect => ApplyClaimLand(state, playerId),
             NextCardDiscountEffect e => (state.UpdatePlayer(playerId, p => p with
                 { NextCardDiscount = p.NextCardDiscount + e.Discount }), null),
@@ -664,7 +665,7 @@ public static class EffectExecutor
     private static GameState ApplyChangeResourcePerCity(GameState state, int playerId, ChangeResourcePerCityEffect e)
     {
         var cityCount = state.PlacedTiles.Values.Count(t => t.Type == TileType.City || t.Type == TileType.Capital)
-                      + state.OffMapTiles.Count(t => t.Type == TileType.City);
+                      + (e.OnMarsOnly ? 0 : state.OffMapTiles.Count(t => t.Type == TileType.City));
 
         var totalAmount = cityCount * e.AmountPerCity;
         if (totalAmount == 0)
@@ -691,6 +692,23 @@ public static class EffectExecutor
 
         return (state, new ChooseOptionPending(
             $"How much {e.From} production to convert to {e.To}?", options.ToImmutable(),
+            SourceCardId: sourceCardId));
+    }
+
+    private static (GameState, PendingAction?) ApplyConvertResource(GameState state, int playerId, ConvertResourceEffect e, string? sourceCardId)
+    {
+        var player = state.GetPlayer(playerId);
+        var maxAmount = player.Resources.Get(e.From);
+
+        if (maxAmount <= 0)
+            return (state, null);
+
+        var options = ImmutableArray.CreateBuilder<string>();
+        for (int i = 0; i <= maxAmount; i++)
+            options.Add(i == 0 ? "Convert 0 (no change)" : $"Spend {i} {e.From} → gain {i} {e.To}");
+
+        return (state, new ChooseOptionPending(
+            $"How much {e.From} to convert to {e.To}?", options.ToImmutable(),
             SourceCardId: sourceCardId));
     }
 

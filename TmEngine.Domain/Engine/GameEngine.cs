@@ -1145,6 +1145,23 @@ public static class GameEngine
                 return state;
             }
 
+            // ConvertResourceEffect: option index = amount to convert
+            var convertResEffect = FindEffect<Cards.Effects.ConvertResourceEffect>(entry);
+            if (convertResEffect != null)
+            {
+                var amount = move.OptionIndex;
+                if (amount > 0)
+                {
+                    state = state.UpdatePlayer(move.PlayerId, p => p with
+                    {
+                        Resources = p.Resources
+                            .Add(convertResEffect.From, -amount)
+                            .Add(convertResEffect.To, amount),
+                    });
+                }
+                return state;
+            }
+
             var chooseEffect = FindChooseEffect(entry);
             if (chooseEffect != null && move.OptionIndex < chooseEffect.Options.Length)
             {

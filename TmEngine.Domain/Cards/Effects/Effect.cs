@@ -366,7 +366,7 @@ public sealed record ChangeProductionPerCityEffect(ResourceType Resource, int Am
 /// Gain resources based on the total number of city tiles in play (all players).
 /// E.g., Greenhouses: gain 1 plant per city tile in play.
 /// </summary>
-public sealed record ChangeResourcePerCityEffect(ResourceType Resource, int AmountPerCity) : Effect;
+public sealed record ChangeResourcePerCityEffect(ResourceType Resource, int AmountPerCity, bool OnMarsOnly = false) : Effect;
 
 /// <summary>
 /// Claim a non-reserved land hex — only this player may place tiles there.
@@ -386,6 +386,13 @@ public sealed record ChangeTRPerTagEffect(Tag Tag, int AmountPerTag) : Effect;
 /// The player chooses N (0 to current production of the source resource).
 /// </summary>
 public sealed record ConvertProductionEffect(ResourceType From, ResourceType To) : Effect;
+
+/// <summary>
+/// Convert resources from one type to another any amount.
+/// E.g., Power Infrastructure: spend any energy, gain that much MC.
+/// The player chooses the amount (0 to current resources of the source type).
+/// </summary>
+public sealed record ConvertResourceEffect(ResourceType From, ResourceType To) : Effect;
 
 /// <summary>
 /// Player must play a card from hand immediately with special rules.
