@@ -176,6 +176,18 @@ public static class EffectExecutor
     }
 
     /// <summary>
+    /// Get the indices of orderable effects in an effect array.
+    /// </summary>
+    public static ImmutableArray<int> GetOrderableIndices(ImmutableArray<Effect> effects)
+    {
+        var result = ImmutableArray.CreateBuilder<int>();
+        for (int i = 0; i < effects.Length; i++)
+            if (IsOrderable(effects[i]))
+                result.Add(i);
+        return result.ToImmutable();
+    }
+
+    /// <summary>
     /// Returns true if this effect type should be player-ordered (strategically meaningful).
     /// </summary>
     public static bool IsOrderable(Effect effect) => effect switch

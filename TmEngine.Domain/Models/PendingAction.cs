@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using TmEngine.Domain.Cards.Effects;
 
 namespace TmEngine.Domain.Models;
 
@@ -117,13 +118,34 @@ public sealed record ChooseTriggerOrderPending(
     ImmutableArray<string> Descriptions) : PendingAction;
 
 /// <summary>
-/// Identifies a triggered effect for queuing: the card that owns the ongoing effect,
-/// the index into that card's OngoingEffects, and the card that triggered it.
+/// Identifies a triggered effect waiting to be resolved.
+/// There are two kinds of entries:
+/// <list type="bullet">
+///   <item><b>Triggered effect</b> — a "When you play X" effect on an in-play card.
+///     OwnerCardId is the card with the trigger (e.g., Mars University),
+///     Trigger is the condition that fired (e.g., PlayScienceTag),
+///     and TriggeringCardId is the card that was just played.</item>
+///   <item><b>On-play effects</b> (IsOnPlayEntry = true) — the played card's own
+///     on-play effects that were deferred for ordering. DeferredEffectIndices stores
+///     which on-play effects still need executing.</item>
+/// </list>
 /// </summary>
 public sealed record TriggerQueueEntry(
+    /// <summary>The card that owns the triggered effect (e.g., Mars University), or the played card for on-play entries.</summary>
     string OwnerCardId,
-    int OngoingEffectIndex,
-    string? TriggeringCardId);
+    /// <summary>Which trigger condition fired (e.g., PlayScienceTag). Null for on-play entries.</summary>
+    TriggerCondition? Trigger,
+    /// <summary>The card that was just played and caused this trigger to fire.</summary>
+    string? TriggeringCardId)
+{
+    /// <summary>True if this entry represents deferred on-play effects rather than a triggered effect.</summary>
+    public bool IsOnPlayEntry => Trigger == null;
+
+    /// <summary>
+    /// For on-play entries only: which of the card's on-play effects still need executing.
+    /// </summary>
+    public ImmutableArray<int> DeferredEffectIndices { get; init; } = [];
+}
 
 /// <summary>
 /// Player must choose one of their building-tagged cards to copy production from.

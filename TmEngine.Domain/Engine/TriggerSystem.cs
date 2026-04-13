@@ -87,10 +87,10 @@ public static class TriggerSystem
         void CheckCard(string cardId)
         {
             if (!CardRegistry.TryGet(cardId, out var entry)) return;
-            for (int i = 0; i < entry.OngoingEffects.Length; i++)
+            foreach (var effect in entry.OngoingEffects)
             {
-                if (entry.OngoingEffects[i] is WhenYouEffect whenYou && whenYou.Trigger == condition)
-                    result.Add(new TriggerQueueEntry(cardId, i, triggeringCardId));
+                if (effect is WhenYouEffect whenYou && whenYou.Trigger == condition)
+                    result.Add(new TriggerQueueEntry(cardId, condition, triggeringCardId));
             }
         }
 
@@ -156,12 +156,16 @@ public static class TriggerSystem
 
     private static Effect? GetInnerEffect(TriggerQueueEntry entry)
     {
+        if (entry.Trigger == null)
+            return null;
         if (!CardRegistry.TryGet(entry.OwnerCardId, out var cardEntry))
             return null;
-        if (entry.OngoingEffectIndex >= cardEntry.OngoingEffects.Length)
-            return null;
-        var effect = cardEntry.OngoingEffects[entry.OngoingEffectIndex];
-        return effect is WhenYouEffect whenYou ? whenYou.Effect : null;
+        foreach (var effect in cardEntry.OngoingEffects)
+        {
+            if (effect is WhenYouEffect whenYou && whenYou.Trigger == entry.Trigger)
+                return whenYou.Effect;
+        }
+        return null;
     }
 
     /// <summary>
@@ -175,6 +179,48 @@ public static class TriggerSystem
         ChooseEffect or
         AddCardResourceEffect { TargetCardId: null } or
         DiscardCardsEffect;
+
+    /// <summary>
+    /// Fire all tag-based triggers for a card (both WhenAnyone and WhenYou), including compound triggers.
+    /// Collects all WhenYou triggers across all tags first, then executes them as a batch
+    /// so duplicate tags (e.g., Research with 2 Science tags) correctly fire triggers multiple times.
+    /// </summary>
+    public static GameState FireCardTagTriggers(
+        GameState state, int playerId, string cardId, CardDefinition card)
+    {
+        var conditions = new List<TriggerCondition>();
+        foreach (var tag in card.Tags)
+        {
+            var condition = EffectToCondition(tag);
+            if (condition != null)
+                conditions.Add(condition.Value);
+        }
+
+        // Compound tag triggers
+        if (card.Tags.Contains(Tag.Space) && card.Tags.Contains(Tag.Event))
+            conditions.Add(TriggerCondition.PlaySpaceEventTag);
+
+        // Fire all WhenAnyone triggers (these are always immediate)
+        foreach (var condition in conditions)
+        {
+            foreach (var player in state.Players)
+                state = FireAnyoneTriggersForPlayer(state, player, condition, cardId);
+        }
+
+        // Collect all WhenYou triggers across all tags, then batch-execute
+        var triggeringPlayer = state.GetPlayer(playerId);
+        var allWhenYou = ImmutableArray.CreateBuilder<TriggerQueueEntry>();
+        foreach (var condition in conditions)
+        {
+            var triggers = CollectWhenYouTriggers(triggeringPlayer, condition, cardId);
+            allWhenYou.AddRange(triggers);
+        }
+
+        if (allWhenYou.Count > 0)
+            state = ExecuteWhenYouTriggers(state, playerId, allWhenYou.ToImmutable());
+
+        return state;
+    }
 
     public static string DescribeTriggerEntry(TriggerQueueEntry entry)
     {
