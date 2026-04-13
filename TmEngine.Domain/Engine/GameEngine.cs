@@ -951,41 +951,55 @@ public static class GameEngine
             });
         }
 
-        // Execute on-play effects
-        var (newState, pending) = EffectExecutor.ExecuteWithOrdering(state, move.PlayerId, entry.OnPlayEffects, move.CardId);
-        state = newState;
-
-        // If on-play effects produced a pending, check if interactive triggers also need to fire
-        if (pending != null)
+        // Check if ordering is needed between on-play effects and interactive triggers
+        var orderableIndices = EffectExecutor.GetOrderableIndices(entry.OnPlayEffects);
+        if (orderableIndices.Length > 0)
         {
-            // Collect would-be interactive triggers
             var currentPlayer = state.GetPlayer(move.PlayerId);
             var interactiveTriggers = TriggerSystem.CollectInteractiveWhenYouTriggers(
                 state, currentPlayer, card, move.CardId);
 
-            if (interactiveTriggers.Length == 0)
+            if (interactiveTriggers.Length > 0)
             {
-                // No interactive triggers — fire all triggers immediately, then set on-play pending
-                state = TriggerSystem.FireCardTagTriggers(state, move.PlayerId, move.CardId, card);
-                return state with { PendingAction = pending };
+                // Execute non-orderable on-play effects immediately
+                for (int i = 0; i < entry.OnPlayEffects.Length; i++)
+                {
+                    if (!orderableIndices.Contains(i))
+                    {
+                        var (s, _) = EffectExecutor.Execute(state, move.PlayerId, entry.OnPlayEffects[i], move.CardId);
+                        state = s;
+                    }
+                }
+
+                // Present ordering choice between orderable on-play effects and interactive triggers
+                var onPlayEntry = new TriggerQueueEntry(move.CardId, Trigger: null, TriggeringCardId: null)
+                    { DeferredEffectIndices = orderableIndices };
+                var allEntries = interactiveTriggers.Insert(0, onPlayEntry);
+                var descriptions = allEntries.Select(t =>
+                    t.IsOnPlayEntry
+                        ? $"{card.Name} (card effects)"
+                        : TriggerSystem.DescribeTriggerEntry(t)).ToImmutableArray();
+
+                // Fire non-interactive triggers immediately
+                state = TriggerSystem.FireNonInteractiveWhenYouTriggers(
+                    state, move.PlayerId, currentPlayer, card, move.CardId);
+
+                return state with
+                {
+                    PendingAction = new ChooseTriggerOrderPending(allEntries, descriptions),
+                };
             }
+        }
 
-            // Interactive triggers exist — let the player choose ordering
-            var deferredIndices = EffectExecutor.GetOrderableIndices(entry.OnPlayEffects);
-            var onPlayEntry = new TriggerQueueEntry(move.CardId, Trigger: null, TriggeringCardId: null) { DeferredEffectIndices = deferredIndices };
-            var allEntries = interactiveTriggers.Insert(0, onPlayEntry);
-            var descriptions = allEntries.Select(t =>
-                t.IsOnPlayEntry
-                    ? $"{card.Name} (card effects)"
-                    : TriggerSystem.DescribeTriggerEntry(t)).ToImmutableArray();
+        // No ordering needed — execute on-play effects normally
+        var (newState, pending) = EffectExecutor.ExecuteWithOrdering(state, move.PlayerId, entry.OnPlayEffects, move.CardId);
+        state = newState;
 
-            // Fire non-interactive triggers immediately before presenting the choice
-            state = TriggerSystem.FireNonInteractiveWhenYouTriggers(state, move.PlayerId, currentPlayer, card, move.CardId);
-
-            return state with
-            {
-                PendingAction = new ChooseTriggerOrderPending(allEntries, descriptions),
-            };
+        // If on-play effects produced a pending, fire triggers immediately then set pending
+        if (pending != null)
+        {
+            state = TriggerSystem.FireCardTagTriggers(state, move.PlayerId, move.CardId, card);
+            return state with { PendingAction = pending };
         }
 
         // Fire tag-based triggered effects
