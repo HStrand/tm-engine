@@ -45,6 +45,7 @@ public static class EffectExecutor
             // Card resources
             AddCardResourceEffect e => ApplyAddCardResource(state, playerId, e),
             AddResourceToAnyCardEffect => ApplyAddResourceToAnyCard(state, playerId),
+            MarsUniversityEffect => ApplyMarsUniversity(state, playerId),
             OlympusConferenceEffect e => ApplyOlympusConference(state, playerId, e),
             ViralEnhancersEffect => ApplyViralEnhancers(state, playerId, triggeringCardId),
             RemoveCardResourceEffect e => ApplyRemoveCardResource(state, playerId, e, sourceCardId),
@@ -511,6 +512,15 @@ public static class EffectExecutor
         // Use AddCardResourcePending — the resource type doesn't matter for resolution,
         // it just needs valid card IDs. Use Science as a placeholder type.
         return (state, new AddCardResourcePending(CardResourceType.Science, 1, validCards));
+    }
+
+    private static (GameState, PendingAction?) ApplyMarsUniversity(GameState state, int playerId)
+    {
+        var player = state.GetPlayer(playerId);
+        if (player.Hand.Count == 0)
+            return (state, null); // No cards to discard
+
+        return (state, new MarsUniversityPending());
     }
 
     private static (GameState, PendingAction?) ApplyOlympusConference(GameState state, int playerId, OlympusConferenceEffect e)

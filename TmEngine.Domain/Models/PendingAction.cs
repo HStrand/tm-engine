@@ -103,6 +103,29 @@ public sealed record ChooseCardToPlayPending(
     ImmutableArray<string> CardIds) : PendingAction;
 
 /// <summary>
+/// Mars University: player may discard a card from hand to draw a new one, or pass.
+/// Resolved by DiscardCardsMove (with 1 card) to cycle, or PassMove to skip.
+/// </summary>
+public sealed record MarsUniversityPending : PendingAction;
+
+/// <summary>
+/// Player must choose which triggered effect to resolve next when multiple fire at once.
+/// Each entry identifies a triggered effect by its owner card ID and effect index.
+/// </summary>
+public sealed record ChooseTriggerOrderPending(
+    ImmutableArray<TriggerQueueEntry> Triggers,
+    ImmutableArray<string> Descriptions) : PendingAction;
+
+/// <summary>
+/// Identifies a triggered effect for queuing: the card that owns the ongoing effect,
+/// the index into that card's OngoingEffects, and the card that triggered it.
+/// </summary>
+public sealed record TriggerQueueEntry(
+    string OwnerCardId,
+    int OngoingEffectIndex,
+    string? TriggeringCardId);
+
+/// <summary>
 /// Player must choose one of their building-tagged cards to copy production from.
 /// E.g., Robotic Workforce.
 /// </summary>

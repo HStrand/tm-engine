@@ -303,6 +303,18 @@ public class BotPlayer
                 }
                 break;
             }
+            case "MarsUniversity":
+            {
+                // Bot always declines to cycle (simple strategy)
+                return (MakeMove("Pass"), "declines Mars University cycle");
+            }
+            case "ChooseTriggerOrder":
+            {
+                // Bot auto-resolves in default order
+                var move = MakeMove("ChooseEffectOrder");
+                move["effectIndex"] = -1;
+                return (move, "auto-resolves trigger order");
+            }
             case "CopyProduction":
             {
                 var cards = pending["validCardIds"]?.ToObject<List<string>>() ?? new();

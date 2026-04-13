@@ -93,6 +93,24 @@ public sealed record GameState
     /// </summary>
     public PendingEffectQueue? EffectQueue { get; init; }
 
+    /// <summary>
+    /// If non-null, remaining triggered effects to execute after the current PendingAction resolves.
+    /// Used when multiple interactive triggers fire at once (e.g., Mars University + Olympus Conference).
+    /// </summary>
+    public ImmutableArray<TriggerQueueEntry>? TriggerQueue { get; init; }
+
+    /// <summary>
+    /// If non-null, tag triggers for this card ID need to fire after the current pending resolves.
+    /// Set when a card's on-play effects produce a pending action before triggers could fire.
+    /// </summary>
+    public string? DeferredTriggerCardId { get; init; }
+
+    /// <summary>
+    /// Stores a deferred pending action from on-play effects when the player is choosing
+    /// trigger ordering first. Set alongside ChooseTriggerOrderPending.
+    /// </summary>
+    public PendingAction? DeferredOnPlayPending { get; init; }
+
     // ── Audit ──────────────────────────────────────────────────
 
     /// <summary>The move that produced this state, if any. Null for the initial state.</summary>

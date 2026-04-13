@@ -45,6 +45,18 @@ public static class GameEngine
                 newState = ResumeEffectQueue(newState, move.PlayerId);
             }
 
+            // Fire deferred tag triggers (from cards whose on-play effects had a pending)
+            if (newState.PendingAction == null && newState.DeferredTriggerCardId != null)
+            {
+                newState = FireDeferredTriggers(newState, move.PlayerId);
+            }
+
+            // Resume remaining triggered effects from the trigger queue
+            if (newState.PendingAction == null && newState.TriggerQueue != null)
+            {
+                newState = TriggerSystem.ResumeTriggerQueue(newState, move.PlayerId);
+            }
+
             // If still no pending action after resuming, advance phase
             if (newState.PendingAction == null)
             {
@@ -222,6 +234,10 @@ public static class GameEngine
             return state with { PendingAction = null };
 
         if (state.PendingAction is RemoveResourcePending { IsOptional: true })
+            return state with { PendingAction = null };
+
+        // Mars University: player declines to cycle
+        if (state.PendingAction is MarsUniversityPending)
             return state with { PendingAction = null };
 
         state = state.UpdatePlayer(move.PlayerId, p => p with { Passed = true });
@@ -589,20 +605,15 @@ public static class GameEngine
             var (newState, pending) = EffectExecutor.ExecuteWithOrdering(state, playerId, preludeEntry.OnPlayEffects, move.PreludeId);
             state = newState;
 
-            // Fire tag-based triggered effects
-            foreach (var tag in preludeEntry.Definition.Tags)
-            {
-                var condition = TagToTriggerCondition(tag);
-                if (condition != null)
-                    state = TriggerSystem.FireTrigger(state, playerId, condition.Value, move.PreludeId);
-            }
-
             if (pending != null)
             {
-                // Remove this prelude from remaining, then set pending action
+                // Defer tag triggers until on-play pending resolves
                 state = RemovePreludeFromRemaining(state, playerIndex, move.PreludeId);
-                return state with { PendingAction = pending };
+                return state with { PendingAction = pending, DeferredTriggerCardId = move.PreludeId };
             }
+
+            // Fire tag-based triggered effects
+            state = FireCardTagTriggers(state, playerId, move.PreludeId, preludeEntry.Definition);
         }
         else
         {
@@ -949,20 +960,41 @@ public static class GameEngine
         var (newState, pending) = EffectExecutor.ExecuteWithOrdering(state, move.PlayerId, entry.OnPlayEffects, move.CardId);
         state = newState;
 
-        // Fire tag-based triggered effects
-        foreach (var tag in card.Tags)
+        // If on-play effects produced a pending, check if interactive triggers also need to fire
+        if (pending != null)
         {
-            var condition = TagToTriggerCondition(tag);
-            if (condition != null)
-                state = TriggerSystem.FireTrigger(state, move.PlayerId, condition.Value, move.CardId);
+            // Collect would-be interactive triggers
+            var currentPlayer = state.GetPlayer(move.PlayerId);
+            var interactiveTriggers = TriggerSystem.CollectInteractiveWhenYouTriggers(
+                state, currentPlayer, card, move.CardId);
+
+            if (interactiveTriggers.Length == 0)
+            {
+                // No interactive triggers — defer all triggers until on-play pending resolves
+                return state with { PendingAction = pending, DeferredTriggerCardId = move.CardId };
+            }
+
+            // Interactive triggers exist — let the player choose ordering
+            // Use OngoingEffectIndex = -1 as sentinel for "on-play effects"
+            var onPlayEntry = new TriggerQueueEntry(move.CardId, -1, null);
+            var allEntries = interactiveTriggers.Insert(0, onPlayEntry);
+            var descriptions = allEntries.Select(t =>
+                t.OngoingEffectIndex == -1
+                    ? $"{card.Name} (card effects)"
+                    : TriggerSystem.DescribeTriggerEntry(t)).ToImmutableArray();
+
+            // Fire non-interactive triggers immediately before presenting the choice
+            state = TriggerSystem.FireNonInteractiveWhenYouTriggers(state, move.PlayerId, currentPlayer, card, move.CardId);
+
+            return state with
+            {
+                PendingAction = new ChooseTriggerOrderPending(allEntries, descriptions),
+                DeferredOnPlayPending = pending,
+            };
         }
 
-        // Compound tag triggers
-        if (card.Tags.Contains(Tag.Space) && card.Tags.Contains(Tag.Event))
-            state = TriggerSystem.FireTrigger(state, move.PlayerId, TriggerCondition.PlaySpaceEventTag, move.CardId);
-
-        if (pending != null)
-            return state with { PendingAction = pending };
+        // Fire tag-based triggered effects
+        state = FireCardTagTriggers(state, move.PlayerId, move.CardId, card);
 
         // A trigger may have set a pending action (e.g., Olympus Conference choice)
         if (state.PendingAction != null)
@@ -1332,6 +1364,25 @@ public static class GameEngine
 
     private static GameState ApplyDiscardCards(GameState state, DiscardCardsMove move)
     {
+        // Mars University: discard 1 card, draw 1 card
+        if (state.PendingAction is MarsUniversityPending)
+        {
+            state = state.UpdatePlayer(move.PlayerId, p => p with
+            {
+                Hand = p.Hand.RemoveRange(move.CardIds),
+            });
+            state = state with { DiscardPile = state.DiscardPile.AddRange(move.CardIds) };
+
+            // Draw 1 card
+            if (!state.DrawPile.IsEmpty)
+            {
+                var cardId = state.DrawPile[0];
+                state = state with { DrawPile = state.DrawPile.RemoveAt(0) };
+                state = state.UpdatePlayer(move.PlayerId, p => p with { Hand = p.Hand.Add(cardId) });
+            }
+            return state with { PendingAction = null };
+        }
+
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
             Hand = p.Hand.RemoveRange(move.CardIds),
@@ -1344,6 +1395,10 @@ public static class GameEngine
 
     private static GameState ApplyChooseEffectOrder(GameState state, ChooseEffectOrderMove move)
     {
+        // Handle trigger ordering (Mars University + Olympus Conference etc.)
+        if (state.PendingAction is ChooseTriggerOrderPending triggerPending)
+            return ApplyChooseTriggerOrder(state, move, triggerPending);
+
         if (state.PendingAction is not ChooseEffectOrderPending pending)
             return state;
 
@@ -1407,6 +1462,107 @@ public static class GameEngine
             PendingAction = new ChooseEffectOrderPending(
                 pending.SourceCardId, pending.EffectSource, remaining, descriptions),
         };
+    }
+
+    private static GameState ApplyChooseTriggerOrder(
+        GameState state, ChooseEffectOrderMove move, ChooseTriggerOrderPending pending)
+    {
+        state = state with { PendingAction = null };
+
+        var triggers = pending.Triggers;
+
+        // Auto mode: execute all sequentially
+        if (move.EffectIndex == -1)
+        {
+            foreach (var trigger in triggers)
+            {
+                var remaining = triggers.Remove(trigger);
+
+                // Sentinel: on-play effects entry
+                if (trigger.OngoingEffectIndex == -1)
+                {
+                    var onPlayPending = state.DeferredOnPlayPending;
+                    state = state with { DeferredOnPlayPending = null };
+                    if (onPlayPending != null)
+                    {
+                        if (remaining.Length > 0)
+                            state = state with { TriggerQueue = remaining };
+                        return state with { PendingAction = onPlayPending };
+                    }
+                    continue;
+                }
+
+                var innerEffect = GetTriggerInnerEffect(trigger);
+                if (innerEffect == null) continue;
+                var (newState, subPending) = EffectExecutor.Execute(
+                    state, move.PlayerId, innerEffect, triggeringCardId: trigger.TriggeringCardId);
+                state = newState;
+                if (subPending != null)
+                {
+                    if (remaining.Length > 0)
+                        state = state with { TriggerQueue = remaining };
+                    return state with { PendingAction = subPending };
+                }
+            }
+            return state;
+        }
+
+        // Execute the chosen trigger
+        if (move.EffectIndex < 0 || move.EffectIndex >= triggers.Length)
+            return state;
+
+        var chosen = triggers[move.EffectIndex];
+        var remaining2 = triggers.RemoveAt(move.EffectIndex);
+
+        // Sentinel: on-play effects entry
+        if (chosen.OngoingEffectIndex == -1)
+        {
+            var onPlayPending = state.DeferredOnPlayPending;
+            state = state with { DeferredOnPlayPending = null };
+            if (onPlayPending != null)
+            {
+                if (remaining2.Length > 0)
+                    state = state with { TriggerQueue = remaining2 };
+                return state with { PendingAction = onPlayPending };
+            }
+            // Fall through to handle remaining
+            return TriggerSystem.ResumeTriggerQueue(
+                state with { TriggerQueue = remaining2 }, move.PlayerId);
+        }
+
+        var chosenEffect = GetTriggerInnerEffect(chosen);
+        if (chosenEffect == null)
+            return state;
+
+        var (resultState, resultPending) = EffectExecutor.Execute(
+            state, move.PlayerId, chosenEffect, triggeringCardId: chosen.TriggeringCardId);
+        state = resultState;
+
+        if (resultPending != null)
+        {
+            // Store remaining triggers for after this pending resolves
+            if (remaining2.Length > 0)
+                state = state with { TriggerQueue = remaining2 };
+            return state with { PendingAction = resultPending };
+        }
+
+        // Effect resolved immediately — continue with remaining triggers
+        if (remaining2.Length == 0)
+            return state;
+
+        // Execute remaining through the trigger system
+        return TriggerSystem.ResumeTriggerQueue(
+            state with { TriggerQueue = remaining2 }, move.PlayerId);
+    }
+
+    private static Effect? GetTriggerInnerEffect(TriggerQueueEntry entry)
+    {
+        if (!CardRegistry.TryGet(entry.OwnerCardId, out var cardEntry))
+            return null;
+        if (entry.OngoingEffectIndex >= cardEntry.OngoingEffects.Length)
+            return null;
+        return cardEntry.OngoingEffects[entry.OngoingEffectIndex] is WhenYouEffect whenYou
+            ? whenYou.Effect : null;
     }
 
     // ── Formatting ─────────────────────────────────────────────
@@ -1480,6 +1636,34 @@ public static class GameEngine
             : $"Player {m.PlayerId} chooses to resolve effect {m.EffectIndex}",
         _ => $"Player {move.PlayerId} does {move.GetType().Name}",
     };
+
+    private static GameState FireCardTagTriggers(
+        GameState state, int playerId, string cardId, CardDefinition card)
+    {
+        foreach (var tag in card.Tags)
+        {
+            var condition = TagToTriggerCondition(tag);
+            if (condition != null)
+                state = TriggerSystem.FireTrigger(state, playerId, condition.Value, cardId);
+        }
+
+        // Compound tag triggers
+        if (card.Tags.Contains(Tag.Space) && card.Tags.Contains(Tag.Event))
+            state = TriggerSystem.FireTrigger(state, playerId, TriggerCondition.PlaySpaceEventTag, cardId);
+
+        return state;
+    }
+
+    private static GameState FireDeferredTriggers(GameState state, int playerId)
+    {
+        var cardId = state.DeferredTriggerCardId!;
+        state = state with { DeferredTriggerCardId = null };
+
+        if (!CardRegistry.TryGet(cardId, out var entry))
+            return state;
+
+        return FireCardTagTriggers(state, playerId, cardId, entry.Definition);
+    }
 
     private static TriggerCondition? TagToTriggerCondition(Tag tag) => tag switch
     {

@@ -700,6 +700,20 @@ public static class MoveValidator
                     ? null
                     : "Invalid effect index.",
 
+            (MarsUniversityPending, PassMove) => null,
+
+            (MarsUniversityPending, DiscardCardsMove discard) =>
+                discard.CardIds.Length != 1
+                    ? "Must discard exactly 1 card."
+                    : !state.GetPlayer(move.PlayerId).Hand.Contains(discard.CardIds[0])
+                    ? "Card not in hand."
+                    : null,
+
+            (ChooseTriggerOrderPending pending, ChooseEffectOrderMove choose) =>
+                choose.EffectIndex == -1 || (choose.EffectIndex >= 0 && choose.EffectIndex < pending.Triggers.Length)
+                    ? null
+                    : "Invalid trigger index.",
+
             _ => $"Expected resolution for {state.PendingAction!.GetType().Name}, got {move.GetType().Name}.",
         };
     }

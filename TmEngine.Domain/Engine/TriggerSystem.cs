@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using TmEngine.Domain.Cards;
 using TmEngine.Domain.Cards.Effects;
 using TmEngine.Domain.Models;
@@ -17,64 +18,256 @@ public static class TriggerSystem
         GameState state, int triggeringPlayerId, TriggerCondition condition,
         string? triggeringCardId = null)
     {
-        // Check all players for WhenAnyoneEffect
+        // Check all players for WhenAnyoneEffect (these are always immediate — no ordering needed)
         foreach (var player in state.Players)
         {
-            state = FireTriggersForPlayer(state, player, condition, isAnyoneTrigger: true, triggeringCardId);
+            state = FireAnyoneTriggersForPlayer(state, player, condition, triggeringCardId);
         }
 
-        // Check triggering player for WhenYouEffect
+        // Collect all WhenYouEffect triggers for the triggering player
         var triggeringPlayer = state.GetPlayer(triggeringPlayerId);
-        state = FireTriggersForPlayer(state, triggeringPlayer, condition, isAnyoneTrigger: false, triggeringCardId);
+        var triggers = CollectWhenYouTriggers(triggeringPlayer, condition, triggeringCardId);
+
+        // Execute collected triggers with ordering support
+        state = ExecuteWhenYouTriggers(state, triggeringPlayerId, triggers);
 
         return state;
     }
 
-    private static GameState FireTriggersForPlayer(
-        GameState state, PlayerState player, TriggerCondition condition,
-        bool isAnyoneTrigger, string? triggeringCardId)
+    /// <summary>
+    /// Resume execution of queued triggers after a pending action resolves.
+    /// </summary>
+    public static GameState ResumeTriggerQueue(GameState state, int playerId)
     {
-        // Check corporation
-        if (!string.IsNullOrEmpty(player.CorporationId) && CardRegistry.TryGet(player.CorporationId, out var corp))
+        var queue = state.TriggerQueue!.Value;
+        state = state with { TriggerQueue = null };
+
+        if (queue.Length == 0)
+            return state;
+
+        // Execute remaining triggers (same ordering logic)
+        state = ExecuteWhenYouTriggers(state, playerId, queue);
+        return state;
+    }
+
+    private static GameState FireAnyoneTriggersForPlayer(
+        GameState state, PlayerState player, TriggerCondition condition, string? triggeringCardId)
+    {
+        void CheckCard(string cardId)
         {
-            state = CheckEffects(state, player.PlayerId, corp.OngoingEffects, condition, isAnyoneTrigger, triggeringCardId);
+            if (!CardRegistry.TryGet(cardId, out var entry)) return;
+            foreach (var effect in entry.OngoingEffects)
+            {
+                if (effect is WhenAnyoneEffect anyone && anyone.Trigger == condition)
+                {
+                    var (newState, _) = EffectExecutor.Execute(state, player.PlayerId, anyone.Effect,
+                        triggeringCardId: triggeringCardId);
+                    state = newState;
+                }
+            }
         }
 
-        // Check played blue cards
+        if (!string.IsNullOrEmpty(player.CorporationId))
+            CheckCard(player.CorporationId);
+
         foreach (var cardId in player.PlayedCards)
-        {
-            if (CardRegistry.TryGet(cardId, out var card))
-            {
-                state = CheckEffects(state, player.PlayerId, card.OngoingEffects, condition, isAnyoneTrigger, triggeringCardId);
-            }
-        }
+            CheckCard(cardId);
 
         return state;
     }
 
-    private static GameState CheckEffects(
-        GameState state, int playerId,
-        System.Collections.Immutable.ImmutableArray<Effect> effects,
-        TriggerCondition condition, bool isAnyoneTrigger, string? triggeringCardId)
+    /// <summary>
+    /// Collect all matching WhenYouEffect triggers as queue entries for the given player.
+    /// </summary>
+    private static ImmutableArray<TriggerQueueEntry> CollectWhenYouTriggers(
+        PlayerState player, TriggerCondition condition, string? triggeringCardId)
     {
-        foreach (var effect in effects)
+        var result = ImmutableArray.CreateBuilder<TriggerQueueEntry>();
+
+        void CheckCard(string cardId)
         {
-            if (isAnyoneTrigger && effect is WhenAnyoneEffect anyone && anyone.Trigger == condition)
+            if (!CardRegistry.TryGet(cardId, out var entry)) return;
+            for (int i = 0; i < entry.OngoingEffects.Length; i++)
             {
-                var (newState, _) = EffectExecutor.Execute(state, playerId, anyone.Effect,
-                    triggeringCardId: triggeringCardId);
-                state = newState;
+                if (entry.OngoingEffects[i] is WhenYouEffect whenYou && whenYou.Trigger == condition)
+                    result.Add(new TriggerQueueEntry(cardId, i, triggeringCardId));
             }
-            else if (!isAnyoneTrigger && effect is WhenYouEffect whenYou && whenYou.Trigger == condition)
+        }
+
+        if (!string.IsNullOrEmpty(player.CorporationId))
+            CheckCard(player.CorporationId);
+
+        foreach (var cardId in player.PlayedCards)
+            CheckCard(cardId);
+
+        return result.ToImmutable();
+    }
+
+    /// <summary>
+    /// Execute collected WhenYou triggers, handling ordering when multiple interactive triggers exist.
+    /// </summary>
+    private static GameState ExecuteWhenYouTriggers(
+        GameState state, int playerId, ImmutableArray<TriggerQueueEntry> triggers)
+    {
+        // Partition into immediate (non-interactive) and interactive triggers
+        var immediate = ImmutableArray.CreateBuilder<TriggerQueueEntry>();
+        var interactive = ImmutableArray.CreateBuilder<TriggerQueueEntry>();
+
+        foreach (var trigger in triggers)
+        {
+            var innerEffect = GetInnerEffect(trigger);
+            if (innerEffect != null && IsInteractiveTrigger(innerEffect))
+                interactive.Add(trigger);
+            else
+                immediate.Add(trigger);
+        }
+
+        // Execute all immediate triggers
+        foreach (var trigger in immediate.ToImmutable())
+        {
+            var innerEffect = GetInnerEffect(trigger);
+            if (innerEffect == null) continue;
+            var (newState, _) = EffectExecutor.Execute(state, playerId, innerEffect,
+                triggeringCardId: trigger.TriggeringCardId);
+            state = newState;
+        }
+
+        // Handle interactive triggers
+        if (interactive.Count == 0)
+            return state;
+
+        if (interactive.Count == 1)
+        {
+            var trigger = interactive[0];
+            var innerEffect = GetInnerEffect(trigger)!;
+            var (newState, pending) = EffectExecutor.Execute(state, playerId, innerEffect,
+                triggeringCardId: trigger.TriggeringCardId);
+            state = newState;
+            if (pending != null && state.PendingAction == null)
+                state = state with { PendingAction = pending };
+            return state;
+        }
+
+        // Multiple interactive triggers — let the player choose the order
+        var descriptions = interactive.ToImmutable().Select(t => DescribeTriggerEntry(t)).ToImmutableArray();
+        state = state with { PendingAction = new ChooseTriggerOrderPending(interactive.ToImmutable(), descriptions) };
+        return state;
+    }
+
+    private static Effect? GetInnerEffect(TriggerQueueEntry entry)
+    {
+        if (!CardRegistry.TryGet(entry.OwnerCardId, out var cardEntry))
+            return null;
+        if (entry.OngoingEffectIndex >= cardEntry.OngoingEffects.Length)
+            return null;
+        var effect = cardEntry.OngoingEffects[entry.OngoingEffectIndex];
+        return effect is WhenYouEffect whenYou ? whenYou.Effect : null;
+    }
+
+    /// <summary>
+    /// Returns true if a triggered inner effect is likely to produce a pending action
+    /// requiring player interaction.
+    /// </summary>
+    private static bool IsInteractiveTrigger(Effect innerEffect) => innerEffect is
+        OlympusConferenceEffect or
+        MarsUniversityEffect or
+        ViralEnhancersEffect or
+        ChooseEffect or
+        AddCardResourceEffect { TargetCardId: null } or
+        DiscardCardsEffect;
+
+    public static string DescribeTriggerEntry(TriggerQueueEntry entry)
+    {
+        if (!CardRegistry.TryGet(entry.OwnerCardId, out var cardEntry))
+            return entry.OwnerCardId;
+        return cardEntry.Definition.Name;
+    }
+
+    /// <summary>
+    /// Collect interactive WhenYou trigger entries for a card's tags (without executing them).
+    /// Used to detect whether ordering is needed between on-play effects and triggers.
+    /// </summary>
+    public static ImmutableArray<TriggerQueueEntry> CollectInteractiveWhenYouTriggers(
+        GameState state, PlayerState player, CardDefinition card, string cardId)
+    {
+        var result = ImmutableArray.CreateBuilder<TriggerQueueEntry>();
+
+        foreach (var tag in card.Tags)
+        {
+            var condition = EffectToCondition(tag);
+            if (condition == null) continue;
+
+            var triggers = CollectWhenYouTriggers(player, condition.Value, cardId);
+            foreach (var trigger in triggers)
             {
-                var (newState, pending) = EffectExecutor.Execute(state, playerId, whenYou.Effect,
-                    triggeringCardId: triggeringCardId);
-                state = newState;
-                if (pending != null && state.PendingAction == null)
-                    state = state with { PendingAction = pending };
+                var inner = GetInnerEffect(trigger);
+                if (inner != null && IsInteractiveTrigger(inner))
+                    result.Add(trigger);
+            }
+        }
+
+        return result.ToImmutable();
+    }
+
+    /// <summary>
+    /// Fire only the non-interactive WhenYou triggers for a card's tags.
+    /// Called before presenting an ordering choice so immediate effects are resolved.
+    /// </summary>
+    public static GameState FireNonInteractiveWhenYouTriggers(
+        GameState state, int playerId, PlayerState player, CardDefinition card, string cardId)
+    {
+        // WhenAnyone triggers always fire immediately
+        foreach (var p in state.Players)
+        {
+            state = FireAnyoneTriggersForPlayer(state, p,
+                card.Tags.Select(t => EffectToCondition(t)).Where(c => c != null).Select(c => c!.Value),
+                cardId);
+        }
+
+        // Fire non-interactive WhenYou triggers
+        foreach (var tag in card.Tags)
+        {
+            var condition = EffectToCondition(tag);
+            if (condition == null) continue;
+
+            var triggers = CollectWhenYouTriggers(player, condition.Value, cardId);
+            foreach (var trigger in triggers)
+            {
+                var inner = GetInnerEffect(trigger);
+                if (inner != null && !IsInteractiveTrigger(inner))
+                {
+                    var (newState, _) = EffectExecutor.Execute(state, playerId, inner,
+                        triggeringCardId: trigger.TriggeringCardId);
+                    state = newState;
+                }
             }
         }
 
         return state;
     }
+
+    private static GameState FireAnyoneTriggersForPlayer(
+        GameState state, PlayerState player,
+        IEnumerable<TriggerCondition> conditions, string? triggeringCardId)
+    {
+        foreach (var condition in conditions)
+            state = FireAnyoneTriggersForPlayer(state, player, condition, triggeringCardId);
+        return state;
+    }
+
+    private static TriggerCondition? EffectToCondition(Tag tag) => tag switch
+    {
+        Tag.Building => TriggerCondition.PlayBuildingTag,
+        Tag.Space => TriggerCondition.PlaySpaceTag,
+        Tag.Science => TriggerCondition.PlayScienceTag,
+        Tag.Power => TriggerCondition.PlayPowerTag,
+        Tag.Jovian => TriggerCondition.PlayJovianTag,
+        Tag.Earth => TriggerCondition.PlayEarthTag,
+        Tag.Plant => TriggerCondition.PlayPlantTag,
+        Tag.Microbe => TriggerCondition.PlayMicrobeTag,
+        Tag.Animal => TriggerCondition.PlayAnimalTag,
+        Tag.City => TriggerCondition.PlayCityTag,
+        Tag.Event => TriggerCondition.PlayEventTag,
+        _ => null,
+    };
 }

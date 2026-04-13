@@ -1069,7 +1069,8 @@ public static class CardRegistry
             action: new CardAction(null, [new AddCardResourceEffect(CardResourceType.Animal, 1, "072")]));
 
         // 073: Mars University — Effect: when you play science tag, may discard to draw
-        // Complex triggered effect — deferred
+        SetEffects(builder, "073", ongoingEffects:
+            [new WhenYouEffect(TriggerCondition.PlayScienceTag, new MarsUniversityEffect())]);
 
         // Tested OK
         // 074: Viral Enhancers — Effect: when you play plant/microbe/animal, gain 1 plant or add 1 resource

@@ -127,6 +127,12 @@ public sealed record AddCardResourceEffect(
 public sealed record OlympusConferenceEffect(string CardId) : Effect;
 
 /// <summary>
+/// Mars University trigger: when the player plays a science tag, they may discard a card from hand
+/// to draw a new one. Optional — the player can decline.
+/// </summary>
+public sealed record MarsUniversityEffect : Effect;
+
+/// <summary>
 /// Viral Enhancers trigger: when the player plays a plant/microbe/animal tag, gain 1 plant.
 /// If the triggering card collects resources, the player may instead add 1 resource to that card.
 /// Requires triggeringCardId context from the trigger system.

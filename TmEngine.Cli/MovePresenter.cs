@@ -477,6 +477,33 @@ public class MovePresenter
                 move["cardId"] = cards[choice];
                 return move;
             }
+            case "MarsUniversity":
+            {
+                Console.WriteLine("Mars University: Discard a card to draw a new one, or 0 to skip.");
+                var hand = playerState.Hand;
+                for (int i = 0; i < hand.Count; i++)
+                    Console.WriteLine($"  {i + 1}. {CardName(hand[i])}");
+                Console.Write($"Choice (0-{hand.Count}): ");
+                int choice = int.Parse(Console.ReadLine()?.Trim() ?? "0");
+                if (choice >= 1 && choice <= hand.Count)
+                {
+                    var move = MakeMove("DiscardCards");
+                    move["cardIds"] = new JArray(hand[choice - 1]);
+                    return move;
+                }
+                return MakeMove("Pass");
+            }
+            case "ChooseTriggerOrder":
+            {
+                var descriptions = pending["descriptions"]?.ToObject<List<string>>() ?? new();
+                Console.WriteLine("Choose which triggered effect to resolve first:");
+                for (int i = 0; i < descriptions.Count; i++)
+                    Console.WriteLine($"  {i + 1}. {descriptions[i]}");
+                int choice = ReadChoice(descriptions.Count) - 1;
+                var move = MakeMove("ChooseEffectOrder");
+                move["effectIndex"] = choice;
+                return move;
+            }
             case "CopyProduction":
             {
                 var cards = pending["validCardIds"]?.ToObject<List<string>>() ?? new();
