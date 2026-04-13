@@ -205,6 +205,7 @@ public static class EffectExecutor
         PlayCardFromHandEffect => true,
         DiscardCardsEffect => true,
         DrawKeepEffect => true,
+        CopyProductionEffect => true,
         _ => false,
     };
 
@@ -226,6 +227,7 @@ public static class EffectExecutor
         ChangeResourceEffect e => e.Amount >= 0 ? $"Gain {e.Amount} {e.Resource}" : $"Lose {-e.Amount} {e.Resource}",
         DrawCardsEffect e => e.Count == 1 ? "Draw 1 card" : $"Draw {e.Count} cards",
         DrawKeepEffect e => $"Draw {e.Draw}, keep {e.Keep}",
+        CopyProductionEffect => "Copy production from a building card",
         DrawAndPlayOneEffect e => $"Draw {e.DrawCount} cards and play 1",
         RevealUntilTagEffect e => $"Reveal cards until {e.Count} {e.Tag} tag(s) found",
         ChooseEffect => "Choose one option",

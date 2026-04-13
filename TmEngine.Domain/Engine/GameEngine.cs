@@ -995,10 +995,24 @@ public static class GameEngine
         var (newState, pending) = EffectExecutor.ExecuteWithOrdering(state, move.PlayerId, entry.OnPlayEffects, move.CardId);
         state = newState;
 
-        // If on-play effects produced a pending, fire triggers immediately then set pending
+        // If on-play effects produced a pending, fire triggers then set pending.
+        // (We already checked for interactive triggers above and found none, so triggers
+        // should be non-interactive. But if one somehow sets a PendingAction, queue it.)
         if (pending != null)
         {
             state = TriggerSystem.FireCardTagTriggers(state, move.PlayerId, move.CardId, card);
+            if (state.PendingAction != null)
+            {
+                // A trigger unexpectedly produced a pending — queue on-play pending for after
+                var triggerPending = state.PendingAction;
+                state = state with { PendingAction = null };
+                // The trigger pending resolves first, then the on-play pending resumes
+                // Store on-play as a deferred entry in the trigger queue
+                var onPlayEntry = new TriggerQueueEntry(move.CardId, Trigger: null, TriggeringCardId: null)
+                    { DeferredEffectIndices = EffectExecutor.GetOrderableIndices(entry.OnPlayEffects) };
+                state = state with { TriggerQueue = [onPlayEntry] };
+                return state with { PendingAction = triggerPending };
+            }
             return state with { PendingAction = pending };
         }
 
