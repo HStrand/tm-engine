@@ -397,6 +397,12 @@ public sealed record ChangeProductionPerCityEffect(ResourceType Resource, int Am
 public sealed record ChangeResourcePerCityEffect(ResourceType Resource, int AmountPerCity, bool OnMarsOnly = false) : Effect;
 
 /// <summary>
+/// Gain resources based on the total number of events played by all players.
+/// E.g., Media Archives: gain 1 MC per event ever played by all players.
+/// </summary>
+public sealed record GainResourcePerAllEventsEffect(ResourceType Resource, int AmountPerEvent) : Effect;
+
+/// <summary>
 /// Claim a non-reserved land hex — only this player may place tiles there.
 /// The player chooses the hex (triggers a pending action).
 /// </summary>

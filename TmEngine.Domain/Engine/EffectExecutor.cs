@@ -60,6 +60,7 @@ public static class EffectExecutor
             ChangeProductionPerOpponentTagEffect e => (ApplyChangeProductionPerOpponentTag(state, playerId, e), null),
             ChangeProductionPerCityEffect e => (ApplyChangeProductionPerCity(state, playerId, e), null),
             ChangeResourcePerCityEffect e => (ApplyChangeResourcePerCity(state, playerId, e), null),
+            GainResourcePerAllEventsEffect e => (ApplyGainResourcePerAllEvents(state, playerId, e), null),
             ChangeTRPerTagEffect e => (ApplyChangeTRPerTag(state, playerId, e), null),
             ConvertProductionEffect e => ApplyConvertProduction(state, playerId, e, sourceCardId),
             ConvertResourceEffect e => ApplyConvertResource(state, playerId, e, sourceCardId),
@@ -747,6 +748,20 @@ public static class EffectExecutor
                       + (e.OnMarsOnly ? 0 : state.OffMapTiles.Count(t => t.Type == TileType.City));
 
         var totalAmount = cityCount * e.AmountPerCity;
+        if (totalAmount == 0)
+            return state;
+
+        return state.UpdatePlayer(playerId, p => p with
+        {
+            Resources = p.Resources.Add(e.Resource, totalAmount),
+        });
+    }
+
+    private static GameState ApplyGainResourcePerAllEvents(GameState state, int playerId, GainResourcePerAllEventsEffect e)
+    {
+        var eventCount = state.Players.Sum(p => p.PlayedEvents.Count);
+        var totalAmount = eventCount * e.AmountPerEvent;
+
         if (totalAmount == 0)
             return state;
 

@@ -1282,8 +1282,10 @@ public static class CardRegistry
         SetEffects(builder, "106", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.MegaCredits, 3)]);
 
+        // Tested OK
         // 107: Media Archives — Gain 1 MC per event ever played by all players
-        // Dynamic count — deferred
+        SetEffects(builder, "107", onPlayEffects:
+            [new GainResourcePerAllEventsEffect(ResourceType.MegaCredits, 1)]);
 
         // Tested OK
         // 108: Open City — +2 plants, place city, -1 energy prod, +4 MC prod
