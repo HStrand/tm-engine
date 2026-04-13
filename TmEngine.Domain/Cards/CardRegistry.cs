@@ -1072,7 +1072,12 @@ public static class CardRegistry
         // Complex triggered effect — deferred
 
         // 074: Viral Enhancers — Effect: when you play plant/microbe/animal, gain 1 plant or add 1 resource
-        // Complex triggered effect — deferred
+        SetEffects(builder, "074", ongoingEffects:
+        [
+            new WhenYouEffect(TriggerCondition.PlayPlantTag, new ViralEnhancersEffect()),
+            new WhenYouEffect(TriggerCondition.PlayMicrobeTag, new ViralEnhancersEffect()),
+            new WhenYouEffect(TriggerCondition.PlayAnimalTag, new ViralEnhancersEffect()),
+        ]);
 
         // Tested OK
         // 075: Towing a Comet — +2 plants, raise O2 1, place ocean

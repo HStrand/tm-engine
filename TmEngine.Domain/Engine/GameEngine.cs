@@ -594,7 +594,7 @@ public static class GameEngine
             {
                 var condition = TagToTriggerCondition(tag);
                 if (condition != null)
-                    state = TriggerSystem.FireTrigger(state, playerId, condition.Value);
+                    state = TriggerSystem.FireTrigger(state, playerId, condition.Value, move.PreludeId);
             }
 
             if (pending != null)
@@ -954,12 +954,12 @@ public static class GameEngine
         {
             var condition = TagToTriggerCondition(tag);
             if (condition != null)
-                state = TriggerSystem.FireTrigger(state, move.PlayerId, condition.Value);
+                state = TriggerSystem.FireTrigger(state, move.PlayerId, condition.Value, move.CardId);
         }
 
         // Compound tag triggers
         if (card.Tags.Contains(Tag.Space) && card.Tags.Contains(Tag.Event))
-            state = TriggerSystem.FireTrigger(state, move.PlayerId, TriggerCondition.PlaySpaceEventTag);
+            state = TriggerSystem.FireTrigger(state, move.PlayerId, TriggerCondition.PlaySpaceEventTag, move.CardId);
 
         if (pending != null)
             return state with { PendingAction = pending };
@@ -1142,6 +1142,35 @@ public static class GameEngine
 
         if (move.OptionIndex < 0 || move.OptionIndex >= pending.Options.Length)
             return state;
+
+        // Viral Enhancers: option 0 = gain 1 plant, option 1 = add 1 resource to triggering card
+        if (pending.Description == "Viral Enhancers:" && pending.SourceCardId != null)
+        {
+            if (move.OptionIndex == 0)
+            {
+                state = state.UpdatePlayer(move.PlayerId, p => p with
+                {
+                    Resources = p.Resources.Add(ResourceType.Plants, 1),
+                });
+            }
+            else
+            {
+                // Find the resource type that the triggering card collects
+                foreach (var crt in Enum.GetValues<CardResourceType>())
+                {
+                    if (EffectExecutor.CardHasResourceType(pending.SourceCardId, crt))
+                    {
+                        state = state.UpdatePlayer(move.PlayerId, p =>
+                        {
+                            var current = p.CardResources.GetValueOrDefault(pending.SourceCardId, 0);
+                            return p with { CardResources = p.CardResources.SetItem(pending.SourceCardId, current + 1) };
+                        });
+                        break;
+                    }
+                }
+            }
+            return state;
+        }
 
         // Try to find a matching effect on the source card
         if (pending.SourceCardId != null && CardRegistry.TryGet(pending.SourceCardId, out var entry))

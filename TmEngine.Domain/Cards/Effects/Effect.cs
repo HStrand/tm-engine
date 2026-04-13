@@ -126,6 +126,13 @@ public sealed record AddCardResourceEffect(
 /// </summary>
 public sealed record OlympusConferenceEffect(string CardId) : Effect;
 
+/// <summary>
+/// Viral Enhancers trigger: when the player plays a plant/microbe/animal tag, gain 1 plant.
+/// If the triggering card collects resources, the player may instead add 1 resource to that card.
+/// Requires triggeringCardId context from the trigger system.
+/// </summary>
+public sealed record ViralEnhancersEffect : Effect;
+
 /// <summary>Add 1 resource to any card that already has at least 1 resource (any type).
 /// E.g., CEO's Favorite Project. No-op if no cards have resources.</summary>
 public sealed record AddResourceToAnyCardEffect : Effect;

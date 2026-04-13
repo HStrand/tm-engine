@@ -16,7 +16,8 @@ public static class EffectExecutor
     /// If a pending action is returned, the remaining effects must be queued for later.
     /// </summary>
     public static (GameState State, PendingAction? Pending) Execute(
-        GameState state, int playerId, Effect effect, string? sourceCardId = null)
+        GameState state, int playerId, Effect effect, string? sourceCardId = null,
+        string? triggeringCardId = null)
     {
         return effect switch
         {
@@ -45,6 +46,7 @@ public static class EffectExecutor
             AddCardResourceEffect e => ApplyAddCardResource(state, playerId, e),
             AddResourceToAnyCardEffect => ApplyAddResourceToAnyCard(state, playerId),
             OlympusConferenceEffect e => ApplyOlympusConference(state, playerId, e),
+            ViralEnhancersEffect => ApplyViralEnhancers(state, playerId, triggeringCardId),
             RemoveCardResourceEffect e => ApplyRemoveCardResource(state, playerId, e, sourceCardId),
 
             // TR
@@ -79,7 +81,7 @@ public static class EffectExecutor
             // They take effect by being present in OngoingEffects and queried by RequirementChecker.
             RequirementModifierEffect or SteelValueModifierEffect or TitaniumValueModifierEffect
                 or TagDiscountEffect or GlobalDiscountEffect or PlantConversionModifierEffect
-                or HeatAsPaymentEffect or PowerPlantDiscountEffect
+                or HeatAsPaymentEffect or CardResourceAsPaymentEffect or PowerPlantDiscountEffect
                 or HighCostRebateEffect or VPCardRebateEffect => (state, null),
 
             // Triggered effects are registered, not executed immediately
@@ -527,6 +529,43 @@ public static class EffectExecutor
             "Remove 1 science resource to draw a card");
 
         return (state, new ChooseOptionPending("Olympus Conference:", options, SourceCardId: e.CardId));
+    }
+
+    private static (GameState, PendingAction?) ApplyViralEnhancers(
+        GameState state, int playerId, string? triggeringCardId)
+    {
+        // Check if the triggering card collects any resource type
+        CardResourceType? resourceType = null;
+        if (triggeringCardId != null)
+        {
+            foreach (var crt in Enum.GetValues<CardResourceType>())
+            {
+                if (CardHasResourceType(triggeringCardId, crt))
+                {
+                    resourceType = crt;
+                    break;
+                }
+            }
+        }
+
+        if (resourceType == null)
+        {
+            // Card doesn't collect resources — just gain 1 plant
+            return (state.UpdatePlayer(playerId, p => p with
+            {
+                Resources = p.Resources.Add(ResourceType.Plants, 1),
+            }), null);
+        }
+
+        // Card collects resources — player chooses: gain 1 plant or add 1 resource to that card
+        var cardName = CardRegistry.TryGet(triggeringCardId!, out var triggeringEntry)
+            ? triggeringEntry.Definition.Name : triggeringCardId!;
+        var options = ImmutableArray.Create(
+            "Gain 1 plant",
+            $"Add 1 {resourceType.Value.ToString().ToLowerInvariant()} to {cardName}");
+
+        return (state, new ChooseOptionPending("Viral Enhancers:", options,
+            SourceCardId: triggeringCardId));
     }
 
     private static (GameState, PendingAction?) ApplyAddCardResource(

@@ -794,6 +794,10 @@ public static class MoveValidator
         if (state.PendingAction is not ChooseOptionPending pending || pending.SourceCardId == null)
             return null;
 
+        // Viral Enhancers choices are always valid (gain plant or add resource)
+        if (pending.Description == "Viral Enhancers:")
+            return null;
+
         if (!CardRegistry.TryGet(pending.SourceCardId, out var entry))
             return null;
 
