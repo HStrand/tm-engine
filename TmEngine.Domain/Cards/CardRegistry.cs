@@ -826,8 +826,14 @@ public static class CardRegistry
         // 036: Release of Inert Gases — +2 TR
         SetEffects(builder, "036", onPlayEffects: [new ChangeTREffect(2)]);
 
+        // Tested OK
         // 037: Nitrogen-Rich Asteroid — +2 TR, +1 temp, +1 plant prod or +4 if 3 plant tags
-        // Complex conditional — deferred
+        SetEffects(builder, "037", onPlayEffects:
+        [
+            new ChangeTREffect(2),
+            new RaiseTemperatureEffect(),
+            new ChangeProductionIfTagThresholdEffect(ResourceType.Plants, Tag.Plant, TagThreshold: 3, BaseAmount: 1, BonusAmount: 4),
+        ]);
 
         // Tested OK
         // 038: Rover Construction — Effect: when any city is placed, gain 2 MC
@@ -1300,7 +1306,6 @@ public static class CardRegistry
         SetEffects(builder, "110",
             onPlayEffects: [new ChangeProductionEffect(ResourceType.MegaCredits, -1)],
             action: new CardAction(null, [new DrawKeepEffect(1, 1, CostPerCard: 3)]));
-		// Action deferred — complex
 
         // Tested OK
 		// 111: Business Contacts — Look at top 4 cards, keep 2 discard 2
@@ -1942,8 +1947,8 @@ public static class CardRegistry
         // Temporary requirement modifier — deferred
 
         // 207: Medical Lab — +1 MC prod per 2 building tags including this
-        // Dynamic: floor(building_tags / 2) MC prod
-        // Deferred — needs "per N tags" variant
+        SetEffects(builder, "207", onPlayEffects:
+            [new ChangeProductionPerTagEffect(ResourceType.MegaCredits, Tag.Building, 1, TagsPer: 2)]);
 
         // Tested OK
         // 208: AI Central — Action: draw 2 cards. -1 energy prod

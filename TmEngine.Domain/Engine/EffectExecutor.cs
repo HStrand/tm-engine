@@ -56,6 +56,7 @@ public static class EffectExecutor
             RevealUntilTagEffect e => (ApplyRevealUntilTag(state, playerId, e), null),
             PlaceOffMapCityEffect e => ApplyPlaceOffMapCity(state, playerId, e),
             ChangeProductionPerTagEffect e => (ApplyChangeProductionPerTag(state, playerId, e), null),
+            ChangeProductionIfTagThresholdEffect e => (ApplyChangeProductionIfTagThreshold(state, playerId, e), null),
             ChangeProductionPerOpponentTagEffect e => (ApplyChangeProductionPerOpponentTag(state, playerId, e), null),
             ChangeProductionPerCityEffect e => (ApplyChangeProductionPerCity(state, playerId, e), null),
             ChangeResourcePerCityEffect e => (ApplyChangeResourcePerCity(state, playerId, e), null),
@@ -693,6 +694,19 @@ public static class EffectExecutor
         return state.UpdatePlayer(playerId, p => p with
         {
             Production = p.Production.Add(e.Resource, totalAmount),
+        });
+    }
+
+    private static GameState ApplyChangeProductionIfTagThreshold(GameState state, int playerId, ChangeProductionIfTagThresholdEffect e)
+    {
+        var player = state.GetPlayer(playerId);
+        var tagCount = player.CountTag(e.Tag, CardRegistry.GetTags)
+                     + player.CountTag(Tag.Wild, CardRegistry.GetTags);
+        var amount = tagCount >= e.TagThreshold ? e.BonusAmount : e.BaseAmount;
+
+        return state.UpdatePlayer(playerId, p => p with
+        {
+            Production = p.Production.Add(e.Resource, amount),
         });
     }
 

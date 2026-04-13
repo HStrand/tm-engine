@@ -351,6 +351,14 @@ public sealed record RevealUntilTagEffect(Tag Tag, int Count) : Effect;
 public sealed record PlaceOffMapCityEffect(string CityName) : Effect;
 
 /// <summary>
+/// Change production conditionally based on whether the player has at least a threshold number of tags.
+/// If the player has >= TagThreshold of the specified tag (including wild), gain BonusAmount; otherwise gain BaseAmount.
+/// E.g., Nitrogen-Rich Asteroid: +1 plant production, or +4 if player has 3+ Plant tags.
+/// </summary>
+public sealed record ChangeProductionIfTagThresholdEffect(
+    ResourceType Resource, Tag Tag, int TagThreshold, int BaseAmount, int BonusAmount) : Effect;
+
+/// <summary>
 /// Change production based on the number of tags the player has.
 /// E.g., Miranda Resort: +1 MC production per Earth tag.
 /// Worms: +1 plant production per 2 Microbe tags (TagsPer = 2).
