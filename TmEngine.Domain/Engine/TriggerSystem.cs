@@ -115,11 +115,19 @@ public static class TriggerSystem
 
         foreach (var trigger in triggers)
         {
-            var innerEffect = GetInnerEffect(trigger);
-            if (innerEffect != null && IsInteractiveTrigger(innerEffect))
+            if (trigger.IsOnPlayEntry)
+            {
+                // On-play entries are always interactive (they produce pending actions)
                 interactive.Add(trigger);
+            }
             else
-                immediate.Add(trigger);
+            {
+                var innerEffect = GetInnerEffect(trigger);
+                if (innerEffect != null && IsInteractiveTrigger(innerEffect))
+                    interactive.Add(trigger);
+                else
+                    immediate.Add(trigger);
+            }
         }
 
         // Execute all immediate triggers
@@ -139,6 +147,17 @@ public static class TriggerSystem
         if (interactive.Count == 1)
         {
             var trigger = interactive[0];
+
+            // On-play entry: re-execute deferred on-play effects
+            if (trigger.IsOnPlayEntry)
+            {
+                var (s, p) = ExecuteOnPlayEntry(state, playerId, trigger);
+                state = s;
+                if (p != null && state.PendingAction == null)
+                    state = state with { PendingAction = p };
+                return state;
+            }
+
             var innerEffect = GetInnerEffect(trigger)!;
             var (newState, pending) = EffectExecutor.Execute(state, playerId, innerEffect,
                 triggeringCardId: trigger.TriggeringCardId);
@@ -178,6 +197,21 @@ public static class TriggerSystem
         var descriptions = interactiveArr.Select(t => DescribeTriggerEntry(t)).ToImmutableArray();
         state = state with { PendingAction = new ChooseTriggerOrderPending(interactiveArr, descriptions) };
         return state;
+    }
+
+    private static (GameState, PendingAction?) ExecuteOnPlayEntry(
+        GameState state, int playerId, TriggerQueueEntry entry)
+    {
+        if (!CardRegistry.TryGet(entry.OwnerCardId, out var cardEntry))
+            return (state, null);
+
+        var effects = cardEntry.OnPlayEffects;
+        var indices = entry.DeferredEffectIndices;
+
+        if (indices.Length == 0)
+            return (state, null);
+
+        return EffectExecutor.ExecuteSequential(state, playerId, effects, indices, entry.OwnerCardId);
     }
 
     private static Effect? GetInnerEffect(TriggerQueueEntry entry)

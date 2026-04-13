@@ -366,6 +366,61 @@ public class GameEngineTests
         Assert.Equal(initialMC - 1 + 2, newState.Players[0].Resources.MegaCredits);
     }
 
+    [Fact]
+    public void MarsUniversity_ThenInventionContest_BothResolve()
+    {
+        // Playing Invention Contest (192, Science+Event, DrawKeep 3/1) with Mars University (073) in play.
+        // The player should get a trigger ordering choice, pick Mars University first,
+        // cycle a card, and then the Invention Contest DrawKeep should still fire.
+        var state = CreateTestGame();
+
+        // Stock the draw pile so both Mars U cycle and DrawKeep have cards to draw
+        state = state with { DrawPile = ["card_a", "card_b", "card_c", "card_d", "card_e"] };
+
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = p.Hand.Add("192").Add("036").Add("001"), // Invention Contest + fodder cards
+            PlayedCards = p.PlayedCards.Add("073"), // Mars University in play
+        });
+
+        // Step 1: Play Invention Contest — should get ChooseTriggerOrderPending
+        var (state1, result1) = GameEngine.Apply(state,
+            new PlayCardMove(0, "192", new PaymentInfo(2, 0, 0, 0)));
+        Assert.True(result1.IsSuccess, $"Step 1 failed: {result1}");
+        Assert.IsType<ChooseTriggerOrderPending>(state1.PendingAction);
+
+        var triggerOrder = (ChooseTriggerOrderPending)state1.PendingAction!;
+        // Find Mars University entry (not the on-play entry)
+        var marsUIndex = triggerOrder.Triggers.IndexOf(
+            triggerOrder.Triggers.First(t => !t.IsOnPlayEntry));
+
+        // Step 2: Choose Mars University first
+        var (state2, result2) = GameEngine.Apply(state1,
+            new ChooseEffectOrderMove(0, marsUIndex));
+        Assert.True(result2.IsSuccess, $"Step 2 failed: {result2}");
+        Assert.IsType<MarsUniversityPending>(state2.PendingAction);
+
+        // Step 3: Cycle — discard "036", draw "card_a" from top of draw pile
+        var handBefore = state2.GetPlayer(0).Hand;
+        Assert.Contains("036", handBefore);
+
+        var (state3, result3) = GameEngine.Apply(state2,
+            new DiscardCardsMove(0, ["036"]));
+        Assert.True(result3.IsSuccess, $"Step 3 failed: {result3}");
+
+        // Verify the cycle happened: "036" gone, "card_a" drawn
+        var handAfter = state3.GetPlayer(0).Hand;
+        Assert.DoesNotContain("036", handAfter);
+        Assert.Contains("card_a", handAfter);
+
+        // Step 4: The Invention Contest DrawKeep should now fire
+        // DrawKeep(3, 1) draws next 3 cards (card_b, card_c, card_d)
+        Assert.IsType<DrawKeepPending>(state3.PendingAction);
+        var drawKeep = (DrawKeepPending)state3.PendingAction!;
+        Assert.Equal(3, drawKeep.DrawnCardIds.Length);
+        Assert.Equal("card_b", drawKeep.DrawnCardIds[0]);
+    }
+
     // ── Milestones & Awards ────────────────────────────────────
 
     [Fact]
