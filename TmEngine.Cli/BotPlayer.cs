@@ -105,17 +105,13 @@ public class BotPlayer
                     c.EffectiveCost, c.CanUseSteel, c.CanUseTitanium, c.CanUseHeat,
                     botState.Resources.MegaCredits, botState.Resources.Steel,
                     botState.Resources.Titanium, botState.Resources.Heat,
-                    c.SteelValue, c.TitaniumValue);
+                    c.SteelValue, c.TitaniumValue,
+                    c.CardResourcePayments.Count > 0 ? c.CardResourcePayments : null,
+                    c.CardResourcePayments.Count > 0 ? botState.CardResources : null);
 
                 var move = MakeMove("PlayCard");
                 move["cardId"] = c.CardId;
-                move["payment"] = new JObject
-                {
-                    ["megaCredits"] = payment.MegaCredits,
-                    ["steel"] = payment.Steel,
-                    ["titanium"] = payment.Titanium,
-                    ["heat"] = payment.Heat,
-                };
+                move["payment"] = BuildPaymentJson(payment);
                 return (move, $"plays {CardName(c.CardId)} (cost {c.EffectiveCost})");
             });
         }
@@ -397,4 +393,23 @@ public class BotPlayer
 
     public string CardName(string id) =>
         _cardNames.GetValueOrDefault(id, id);
+
+    protected static JObject BuildPaymentJson(PaymentInfo payment)
+    {
+        var obj = new JObject
+        {
+            ["megaCredits"] = payment.MegaCredits,
+            ["steel"] = payment.Steel,
+            ["titanium"] = payment.Titanium,
+            ["heat"] = payment.Heat,
+        };
+        if (payment.CardResources != null && payment.CardResources.Count > 0)
+        {
+            var cr = new JObject();
+            foreach (var (cardId, count) in payment.CardResources)
+                cr[cardId] = count;
+            obj["cardResources"] = cr;
+        }
+        return obj;
+    }
 }

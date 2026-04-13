@@ -237,6 +237,8 @@ public class PlayableCardDto
     public bool CanUseHeat { get; set; }
     public int SteelValue { get; set; } = 2;
     public int TitaniumValue { get; set; } = 3;
+    /// <summary>Source card ID → MC value per resource, for card resources usable as payment.</summary>
+    public Dictionary<string, int> CardResourcePayments { get; set; } = new();
 }
 
 public class StandardProjectOptionDto

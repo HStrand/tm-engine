@@ -70,7 +70,9 @@ public sealed record PlayableCard(
     bool CanUseTitanium,
     bool CanUseHeat,
     int SteelValue,
-    int TitaniumValue);
+    int TitaniumValue,
+    /// <summary>Source card ID → MC value per resource, for card resources usable as payment.</summary>
+    ImmutableDictionary<string, int> CardResourcePayments);
 
 public sealed record StandardProjectOption(
     StandardProject Project,
@@ -346,16 +348,23 @@ public static class LegalMoveGenerator
             bool canUseSteel = card.Tags.Contains(Tag.Building);
             bool canUseTitanium = card.Tags.Contains(Tag.Space);
             bool canUseHeat = RequirementChecker.CanUseHeatAsPayment(player);
+            var cardResourcePayments = RequirementChecker.GetCardResourcePaymentOptions(player, card.Tags);
 
             int maxPayable = player.Resources.MegaCredits
                 + (canUseSteel ? player.Resources.Steel * steelValue : 0)
                 + (canUseTitanium ? player.Resources.Titanium * titaniumValue : 0)
                 + (canUseHeat ? player.Resources.Heat : 0);
 
+            foreach (var (crCardId, valuePerResource) in cardResourcePayments)
+            {
+                if (player.CardResources.TryGetValue(crCardId, out var resourceCount))
+                    maxPayable += resourceCount * valuePerResource;
+            }
+
             if (maxPayable < effectiveCost)
                 continue;
 
-            result.Add(new PlayableCard(cardId, effectiveCost, canUseSteel, canUseTitanium, canUseHeat, steelValue, titaniumValue));
+            result.Add(new PlayableCard(cardId, effectiveCost, canUseSteel, canUseTitanium, canUseHeat, steelValue, titaniumValue, cardResourcePayments));
         }
 
         return result.ToImmutable();

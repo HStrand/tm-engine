@@ -1,6 +1,8 @@
 namespace TmEngine.Cli;
 
-public record PaymentInfo(int MegaCredits, int Steel, int Titanium, int Heat);
+public record PaymentInfo(
+    int MegaCredits, int Steel, int Titanium, int Heat,
+    Dictionary<string, int>? CardResources = null);
 
 public static class PaymentCalculator
 {
@@ -8,10 +10,13 @@ public static class PaymentCalculator
         int effectiveCost,
         bool canUseSteel, bool canUseTitanium, bool canUseHeat,
         int availableMC, int availableSteel, int availableTitanium, int availableHeat,
-        int steelValue = 2, int titaniumValue = 3)
+        int steelValue = 2, int titaniumValue = 3,
+        Dictionary<string, int>? cardResourcePayments = null,
+        Dictionary<string, int>? availableCardResources = null)
     {
         int remaining = effectiveCost;
         int titaniumUsed = 0, steelUsed = 0, heatUsed = 0;
+        Dictionary<string, int>? cardResourcesUsed = null;
 
         if (canUseTitanium && availableTitanium > 0)
         {
@@ -25,6 +30,25 @@ public static class PaymentCalculator
             remaining -= steelUsed * steelValue;
         }
 
+        // Use card resources (e.g., Psychrophiles microbes) before heat/MC
+        if (cardResourcePayments != null && availableCardResources != null)
+        {
+            foreach (var (cardId, valuePerResource) in cardResourcePayments)
+            {
+                if (remaining <= 0) break;
+                if (!availableCardResources.TryGetValue(cardId, out var available) || available <= 0)
+                    continue;
+
+                var needed = Math.Min(available, remaining / valuePerResource);
+                if (needed > 0)
+                {
+                    cardResourcesUsed ??= new Dictionary<string, int>();
+                    cardResourcesUsed[cardId] = needed;
+                    remaining -= needed * valuePerResource;
+                }
+            }
+        }
+
         // Use MC first, then heat only for what MC can't cover
         if (canUseHeat && availableHeat > 0)
         {
@@ -33,6 +57,6 @@ public static class PaymentCalculator
             remaining -= heatUsed;
         }
 
-        return new PaymentInfo(Math.Max(0, remaining), steelUsed, titaniumUsed, heatUsed);
+        return new PaymentInfo(Math.Max(0, remaining), steelUsed, titaniumUsed, heatUsed, cardResourcesUsed);
     }
 }

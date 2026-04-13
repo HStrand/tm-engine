@@ -114,17 +114,13 @@ public class TargetedBotPlayer : BotPlayer
                 targetPlayable.CanUseHeat,
                 botState.Resources.MegaCredits, botState.Resources.Steel,
                 botState.Resources.Titanium, botState.Resources.Heat,
-                targetPlayable.SteelValue, targetPlayable.TitaniumValue);
+                targetPlayable.SteelValue, targetPlayable.TitaniumValue,
+                targetPlayable.CardResourcePayments.Count > 0 ? targetPlayable.CardResourcePayments : null,
+                targetPlayable.CardResourcePayments.Count > 0 ? botState.CardResources : null);
 
             var move = MakeMove("PlayCard");
             move["cardId"] = _targetCardId;
-            move["payment"] = new JObject
-            {
-                ["megaCredits"] = payment.MegaCredits,
-                ["steel"] = payment.Steel,
-                ["titanium"] = payment.Titanium,
-                ["heat"] = payment.Heat,
-            };
+            move["payment"] = BuildPaymentJson(payment);
             _targetCardPlayed = true;
             return (move, $"*** PLAYS TARGET CARD: {CardName(_targetCardId)} (cost {targetPlayable.EffectiveCost}) ***");
         }

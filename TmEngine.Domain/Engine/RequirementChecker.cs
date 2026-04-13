@@ -295,6 +295,40 @@ public static class RequirementChecker
     }
 
     /// <summary>
+    /// Get card-resource payment options available to a player for a card with the given tags.
+    /// Returns a dictionary of source card ID → MC value per resource, for cards that have
+    /// resources and a CardResourceAsPaymentEffect matching one of the target card's tags.
+    /// </summary>
+    public static ImmutableDictionary<string, int> GetCardResourcePaymentOptions(
+        PlayerState player, ImmutableArray<Tag> targetCardTags)
+    {
+        var result = ImmutableDictionary<string, int>.Empty;
+
+        void CheckEntry(CardEntry entry)
+        {
+            foreach (var effect in entry.OngoingEffects)
+            {
+                if (effect is CardResourceAsPaymentEffect crp
+                    && targetCardTags.Contains(crp.RequiredTag)
+                    && player.CardResources.TryGetValue(crp.CardId, out var count)
+                    && count > 0)
+                {
+                    result = result.SetItem(crp.CardId, crp.ValuePerResource);
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(player.CorporationId) && CardRegistry.TryGet(player.CorporationId, out var corp))
+            CheckEntry(corp);
+
+        foreach (var cardId in player.PlayedCards)
+            if (CardRegistry.TryGet(cardId, out var card))
+                CheckEntry(card);
+
+        return result;
+    }
+
+    /// <summary>
     /// Get the MC rebate for spending on a card or standard project with the given printed cost.
     /// Checks HighCostRebateEffect on corporation and played cards (Credicor).
     /// </summary>

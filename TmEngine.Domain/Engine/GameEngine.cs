@@ -888,6 +888,19 @@ public static class GameEngine
         var effectiveCost = Math.Max(0, card.Cost - discount);
 
         // Deduct resources and consume next-card discount
+        var cardResources = state.GetPlayer(move.PlayerId).CardResources;
+        if (move.Payment.CardResources != null)
+        {
+            foreach (var (sourceCardId, count) in move.Payment.CardResources)
+            {
+                if (count > 0)
+                {
+                    var current = cardResources.GetValueOrDefault(sourceCardId, 0);
+                    cardResources = cardResources.SetItem(sourceCardId, current - count);
+                }
+            }
+        }
+
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
             Resources = new ResourceSet(
@@ -897,6 +910,7 @@ public static class GameEngine
                 Plants: p.Resources.Plants,
                 Energy: p.Resources.Energy,
                 Heat: p.Resources.Heat - move.Payment.Heat),
+            CardResources = cardResources,
             Hand = p.Hand.Remove(move.CardId),
             // Only count as an action if this is a normal action phase play
             ActionsThisTurn = isFromPending ? p.ActionsThisTurn : p.ActionsThisTurn + 1,

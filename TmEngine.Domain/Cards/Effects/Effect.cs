@@ -315,6 +315,16 @@ public sealed record PlantConversionModifierEffect(int NewCost) : Effect;
 public sealed record HeatAsPaymentEffect : Effect;
 
 /// <summary>
+/// Card resources on this card can be used as MC to pay for cards with a specific tag.
+/// E.g., Psychrophiles: microbes here may be used as 2 MC each when paying for Plant-tagged cards.
+/// </summary>
+public sealed record CardResourceAsPaymentEffect(
+    string CardId,
+    CardResourceType ResourceType,
+    Tag RequiredTag,
+    int ValuePerResource) : Effect;
+
+/// <summary>
 /// Reduces the cost of the Power Plant standard project (Thorgate corporation).
 /// </summary>
 public sealed record PowerPlantDiscountEffect(int Discount) : Effect;

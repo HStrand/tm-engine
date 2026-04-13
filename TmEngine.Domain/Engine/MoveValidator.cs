@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using TmEngine.Domain.Cards;
 using TmEngine.Domain.Cards.Effects;
 using TmEngine.Domain.Models;
@@ -381,6 +382,12 @@ public static class MoveValidator
         if (payment.Heat > 0 && !RequirementChecker.CanUseHeatAsPayment(player))
             return "Cannot use heat to pay for cards (requires Helion corporation).";
 
+        // Validate card resource payments
+        var cardResourcePaymentOptions = RequirementChecker.GetCardResourcePaymentOptions(player, card.Tags);
+        var cardResourceError = ValidateCardResourcePayment(player, payment, cardResourcePaymentOptions);
+        if (cardResourceError != null)
+            return cardResourceError;
+
         // Check player has the resources they're trying to spend
         if (payment.MegaCredits > player.Resources.MegaCredits)
             return $"Not enough MC: have {player.Resources.MegaCredits}, trying to spend {payment.MegaCredits}.";
@@ -396,7 +403,7 @@ public static class MoveValidator
         var effectiveCost = Math.Max(0, card.Cost - discount);
         var steelValue = RequirementChecker.GetSteelValue(player);
         var titaniumValue = RequirementChecker.GetTitaniumValue(player);
-        var totalValue = payment.TotalValue(steelValue, titaniumValue);
+        var totalValue = payment.TotalValue(steelValue, titaniumValue, cardResourcePaymentOptions);
 
         if (totalValue < effectiveCost)
             return $"Payment ({totalValue} MC value) does not cover card cost ({effectiveCost} MC).";
@@ -728,6 +735,11 @@ public static class MoveValidator
         if (payment.Heat > 0 && !RequirementChecker.CanUseHeatAsPayment(player))
             return "Cannot use heat to pay for cards.";
 
+        var cardResourcePaymentOptions = RequirementChecker.GetCardResourcePaymentOptions(player, card.Tags);
+        var cardResourceError = ValidateCardResourcePayment(player, payment, cardResourcePaymentOptions);
+        if (cardResourceError != null)
+            return cardResourceError;
+
         if (payment.MegaCredits > player.Resources.MegaCredits)
             return $"Not enough MC.";
         if (payment.Steel > player.Resources.Steel)
@@ -741,10 +753,35 @@ public static class MoveValidator
         var effectiveCost = Math.Max(0, card.Cost - discount);
         var steelValue = RequirementChecker.GetSteelValue(player);
         var titaniumValue = RequirementChecker.GetTitaniumValue(player);
-        var totalValue = payment.TotalValue(steelValue, titaniumValue);
+        var totalValue = payment.TotalValue(steelValue, titaniumValue, cardResourcePaymentOptions);
 
         if (totalValue < effectiveCost)
             return $"Payment ({totalValue} MC value) does not cover card cost ({effectiveCost} MC).";
+
+        return null;
+    }
+
+    /// <summary>
+    /// Validate card resource payment: each source card must be a valid payment option and
+    /// the player must have enough resources on that card.
+    /// </summary>
+    private static string? ValidateCardResourcePayment(
+        PlayerState player, PaymentInfo payment, ImmutableDictionary<string, int> validOptions)
+    {
+        if (payment.CardResources == null)
+            return null;
+
+        foreach (var (cardId, count) in payment.CardResources)
+        {
+            if (count <= 0)
+                continue;
+
+            if (!validOptions.ContainsKey(cardId))
+                return $"Card {cardId} cannot be used as payment for this card.";
+
+            if (!player.CardResources.TryGetValue(cardId, out var available) || count > available)
+                return $"Not enough resources on card {cardId}: have {available}, trying to spend {count}.";
+        }
 
         return null;
     }

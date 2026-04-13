@@ -1974,11 +1974,13 @@ public static class CardRegistry
         // P38: Martian Survey — Draw 2 cards
         SetEffects(builder, "P38", onPlayEffects: [new DrawCardsEffect(2)]);
 
-        // P39: Psychrophiles — Action: add 1 microbe. Microbes here can pay for plant cards
-        // Complex payment mechanic — action implemented, payment deferred
+        // Tested OK
+        // P39: Psychrophiles — Action: add 1 microbe. Microbes here can pay for plant cards (2 MC each)
         SetEffects(builder, "P39",
+            ongoingEffects: [new CardResourceAsPaymentEffect("P39", CardResourceType.Microbe, Tag.Plant, ValuePerResource: 2)],
             action: new CardAction(null, [new AddCardResourceEffect(CardResourceType.Microbe, 1, "P39")]));
 
+        // Tested OK
         // P40: Research Coordination — Wild tag only, no on-play effects.
         SetEffects(builder, "P40");
 
@@ -1986,6 +1988,7 @@ public static class CardRegistry
         // P41: SF Memorial — Draw 1 card
         SetEffects(builder, "P41", onPlayEffects: [new DrawCardsEffect(1)]);
 
+        // Tested OK
         // P42: Space Hotels — +4 MC prod
         SetEffects(builder, "P42", onPlayEffects:
             [new ChangeProductionEffect(ResourceType.MegaCredits, 4)]);

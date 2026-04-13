@@ -140,11 +140,23 @@ public class MoveJsonConverter : JsonConverter<Move>
     private static PaymentInfo ReadPayment(JToken? token)
     {
         if (token == null || token.Type == JTokenType.Null) return PaymentInfo.Zero;
+
+        ImmutableDictionary<string, int>? cardResources = null;
+        var crToken = token["cardResources"];
+        if (crToken is JObject crObj && crObj.Count > 0)
+        {
+            var builder = ImmutableDictionary.CreateBuilder<string, int>();
+            foreach (var prop in crObj.Properties())
+                builder[prop.Name] = prop.Value.Value<int>();
+            cardResources = builder.ToImmutable();
+        }
+
         return new PaymentInfo(
             token["megaCredits"]?.Value<int>() ?? 0,
             token["steel"]?.Value<int>() ?? 0,
             token["titanium"]?.Value<int>() ?? 0,
-            token["heat"]?.Value<int>() ?? 0);
+            token["heat"]?.Value<int>() ?? 0,
+            cardResources);
     }
 
     private static HexCoord? ReadHexCoord(JToken? token)

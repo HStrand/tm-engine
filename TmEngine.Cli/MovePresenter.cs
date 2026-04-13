@@ -276,13 +276,7 @@ public class MovePresenter
                 var payment = PromptPayment(c, playerState);
                 var move = MakeMove("PlayCard");
                 move["cardId"] = c.CardId;
-                move["payment"] = new JObject
-                {
-                    ["megaCredits"] = payment.MegaCredits,
-                    ["steel"] = payment.Steel,
-                    ["titanium"] = payment.Titanium,
-                    ["heat"] = payment.Heat,
-                };
+                move["payment"] = BuildPaymentJson(payment);
                 return move;
             }));
         }
@@ -551,13 +545,7 @@ public class MovePresenter
                     var payment = PromptPayment(card, playerState);
                     var move = MakeMove("PlayCard");
                     move["cardId"] = card.CardId;
-                    move["payment"] = new JObject
-                    {
-                        ["megaCredits"] = payment.MegaCredits,
-                        ["steel"] = payment.Steel,
-                        ["titanium"] = payment.Titanium,
-                        ["heat"] = payment.Heat,
-                    };
+                    move["payment"] = BuildPaymentJson(payment);
                     return move;
                 }
                 return MakeMove("Pass");
@@ -638,12 +626,16 @@ public class MovePresenter
             card.EffectiveCost, card.CanUseSteel, card.CanUseTitanium, card.CanUseHeat,
             player.Resources.MegaCredits, player.Resources.Steel,
             player.Resources.Titanium, player.Resources.Heat,
-            card.SteelValue, card.TitaniumValue);
+            card.SteelValue, card.TitaniumValue,
+            card.CardResourcePayments.Count > 0 ? card.CardResourcePayments : null,
+            card.CardResourcePayments.Count > 0 ? player.CardResources : null);
 
         // Auto-pay without prompting if there's no alternative resource to use
         bool hasAlternative = (card.CanUseSteel && player.Resources.Steel > 0)
             || (card.CanUseTitanium && player.Resources.Titanium > 0)
-            || (card.CanUseHeat && player.Resources.Heat > 0);
+            || (card.CanUseHeat && player.Resources.Heat > 0)
+            || card.CardResourcePayments.Any(crp =>
+                player.CardResources.TryGetValue(crp.Key, out var cnt) && cnt > 0);
         if (!hasAlternative)
             return auto;
 
@@ -651,6 +643,9 @@ public class MovePresenter
         Console.Write($"{auto.MegaCredits} MC");
         if (auto.Steel > 0) Console.Write($", {auto.Steel} steel");
         if (auto.Titanium > 0) Console.Write($", {auto.Titanium} titanium");
+        if (auto.CardResources != null)
+            foreach (var (crCardId, count) in auto.CardResources)
+                Console.Write($", {count} from {CardName(crCardId)}");
         if (auto.Heat > 0) Console.Write($", {auto.Heat} heat");
         Console.Write(" [Enter to accept, or 'c' to customize]: ");
 
@@ -660,6 +655,7 @@ public class MovePresenter
             Console.Write($"  MC (have {player.Resources.MegaCredits}): ");
             int mc = int.Parse(Console.ReadLine()?.Trim() ?? "0");
             int steel = 0, titanium = 0, heat = 0;
+            Dictionary<string, int>? cardResources = null;
             if (card.CanUseSteel)
             {
                 Console.Write($"  Steel (have {player.Resources.Steel}, worth {card.SteelValue} MC each): ");
@@ -670,12 +666,25 @@ public class MovePresenter
                 Console.Write($"  Titanium (have {player.Resources.Titanium}, worth {card.TitaniumValue} MC each): ");
                 titanium = int.Parse(Console.ReadLine()?.Trim() ?? "0");
             }
+            foreach (var (crCardId, valuePerResource) in card.CardResourcePayments)
+            {
+                if (player.CardResources.TryGetValue(crCardId, out var available) && available > 0)
+                {
+                    Console.Write($"  {CardName(crCardId)} resources (have {available}, worth {valuePerResource} MC each): ");
+                    var count = int.Parse(Console.ReadLine()?.Trim() ?? "0");
+                    if (count > 0)
+                    {
+                        cardResources ??= new Dictionary<string, int>();
+                        cardResources[crCardId] = count;
+                    }
+                }
+            }
             if (card.CanUseHeat)
             {
                 Console.Write($"  Heat (have {player.Resources.Heat}): ");
                 heat = int.Parse(Console.ReadLine()?.Trim() ?? "0");
             }
-            return new PaymentInfo(mc, steel, titanium, heat);
+            return new PaymentInfo(mc, steel, titanium, heat, cardResources);
         }
 
         return auto;
@@ -743,6 +752,25 @@ public class MovePresenter
 
     private JObject MakeMove(string type) =>
         new() { ["type"] = type, ["playerId"] = _playerId };
+
+    private static JObject BuildPaymentJson(PaymentInfo payment)
+    {
+        var obj = new JObject
+        {
+            ["megaCredits"] = payment.MegaCredits,
+            ["steel"] = payment.Steel,
+            ["titanium"] = payment.Titanium,
+            ["heat"] = payment.Heat,
+        };
+        if (payment.CardResources != null && payment.CardResources.Count > 0)
+        {
+            var cr = new JObject();
+            foreach (var (cardId, count) in payment.CardResources)
+                cr[cardId] = count;
+            obj["cardResources"] = cr;
+        }
+        return obj;
+    }
 
     private string CardName(string id) =>
         _cardNames.GetValueOrDefault(id, id);
