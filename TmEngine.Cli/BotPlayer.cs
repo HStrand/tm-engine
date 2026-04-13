@@ -303,6 +303,18 @@ public class BotPlayer
                 }
                 break;
             }
+            case "CopyProduction":
+            {
+                var cards = pending["validCardIds"]?.ToObject<List<string>>() ?? new();
+                if (cards.Count > 0)
+                {
+                    var card = PickRandom(cards);
+                    var move = MakeMove("SelectCard");
+                    move["cardId"] = card;
+                    return (move, $"copies production from {CardName(card)}");
+                }
+                break;
+            }
             case "ChooseOption":
             {
                 var opts = pending["options"]?.ToObject<List<string>>() ?? new();

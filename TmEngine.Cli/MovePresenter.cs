@@ -477,6 +477,17 @@ public class MovePresenter
                 move["cardId"] = cards[choice];
                 return move;
             }
+            case "CopyProduction":
+            {
+                var cards = pending["validCardIds"]?.ToObject<List<string>>() ?? new();
+                Console.WriteLine("Choose a building card to copy production from:");
+                for (int i = 0; i < cards.Count; i++)
+                    Console.WriteLine($"  {i + 1}. {CardName(cards[i])}");
+                int choice = ReadChoice(cards.Count) - 1;
+                var move = MakeMove("SelectCard");
+                move["cardId"] = cards[choice];
+                return move;
+            }
             case "ChooseOption":
             {
                 var desc = pending["description"]?.Value<string>() ?? "";

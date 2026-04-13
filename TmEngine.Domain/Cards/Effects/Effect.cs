@@ -404,6 +404,13 @@ public sealed record ChangeProductionPerCityEffect(ResourceType Resource, int Am
 public sealed record ChangeResourcePerCityEffect(ResourceType Resource, int AmountPerCity, bool OnMarsOnly = false) : Effect;
 
 /// <summary>
+/// Copy the production box of one of the player's building-tagged cards.
+/// Triggers a pending action to select which card to copy.
+/// E.g., Robotic Workforce.
+/// </summary>
+public sealed record CopyProductionEffect : Effect;
+
+/// <summary>
 /// Gain resources based on the total number of events played by all players.
 /// E.g., Media Archives: gain 1 MC per event ever played by all players.
 /// </summary>

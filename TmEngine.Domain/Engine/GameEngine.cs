@@ -1113,6 +1113,21 @@ public static class GameEngine
             return state with { PendingAction = null };
         }
 
+        if (state.PendingAction is CopyProductionPending)
+        {
+            // Re-execute the production effects of the selected card
+            if (CardRegistry.TryGet(move.CardId, out var copyEntry))
+            {
+                var productionEffects = EffectExecutor.GetProductionEffects(copyEntry.OnPlayEffects);
+                foreach (var effect in productionEffects)
+                {
+                    var (newState, _) = EffectExecutor.Execute(state, move.PlayerId, effect);
+                    state = newState;
+                }
+            }
+            return state with { PendingAction = null };
+        }
+
         if (state.PendingAction is ChooseCardToPlayPending choosePending)
         {
             // Play the chosen card, discard the rest

@@ -643,6 +643,11 @@ public static class MoveValidator
                     ? null
                     : "Invalid card selection.",
 
+            (CopyProductionPending pending, SelectCardMove select) =>
+                pending.ValidCardIds.Contains(select.CardId)
+                    ? null
+                    : "Invalid card selection.",
+
             (ChooseCardToPlayPending pending, SelectCardMove select) =>
                 pending.CardIds.Contains(select.CardId)
                     ? null

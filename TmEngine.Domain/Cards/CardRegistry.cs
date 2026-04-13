@@ -1071,6 +1071,7 @@ public static class CardRegistry
         // 073: Mars University — Effect: when you play science tag, may discard to draw
         // Complex triggered effect — deferred
 
+        // Tested OK
         // 074: Viral Enhancers — Effect: when you play plant/microbe/animal, gain 1 plant or add 1 resource
         SetEffects(builder, "074", ongoingEffects:
         [
@@ -1150,8 +1151,9 @@ public static class CardRegistry
             new PlaceTileEffect(TileType.CommercialDistrict),
         ]);
 
+        // Tested OK
         // 086: Robotic Workforce — Duplicate production box of one of your building cards
-        // Complex — deferred
+        SetEffects(builder, "086", onPlayEffects: [new CopyProductionEffect()]);
 
         // Tested OK
         // 087: Grass — +1 plant prod, +3 plants

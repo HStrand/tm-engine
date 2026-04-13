@@ -104,7 +104,7 @@ public static class RequirementChecker
     public static string? CanAffordActionEffects(GameState state, int playerId, CardAction action, string? sourceCardId = null) =>
         CanAffordEffectsList(state, playerId, action.Effects, sourceCardId);
 
-    private static string? CanAffordEffectsList(
+    public static string? CanAffordEffectsList(
         GameState state, int playerId, ImmutableArray<Effect> effects, string? sourceCardId = null)
     {
         var player = state.GetPlayer(playerId);

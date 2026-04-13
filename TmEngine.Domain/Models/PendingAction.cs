@@ -103,6 +103,13 @@ public sealed record ChooseCardToPlayPending(
     ImmutableArray<string> CardIds) : PendingAction;
 
 /// <summary>
+/// Player must choose one of their building-tagged cards to copy production from.
+/// E.g., Robotic Workforce.
+/// </summary>
+public sealed record CopyProductionPending(
+    ImmutableArray<string> ValidCardIds) : PendingAction;
+
+/// <summary>
 /// Player must submit their combined setup choices (corporation + preludes + initial cards).
 /// </summary>
 public sealed record SetupPending(

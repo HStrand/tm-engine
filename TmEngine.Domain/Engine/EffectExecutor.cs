@@ -63,6 +63,7 @@ public static class EffectExecutor
             ChangeProductionPerCityEffect e => (ApplyChangeProductionPerCity(state, playerId, e), null),
             ChangeResourcePerCityEffect e => (ApplyChangeResourcePerCity(state, playerId, e), null),
             GainResourcePerAllEventsEffect e => (ApplyGainResourcePerAllEvents(state, playerId, e), null),
+            CopyProductionEffect => ApplyCopyProduction(state, playerId),
             ChangeTRPerTagEffect e => (ApplyChangeTRPerTag(state, playerId, e), null),
             ConvertProductionEffect e => ApplyConvertProduction(state, playerId, e, sourceCardId),
             ConvertResourceEffect e => ApplyConvertResource(state, playerId, e, sourceCardId),
@@ -795,6 +796,58 @@ public static class EffectExecutor
             Resources = p.Resources.Add(e.Resource, totalAmount),
         });
     }
+
+    private static (GameState, PendingAction?) ApplyCopyProduction(GameState state, int playerId)
+    {
+        var player = state.GetPlayer(playerId);
+
+        // Find all building-tagged cards the player has played (including corporation and preludes)
+        var validCards = new List<string>();
+
+        // Check corporation
+        if (!string.IsNullOrEmpty(player.CorporationId) && CardRegistry.TryGet(player.CorporationId, out var corp))
+        {
+            if (corp.Definition.Tags.Contains(Tag.Building)
+                && GetProductionEffects(corp.OnPlayEffects).Length > 0
+                && RequirementChecker.CanAffordEffectsList(state, playerId, GetProductionEffects(corp.OnPlayEffects)) == null)
+            {
+                validCards.Add(player.CorporationId);
+            }
+        }
+
+        // Check played cards (blue/automated + preludes, not events — events are face-down)
+        foreach (var cardId in player.PlayedCards)
+        {
+            if (CardRegistry.TryGet(cardId, out var entry)
+                && entry.Definition.Tags.Contains(Tag.Building)
+                && GetProductionEffects(entry.OnPlayEffects).Length > 0
+                && RequirementChecker.CanAffordEffectsList(state, playerId, GetProductionEffects(entry.OnPlayEffects)) == null)
+            {
+                validCards.Add(cardId);
+            }
+        }
+
+        if (validCards.Count == 0)
+            return (state, null);
+
+        return (state, new CopyProductionPending([.. validCards]));
+    }
+
+    /// <summary>
+    /// Extract only the production-related effects from a list of on-play effects.
+    /// Production effects are: ChangeProductionEffect, ChangeProductionPerTagEffect,
+    /// ChangeProductionPerCityEffect, ChangeProductionPerOpponentTagEffect,
+    /// ChangeProductionIfTagThresholdEffect.
+    /// </summary>
+    public static ImmutableArray<Effect> GetProductionEffects(ImmutableArray<Effect> effects) =>
+        [.. effects.Where(IsProductionEffect)];
+
+    public static bool IsProductionEffect(Effect e) => e is
+        ChangeProductionEffect or
+        ChangeProductionPerTagEffect or
+        ChangeProductionPerCityEffect or
+        ChangeProductionPerOpponentTagEffect or
+        ChangeProductionIfTagThresholdEffect;
 
     private static GameState ApplyGainResourcePerAllEvents(GameState state, int playerId, GainResourcePerAllEventsEffect e)
     {
