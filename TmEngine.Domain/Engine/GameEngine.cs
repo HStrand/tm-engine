@@ -971,10 +971,8 @@ public static class GameEngine
             }
 
             // Interactive triggers exist — let the player choose ordering
-            // Use EffectIndex = -1 as sentinel for "on-play effects"
-            // Store which effect indices still need executing
-            var orderableIndices = EffectExecutor.GetOrderableIndices(entry.OnPlayEffects);
-            var onPlayEntry = new TriggerQueueEntry(move.CardId, Trigger: null, TriggeringCardId: null) { DeferredEffectIndices = orderableIndices };
+            var deferredIndices = EffectExecutor.GetOrderableIndices(entry.OnPlayEffects);
+            var onPlayEntry = new TriggerQueueEntry(move.CardId, Trigger: null, TriggeringCardId: null) { DeferredEffectIndices = deferredIndices };
             var allEntries = interactiveTriggers.Insert(0, onPlayEntry);
             var descriptions = allEntries.Select(t =>
                 t.IsOnPlayEntry

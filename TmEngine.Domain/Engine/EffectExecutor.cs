@@ -204,6 +204,7 @@ public static class EffectExecutor
         AddCardResourceEffect e => e.TargetCardId == null, // only if target not specified
         PlayCardFromHandEffect => true,
         DiscardCardsEffect => true,
+        DrawKeepEffect => true,
         _ => false,
     };
 
@@ -224,6 +225,7 @@ public static class EffectExecutor
         ChangeProductionPerCityEffect e => $"+{e.AmountPerCity} {e.Resource} production per city in play",
         ChangeResourceEffect e => e.Amount >= 0 ? $"Gain {e.Amount} {e.Resource}" : $"Lose {-e.Amount} {e.Resource}",
         DrawCardsEffect e => e.Count == 1 ? "Draw 1 card" : $"Draw {e.Count} cards",
+        DrawKeepEffect e => $"Draw {e.Draw}, keep {e.Keep}",
         DrawAndPlayOneEffect e => $"Draw {e.DrawCount} cards and play 1",
         RevealUntilTagEffect e => $"Reveal cards until {e.Count} {e.Tag} tag(s) found",
         ChooseEffect => "Choose one option",

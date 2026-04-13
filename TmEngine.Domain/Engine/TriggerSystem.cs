@@ -148,9 +148,35 @@ public static class TriggerSystem
             return state;
         }
 
-        // Multiple interactive triggers — let the player choose the order
-        var descriptions = interactive.ToImmutable().Select(t => DescribeTriggerEntry(t)).ToImmutableArray();
-        state = state with { PendingAction = new ChooseTriggerOrderPending(interactive.ToImmutable(), descriptions) };
+        var interactiveArr = interactive.ToImmutable();
+
+        // If all interactive triggers are from the same card (e.g., Research with 2 Science tags
+        // triggering Mars University twice), execute sequentially — no ordering choice needed.
+        var allSameSource = interactiveArr.All(t =>
+            t.OwnerCardId == interactiveArr[0].OwnerCardId && t.Trigger == interactiveArr[0].Trigger);
+        if (allSameSource)
+        {
+            foreach (var trigger in interactiveArr)
+            {
+                var innerEffect = GetInnerEffect(trigger)!;
+                var (newState, pending) = EffectExecutor.Execute(state, playerId, innerEffect,
+                    triggeringCardId: trigger.TriggeringCardId);
+                state = newState;
+                if (pending != null)
+                {
+                    var remaining = interactiveArr.Remove(trigger);
+                    if (remaining.Length > 0)
+                        state = state with { TriggerQueue = remaining };
+                    state = state with { PendingAction = pending };
+                    return state;
+                }
+            }
+            return state;
+        }
+
+        // Multiple distinct interactive triggers — let the player choose the order
+        var descriptions = interactiveArr.Select(t => DescribeTriggerEntry(t)).ToImmutableArray();
+        state = state with { PendingAction = new ChooseTriggerOrderPending(interactiveArr, descriptions) };
         return state;
     }
 
