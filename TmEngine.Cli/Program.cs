@@ -671,6 +671,25 @@ async Task RunHarnessShow(string gameId)
     var allNames = MergeCardNames(cn0, stateNames);
     new GameDisplay().ShowGameState(state, allNames, 0);
 
+    // Explicit hand dump with IDs — the filtered GetGameState call above ensures this
+    // shows the real hand (not the spectator-view empty hand). Avoids having to do
+    // ad-hoc curl queries to look up card IDs for submission.
+    var me = state.Players.First(p => p.PlayerId == 0);
+    Console.WriteLine();
+    Console.WriteLine("=== HAND (id → name) ===");
+    if (me.Hand.Count == 0)
+    {
+        Console.WriteLine("(empty)");
+    }
+    else
+    {
+        foreach (var cardId in me.Hand)
+        {
+            var name = allNames.GetValueOrDefault(cardId, "?");
+            Console.WriteLine($"  {cardId}  {name}");
+        }
+    }
+
     // Dump raw legal moves JSON so Claude can see exact move shapes
     var json = Newtonsoft.Json.JsonConvert.SerializeObject(moves0, Newtonsoft.Json.Formatting.Indented);
     Console.WriteLine();
