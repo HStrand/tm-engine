@@ -921,6 +921,7 @@ public static class GameEngine
             // Only count as an action if this is a normal action phase play
             ActionsThisTurn = isFromPending ? p.ActionsThisTurn : p.ActionsThisTurn + 1,
             NextCardDiscount = 0,
+            NextCardRequirementModifier = 0,
         });
 
         // Clear the pending action if resolving one

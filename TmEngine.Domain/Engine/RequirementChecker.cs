@@ -207,6 +207,9 @@ public static class RequirementChecker
             }
         }
 
+        // One-shot modifier from Special Design — consumed on next card play
+        modifier += player.NextCardRequirementModifier;
+
         return modifier;
     }
 

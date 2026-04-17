@@ -50,6 +50,13 @@ public sealed record PlayerState
     public int NextCardDiscount { get; init; }
 
     /// <summary>
+    /// Global-requirement modifier (in steps) to apply to the next card played this generation.
+    /// Set by Special Design. Consumed when the next card is played. Stacks additively with
+    /// ongoing RequirementModifierEffect sources (Inventrix, Adaptation Technology).
+    /// </summary>
+    public int NextCardRequirementModifier { get; init; }
+
+    /// <summary>
     /// Creates a fresh player state for game start.
     /// </summary>
     public static PlayerState CreateInitial(int playerId, int startingTR) => new()

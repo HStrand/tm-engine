@@ -471,6 +471,14 @@ public sealed record PlayCardFromHandEffect(
 public sealed record NextCardDiscountEffect(int Discount) : Effect;
 
 /// <summary>
+/// Apply a global-requirement modifier (in steps) to the next card the player plays
+/// this generation. Stacks additively with ongoing RequirementModifierEffect sources
+/// (Inventrix, Adaptation Technology). Consumed when the next card is played.
+/// E.g., Special Design: next card has +/- 2 global requirements.
+/// </summary>
+public sealed record NextCardRequirementModifierEffect(int Amount) : Effect;
+
+/// <summary>
 /// Grants the player one free award funding (Vitor corporation).
 /// The player can use it at any point — it's not tied to a specific generation.
 /// </summary>

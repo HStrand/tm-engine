@@ -171,6 +171,26 @@ public class CardRegistryTests
     }
 
     [Fact]
+    public void Card_SpecialDesign_HasCorrectMetadata()
+    {
+        var card = CardRegistry.GetDefinition("206");
+        Assert.Equal("Special Design", card.Name);
+        Assert.Equal(CardType.Event, card.Type);
+        Assert.Equal(4, card.Cost);
+        Assert.Contains(Tag.Event, card.Tags);
+        Assert.Contains(Tag.Science, card.Tags);
+        Assert.Empty(card.Requirements);
+        Assert.Null(card.VictoryPoints);
+    }
+
+    [Fact]
+    public void Card_SpecialDesign_HasNextCardRequirementModifierEffect()
+    {
+        var entry = CardRegistry.Get("206");
+        Assert.Contains(entry.OnPlayEffects, e => e is NextCardRequirementModifierEffect { Amount: 2 });
+    }
+
+    [Fact]
     public void Corporation_Phobolog_HasTitaniumValueModifier()
     {
         var entry = CardRegistry.Get("CORP07");

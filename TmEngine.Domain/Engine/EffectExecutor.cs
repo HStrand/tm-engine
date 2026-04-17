@@ -71,6 +71,8 @@ public static class EffectExecutor
             ClaimLandEffect => ApplyClaimLand(state, playerId),
             NextCardDiscountEffect e => (state.UpdatePlayer(playerId, p => p with
                 { NextCardDiscount = p.NextCardDiscount + e.Discount }), null),
+            NextCardRequirementModifierEffect e => (state.UpdatePlayer(playerId, p => p with
+                { NextCardRequirementModifier = p.NextCardRequirementModifier + e.Amount }), null),
             PlayCardFromHandEffect e => (state, new PlayCardFromHandPending(
                 e.IgnoreGlobalRequirements ? "Play a card from hand (ignoring global requirements):" : $"Play a card from hand ({e.CostDiscount} MC discount):",
                 e.IgnoreGlobalRequirements, e.CostDiscount)),

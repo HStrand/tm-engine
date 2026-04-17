@@ -107,6 +107,7 @@ public static class PhaseManager
                 ActionsThisTurn = 0,
                 IncreasedTRThisGeneration = false,
                 NextCardDiscount = 0,
+                NextCardRequirementModifier = 0,
             });
         }
 

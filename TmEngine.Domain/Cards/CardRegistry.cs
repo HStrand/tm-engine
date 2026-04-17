@@ -1954,7 +1954,7 @@ public static class CardRegistry
         ]);
 
         // 206: Special Design — Next card this generation has +/- 2 global requirements
-        // Temporary requirement modifier — deferred
+        SetEffects(builder, "206", onPlayEffects: [new NextCardRequirementModifierEffect(2)]);
 
         // 207: Medical Lab — +1 MC prod per 2 building tags including this
         SetEffects(builder, "207", onPlayEffects:

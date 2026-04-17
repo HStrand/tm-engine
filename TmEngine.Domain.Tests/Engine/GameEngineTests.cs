@@ -1829,4 +1829,143 @@ public class GameEngineTests
         Assert.NotNull(moves.Actions);
         Assert.Contains(moves.Actions!.UsableCardActions, a => a.CardId == "015");
     }
+
+    // ── Special Design ─────────────────────────────────────────
+    // Card 206 (Event, cost 4): arms +/-2 on global requirements for the next card
+    // played this generation. Test target: Breathing Filters (114) — cost 11, requires
+    // 7% oxygen, no on-play effects, 2 VP. Just a clean requirement to check.
+
+    [Fact]
+    public void SpecialDesign_Play_ArmsNextCardRequirementModifier()
+    {
+        var state = CreateTestGame() with { Oxygen = 5 };
+        state = state.UpdatePlayer(0, p => p with { Hand = ImmutableList.Create("206") });
+
+        var (s1, r1) = GameEngine.Apply(state, new PlayCardMove(0, "206", new PaymentInfo(MegaCredits: 4)));
+
+        Assert.True(r1.IsSuccess);
+        Assert.Equal(2, s1.Players[0].NextCardRequirementModifier);
+        Assert.Contains("206", s1.Players[0].PlayedEvents);
+    }
+
+    [Fact]
+    public void SpecialDesign_MakesOxygenRequirementCardPlayable()
+    {
+        // Oxygen = 5, Breathing Filters requires 7. Without Special Design it's not playable.
+        // After Special Design, the +2 modifier makes it playable (5 >= 7 - 2).
+        var state = CreateTestGame() with { Oxygen = 5 };
+        state = state.UpdatePlayer(0, p => p with { Hand = ImmutableList.Create("206", "114") });
+
+        var movesBefore = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.DoesNotContain(movesBefore.Actions!.PlayableCards, c => c.CardId == "114");
+
+        var (s1, _) = GameEngine.Apply(state, new PlayCardMove(0, "206", new PaymentInfo(MegaCredits: 4)));
+
+        var movesAfter = LegalMoveGenerator.GetLegalMoves(s1, 0);
+        Assert.Contains(movesAfter.Actions!.PlayableCards, c => c.CardId == "114");
+    }
+
+    [Fact]
+    public void SpecialDesign_ModifierConsumedOnNextCardPlay()
+    {
+        var state = CreateTestGame() with { Oxygen = 5 };
+        state = state.UpdatePlayer(0, p => p with { Hand = ImmutableList.Create("206", "114") });
+
+        var (s1, _) = GameEngine.Apply(state, new PlayCardMove(0, "206", new PaymentInfo(MegaCredits: 4)));
+        var (s2, r2) = GameEngine.Apply(s1, new PlayCardMove(0, "114", new PaymentInfo(MegaCredits: 11)));
+
+        Assert.True(r2.IsSuccess);
+        Assert.Equal(0, s2.Players[0].NextCardRequirementModifier);
+        Assert.Contains("114", s2.Players[0].PlayedCards);
+    }
+
+    [Fact]
+    public void SpecialDesign_StandardProject_DoesNotConsumeModifier()
+    {
+        // Power Plant standard project between Special Design and the requirement card
+        // must NOT consume the +2 modifier.
+        var state = CreateTestGame() with { Oxygen = 5 };
+        state = state.UpdatePlayer(0, p => p with { Hand = ImmutableList.Create("206", "114") });
+
+        var (s1, _) = GameEngine.Apply(state, new PlayCardMove(0, "206", new PaymentInfo(MegaCredits: 4)));
+        Assert.Equal(2, s1.Players[0].NextCardRequirementModifier);
+
+        // Switch active player back to 0 (PowerPlant counts as an action; CreateTestGame
+        // has 2 players, but we just care that the modifier field survives the move).
+        var (s2, r2) = GameEngine.Apply(s1, new PowerPlantMove(0));
+        Assert.True(r2.IsSuccess);
+        Assert.Equal(2, s2.Players[0].NextCardRequirementModifier);
+    }
+
+    [Fact]
+    public void SpecialDesign_StacksWithAdaptationTechnology()
+    {
+        // Adaptation Technology (153) in PlayedCards grants +2 always.
+        // Special Design adds another +2 for the next card. Combined: +4.
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = ImmutableList.Create("153"),
+        });
+
+        var player = state.Players[0];
+        Assert.Equal(2, RequirementChecker.GetRequirementModifier(player));
+
+        state = state.UpdatePlayer(0, p => p with
+        {
+            NextCardRequirementModifier = 2,
+        });
+        Assert.Equal(4, RequirementChecker.GetRequirementModifier(state.Players[0]));
+    }
+
+    [Fact]
+    public void SpecialDesign_StacksWithInventrixAndAdaptationTechnology()
+    {
+        // Inventrix (CORP06) + Adaptation Technology (153) + Special Design armed = +6.
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            CorporationId = "CORP06",
+            PlayedCards = ImmutableList.Create("153"),
+            NextCardRequirementModifier = 2,
+        });
+
+        Assert.Equal(6, RequirementChecker.GetRequirementModifier(state.Players[0]));
+    }
+
+    [Fact]
+    public void SpecialDesign_ModifierClearedAtGenerationEnd()
+    {
+        var state = CreateTestGame() with { Oxygen = 5 };
+        state = state.UpdatePlayer(0, p => p with
+        {
+            NextCardRequirementModifier = 2,
+            Passed = true,
+        });
+        state = state.UpdatePlayer(1, p => p with { Passed = true });
+
+        var post = PhaseManager.RunProductionPhase(state);
+
+        Assert.Equal(0, post.Players[0].NextCardRequirementModifier);
+    }
+
+    [Fact]
+    public void SpecialDesign_PlayedTwice_ModifierStaysAtTwo()
+    {
+        // Regression guard for reset-before-effects ordering in ApplyPlayCard:
+        // playing Special Design a second time must reset the old +2 before its own
+        // on-play effect re-arms the slot. Final modifier should be 2, not 4.
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = ImmutableList.Create("206"),
+            NextCardRequirementModifier = 2, // simulate already armed
+        });
+
+        // Add a second Special Design by adding it to hand via a hand-swap state fork.
+        // (There's only one copy in a real deck, but we can simulate two plays for the test.)
+        var (s1, r1) = GameEngine.Apply(state, new PlayCardMove(0, "206", new PaymentInfo(MegaCredits: 4)));
+        Assert.True(r1.IsSuccess);
+        Assert.Equal(2, s1.Players[0].NextCardRequirementModifier);
+    }
 }
