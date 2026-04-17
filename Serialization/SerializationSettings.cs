@@ -18,7 +18,7 @@ public static class SerializationSettings
         {
             ContractResolver = resolver,
             NullValueHandling = NullValueHandling.Ignore,
-            Formatting = Formatting.Indented,
+            Formatting = Formatting.None,
             ConstructorHandling = ConstructorHandling.AllowNonPublicDefaultConstructor,
         };
 
