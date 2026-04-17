@@ -191,6 +191,26 @@ public class CardRegistryTests
     }
 
     [Fact]
+    public void Card_ProtectedHabitats_HasCorrectMetadata()
+    {
+        var card = CardRegistry.GetDefinition("173");
+        Assert.Equal("Protected Habitats", card.Name);
+        Assert.Equal(CardType.Active, card.Type);
+        Assert.Equal(5, card.Cost);
+        Assert.Empty(card.Tags);
+        Assert.Empty(card.Requirements);
+        Assert.Null(card.VictoryPoints);
+        Assert.Equal(Expansion.CorporateEra, card.Expansion);
+    }
+
+    [Fact]
+    public void Card_ProtectedHabitats_HasProtectedHabitatsEffect()
+    {
+        var entry = CardRegistry.Get("173");
+        Assert.Contains(entry.OngoingEffects, e => e is ProtectedHabitatsEffect);
+    }
+
+    [Fact]
     public void Corporation_Phobolog_HasTitaniumValueModifier()
     {
         var entry = CardRegistry.Get("CORP07");

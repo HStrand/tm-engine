@@ -1751,7 +1751,7 @@ public static class CardRegistry
                 [new WhenAnyoneEffect(TriggerCondition.PlaceAnyCityTile, new AddCardResourceEffect(CardResourceType.Animal, 1, "172"))]);
 
         // 173: Protected Habitats — Opponents may not remove your animals, plants, or microbes
-        // Passive protection — deferred (needs resource protection mechanic)
+        SetEffects(builder, "173", ongoingEffects: [new ProtectedHabitatsEffect()]);
 
         // Tested OK
         // 174: Protected Valley — +2 MC prod, place greenery on ocean-reserved area

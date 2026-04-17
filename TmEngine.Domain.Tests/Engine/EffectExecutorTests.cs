@@ -117,6 +117,147 @@ public class EffectExecutorTests
         Assert.Equal(5, newState.Players[0].Resources.Titanium);
     }
 
+    // ── Protected Habitats ─────────────────────────────────────
+
+    [Fact]
+    public void ProtectedHabitats_BlocksPlantRemoval_SoleOpponent()
+    {
+        // Player 1 has Protected Habitats. Asteroid-style plant removal yields no pending.
+        var state = CreateTestState();
+        state = state.UpdatePlayer(1, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("173"),
+        });
+
+        var effect = new RemoveResourceEffect(ResourceType.Plants, 3);
+        var (newState, pending) = EffectExecutor.Execute(state, 0, effect);
+
+        Assert.Null(pending);
+        Assert.Equal(8, newState.Players[1].Resources.Plants); // unchanged
+    }
+
+    [Fact]
+    public void ProtectedHabitats_DoesNotBlockNonPlantRemoval()
+    {
+        // Sabotage removes titanium/steel/MC — Protected Habitats must not shield these.
+        var state = CreateTestState();
+        state = state.UpdatePlayer(1, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("173"),
+            Resources = p.Resources with { Titanium = 3 },
+        });
+
+        var effect = new RemoveResourceEffect(ResourceType.Titanium, 2);
+        var (newState, pending) = EffectExecutor.Execute(state, 0, effect);
+
+        Assert.NotNull(pending);
+        var removePending = Assert.IsType<RemoveResourcePending>(pending);
+        Assert.Contains(1, removePending.ValidTargetPlayerIds);
+    }
+
+    [Fact]
+    public void ProtectedHabitats_BlocksAnimalRemoval()
+    {
+        // Player 1 has Protected Habitats and an animal on Birds (072).
+        // Predators-style remove should find no valid target.
+        var state = CreateTestState();
+        state = state.UpdatePlayer(1, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("173").Add("072"),
+            CardResources = p.CardResources.SetItem("072", 2),
+        });
+
+        var effect = new RemoveCardResourceEffect(CardResourceType.Animal, 1, AnyPlayer: true);
+        var (newState, pending) = EffectExecutor.Execute(state, 0, effect, sourceCardId: "024");
+
+        Assert.Null(pending);
+        Assert.Equal(2, newState.Players[1].CardResources["072"]); // unchanged
+    }
+
+    [Fact]
+    public void ProtectedHabitats_BlocksMicrobeRemoval()
+    {
+        // Player 1 has Protected Habitats and microbes on Decomposers (131).
+        // Ants-style microbe removal should find no valid target.
+        var state = CreateTestState();
+        state = state.UpdatePlayer(1, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("173").Add("131"),
+            CardResources = p.CardResources.SetItem("131", 3),
+        });
+
+        var effect = new RemoveCardResourceEffect(CardResourceType.Microbe, 1, AnyPlayer: true);
+        var (newState, pending) = EffectExecutor.Execute(state, 0, effect, sourceCardId: "035");
+
+        Assert.Null(pending);
+        Assert.Equal(3, newState.Players[1].CardResources["131"]);
+    }
+
+    [Fact]
+    public void ProtectedHabitats_AllowsSelfRemovalOnAnyPlayerEffect()
+    {
+        // Acting player has Protected Habitats AND an animal on Birds. They play Predators
+        // themselves — they must still be able to remove from their own animals.
+        var state = CreateTestState();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("173").Add("072"),
+            CardResources = p.CardResources.SetItem("072", 2),
+        });
+        // No opponent animals.
+
+        var effect = new RemoveCardResourceEffect(CardResourceType.Animal, 1, AnyPlayer: true);
+        var (newState, pending) = EffectExecutor.Execute(state, 0, effect, sourceCardId: "024");
+
+        // Auto-resolves (1 valid card = player 0's Birds).
+        Assert.Null(pending);
+        Assert.Equal(1, newState.Players[0].CardResources["072"]);
+    }
+
+    [Fact]
+    public void ProtectedHabitats_OneProtectedOneUnprotected_OnlyUnprotectedTargetable()
+    {
+        // Player 1 protected, but player 0 isn't the only opponent here — we reuse the
+        // 2-player setup but give player 0 the active role against player 1 (the only
+        // opponent). To simulate a 3-player "mixed" scenario, we instead verify the
+        // filter behavior by toggling protection between tests.
+        var state = CreateTestState();
+        state = state.UpdatePlayer(1, p => p with
+        {
+            PlayedCards = p.PlayedCards.Add("173"),
+        });
+
+        // Protected → no target
+        var (_, pending1) = EffectExecutor.Execute(state, 0,
+            new RemoveResourceEffect(ResourceType.Plants, 2));
+        Assert.Null(pending1);
+
+        // Remove Protected Habitats → target appears
+        state = state.UpdatePlayer(1, p => p with
+        {
+            PlayedCards = p.PlayedCards.Remove("173"),
+        });
+        var (_, pending2) = EffectExecutor.Execute(state, 0,
+            new RemoveResourceEffect(ResourceType.Plants, 2));
+        var removePending = Assert.IsType<RemoveResourcePending>(pending2);
+        Assert.Contains(1, removePending.ValidTargetPlayerIds);
+    }
+
+    [Fact]
+    public void IsProtectedFromRemoval_ReturnsFalse_WhenNoProtection()
+    {
+        var state = CreateTestState();
+        Assert.False(RequirementChecker.IsProtectedFromRemoval(state.Players[0]));
+    }
+
+    [Fact]
+    public void IsProtectedFromRemoval_ReturnsTrue_WhenProtectedHabitatsInPlay()
+    {
+        var state = CreateTestState();
+        state = state.UpdatePlayer(0, p => p with { PlayedCards = p.PlayedCards.Add("173") });
+        Assert.True(RequirementChecker.IsProtectedFromRemoval(state.Players[0]));
+    }
+
     // ── Global Parameters ──────────────────────────────────────
 
     [Fact]

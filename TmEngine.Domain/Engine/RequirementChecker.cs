@@ -282,6 +282,24 @@ public static class RequirementChecker
     }
 
     /// <summary>
+    /// Check if a player is protected from having their Plants (resource) or
+    /// Animals/Microbes (card resources) removed by opponents (Protected Habitats).
+    /// Scans the player's corporation and played cards for ProtectedHabitatsEffect.
+    /// </summary>
+    public static bool IsProtectedFromRemoval(PlayerState player)
+    {
+        if (!string.IsNullOrEmpty(player.CorporationId) && CardRegistry.TryGet(player.CorporationId, out var corp))
+        {
+            if (corp.OngoingEffects.Any(e => e is ProtectedHabitatsEffect))
+                return true;
+        }
+
+        return player.PlayedCards.Any(cardId =>
+            CardRegistry.TryGet(cardId, out var card) &&
+            card.OngoingEffects.Any(e => e is ProtectedHabitatsEffect));
+    }
+
+    /// <summary>
     /// Check if a player can use heat to pay for cards (Helion corporation).
     /// </summary>
     public static bool CanUseHeatAsPayment(PlayerState player)

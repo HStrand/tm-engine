@@ -328,6 +328,14 @@ public sealed record PlantConversionModifierEffect(int NewCost) : Effect;
 public sealed record HeatAsPaymentEffect : Effect;
 
 /// <summary>
+/// Marker effect: while this is in the owning player's OngoingEffects, opponents
+/// may not remove the player's Plants (resource), Animals (card resource), or
+/// Microbes (card resource). Used by Protected Habitats (card 173). Does NOT
+/// protect against production reductions or the player's own voluntary spending.
+/// </summary>
+public sealed record ProtectedHabitatsEffect : Effect;
+
+/// <summary>
 /// Card resources on this card can be used as MC to pay for cards with a specific tag.
 /// E.g., Psychrophiles: microbes here may be used as 2 MC each when paying for Plant-tagged cards.
 /// </summary>

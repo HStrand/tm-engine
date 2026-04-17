@@ -86,7 +86,8 @@ public static class EffectExecutor
             RequirementModifierEffect or SteelValueModifierEffect or TitaniumValueModifierEffect
                 or TagDiscountEffect or GlobalDiscountEffect or PlantConversionModifierEffect
                 or HeatAsPaymentEffect or CardResourceAsPaymentEffect or PowerPlantDiscountEffect
-                or HighCostRebateEffect or VPCardRebateEffect => (state, null),
+                or HighCostRebateEffect or VPCardRebateEffect
+                or ProtectedHabitatsEffect => (state, null),
 
             // Triggered effects are registered, not executed immediately
             WhenYouEffect or WhenAnyoneEffect => (state, null),
@@ -257,9 +258,12 @@ public static class EffectExecutor
     private static (GameState, PendingAction?) ApplyRemoveResource(
         GameState state, int playerId, RemoveResourceEffect e)
     {
-        // Find players who have the resource (excluding active player for "any player" targeting)
+        // Find players who have the resource (excluding active player for "any player" targeting).
+        // Plants are shielded by Protected Habitats — skip protected opponents for that branch.
         var validTargets = state.Players
             .Where(p => p.PlayerId != playerId && p.Resources.Get(e.Resource) > 0)
+            .Where(p => e.Resource != ResourceType.Plants
+                        || !RequirementChecker.IsProtectedFromRemoval(p))
             .Select(p => p.PlayerId)
             .ToImmutableArray();
 
@@ -632,9 +636,17 @@ public static class EffectExecutor
         // excluding the source card itself (e.g., Predators can't remove from itself).
         var validCards = ImmutableArray.CreateBuilder<string>();
 
+        // Animals and Microbes on opponent cards are shielded by Protected Habitats.
+        // The acting player's own cards are never skipped — self-removal is always allowed.
+        var isProtectedType = e.ResourceType is CardResourceType.Animal or CardResourceType.Microbe;
         var playersToCheck = e.AnyPlayer ? state.Players : [state.GetPlayer(playerId)];
         foreach (var player in playersToCheck)
         {
+            if (isProtectedType
+                && player.PlayerId != playerId
+                && RequirementChecker.IsProtectedFromRemoval(player))
+                continue;
+
             foreach (var cardId in player.PlayedCards)
             {
                 if (cardId == sourceCardId) continue;
