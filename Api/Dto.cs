@@ -1,8 +1,10 @@
 using System.Collections.Immutable;
+using Newtonsoft.Json;
 using TmEngine.Domain.Models;
 
 namespace tm_engine.Api;
 
+[JsonObject(MissingMemberHandling = MissingMemberHandling.Error)]
 public sealed record CreateGameRequest(
     int PlayerCount,
     MapName Map,

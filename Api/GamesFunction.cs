@@ -40,7 +40,15 @@ public class GamesFunction
         if (string.IsNullOrEmpty(body))
             return JsonResult(HttpStatusCode.BadRequest, new ErrorResponse("Request body is required."));
 
-        var request = JsonConvert.DeserializeObject<CreateGameRequest>(body, _jsonSettings);
+        CreateGameRequest? request;
+        try
+        {
+            request = JsonConvert.DeserializeObject<CreateGameRequest>(body, _jsonSettings);
+        }
+        catch (JsonSerializationException ex)
+        {
+            return JsonResult(HttpStatusCode.BadRequest, new ErrorResponse(ex.Message));
+        }
         if (request == null)
             return JsonResult(HttpStatusCode.BadRequest, new ErrorResponse("Invalid request body."));
 

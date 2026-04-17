@@ -2,6 +2,18 @@ using TmEngine.Cli;
 
 Console.OutputEncoding = System.Text.Encoding.UTF8;
 
+// Harness subcommands (used when Claude drives a game turn-by-turn; no console banner)
+if (args.Length >= 2 && args[0] == "harness-bot")
+{
+    await RunHarnessBotMove(args[1], int.Parse(args[2]));
+    return;
+}
+if (args.Length >= 2 && args[0] == "harness-show")
+{
+    await RunHarnessShow(args[1]);
+    return;
+}
+
 Console.ForegroundColor = ConsoleColor.Cyan;
 Console.WriteLine("╔════════════════════════════════════════╗");
 Console.WriteLine("║     TERRAFORMING MARS - CLI Client     ║");
@@ -598,4 +610,70 @@ static Dictionary<string, string> MergeCardNames(params Dictionary<string, strin
         foreach (var kv in d)
             result[kv.Key] = kv.Value;
     return result;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  HARNESS MODE (used by turn.sh when Claude plays as player 0)
+// ════════════════════════════════════════════════════════════════
+
+async Task RunHarnessBotMove(string gameId, int playerId)
+{
+    var api = new ApiClient("http://localhost:7102/api");
+    var bot = new BotPlayer(playerId);
+
+    var (moves, cardNames) = await api.GetLegalMovesAsync(gameId, playerId);
+    bot.UpdateCardNames(cardNames);
+    if (moves.GameOver) { Console.WriteLine("GAME_OVER"); return; }
+    if (moves.WaitingForOtherPlayer) { Console.WriteLine($"WAITING P{playerId}"); return; }
+
+    var (state, stateCardNames) = await api.GetGameStateAsync(gameId, playerId);
+    bot.UpdateCardNames(stateCardNames);
+    var botState = state.Players.First(p => p.PlayerId == playerId);
+    var (move, description) = bot.PickMove(moves, botState);
+
+    var result = await api.SubmitMoveAsync(gameId, playerId, move);
+    for (int retry = 0; retry < 10 && !result.Success; retry++)
+    {
+        (move, description) = bot.PickMove(moves, botState);
+        result = await api.SubmitMoveAsync(gameId, playerId, move);
+    }
+    if (!result.Success)
+    {
+        var fallback = new Newtonsoft.Json.Linq.JObject
+        {
+            ["type"] = moves.Actions?.CanEndTurn == true ? "EndTurn" : "Pass",
+            ["playerId"] = playerId
+        };
+        result = await api.SubmitMoveAsync(gameId, playerId, fallback);
+        description = moves.Actions?.CanEndTurn == true ? "ends turn (fallback)" : "passes (fallback)";
+    }
+    Console.WriteLine($"P{playerId}: {description}");
+}
+
+async Task RunHarnessShow(string gameId)
+{
+    var api = new ApiClient("http://localhost:7102/api");
+    var (moves0, cn0) = await api.GetLegalMovesAsync(gameId, 0);
+    if (moves0.GameOver)
+    {
+        var (finalState, finalNames) = await api.GetGameStateAsync(gameId, 0);
+        new GameDisplay().ShowFinalScores(finalState, finalNames);
+        Console.WriteLine("GAME_OVER");
+        return;
+    }
+    if (moves0.WaitingForOtherPlayer)
+    {
+        Console.WriteLine("WAITING_FOR_OPPONENT");
+        return;
+    }
+
+    var (state, stateNames) = await api.GetGameStateAsync(gameId, 0);
+    var allNames = MergeCardNames(cn0, stateNames);
+    new GameDisplay().ShowGameState(state, allNames, 0);
+
+    // Dump raw legal moves JSON so Claude can see exact move shapes
+    var json = Newtonsoft.Json.JsonConvert.SerializeObject(moves0, Newtonsoft.Json.Formatting.Indented);
+    Console.WriteLine();
+    Console.WriteLine("=== LEGAL MOVES (raw JSON) ===");
+    Console.WriteLine(json);
 }
