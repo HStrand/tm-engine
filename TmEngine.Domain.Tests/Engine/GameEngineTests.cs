@@ -1950,6 +1950,37 @@ public class GameEngineTests
     }
 
     [Fact]
+    public void SpecialDesign_WithInventrixAndAdaptationTech_EnablesDustSealsAtNineOceans()
+    {
+        // Dust Seals (119) requires max_oceans 3. With 9 oceans out, the deficit is 6 —
+        // exactly matching Inventrix (+2) + Adaptation Technology (+2) + Special Design (+2).
+        var state = CreateTestGame() with { OceansPlaced = 9 };
+        state = state.UpdatePlayer(0, p => p with
+        {
+            CorporationId = "CORP06",
+            PlayedCards = ImmutableList.Create("153"),
+            Hand = ImmutableList.Create("206", "119"),
+        });
+
+        // Without Special Design armed, Dust Seals is not playable.
+        var movesBefore = LegalMoveGenerator.GetLegalMoves(state, 0);
+        Assert.DoesNotContain(movesBefore.Actions!.PlayableCards, c => c.CardId == "119");
+
+        // Play Special Design — arms the third +2 modifier.
+        var (s1, r1) = GameEngine.Apply(state, new PlayCardMove(0, "206", new PaymentInfo(MegaCredits: 4)));
+        Assert.True(r1.IsSuccess);
+        Assert.Equal(6, RequirementChecker.GetRequirementModifier(s1.Players[0]));
+
+        // Dust Seals is now playable, and the play succeeds.
+        var movesAfter = LegalMoveGenerator.GetLegalMoves(s1, 0);
+        Assert.Contains(movesAfter.Actions!.PlayableCards, c => c.CardId == "119");
+
+        var (s2, r2) = GameEngine.Apply(s1, new PlayCardMove(0, "119", new PaymentInfo(MegaCredits: 2)));
+        Assert.True(r2.IsSuccess);
+        Assert.Contains("119", s2.Players[0].PlayedCards);
+    }
+
+    [Fact]
     public void SpecialDesign_PlayedTwice_ModifierStaysAtTwo()
     {
         // Regression guard for reset-before-effects ordering in ApplyPlayCard:
