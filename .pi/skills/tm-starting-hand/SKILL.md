@@ -1,6 +1,6 @@
 ---
-name: tm-card-evaluation
-description: Framework for evaluating Terraforming Mars cards — cost/VP ratios, tag value heuristics, when to buy during research, when to skip expensive cards, evaluating active vs automated vs event cards.
+name: tm-starting-hand
+description: Starting-hand evaluation for Terraforming Mars — uses baseline stats and corporation-combo synergy data from tfmstats API to decide which corporations, preludes, and project cards to keep. Load during Setup phase.
 ---
 
 # Card Evaluation

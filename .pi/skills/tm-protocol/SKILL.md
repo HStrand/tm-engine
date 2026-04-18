@@ -173,13 +173,14 @@ Load **at game start** (before the first move):
 - `tm-maps-<map>` — the one matching the current game (`hellas` /
   `tharsis` / `elysium`).
 - `tm-drafting` — only if `draftVariant: true`.
+- `tm-starting-hand` — for corp/prelude/card keep decisions in Setup.
 
 Load **mid-game as needed**:
 
-- `tm-economy` — when weighing production investments, payment choices.
+- `tm-strategy` — when weighing production investments, game phase
+  timing, synergy development, payment choices.
 - `tm-milestones-awards` — when claimable milestones or fundable awards
   become relevant.
-- `tm-card-evaluation` — during Research / buy phases.
 - `tm-endgame` — when 2 of 3 globals are maxed.
 
 Use `read` to load the relevant `SKILL.md` files; they're progressive

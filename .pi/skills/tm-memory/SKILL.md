@@ -35,7 +35,7 @@ Write **only** in these cases:
 Do **not** write:
 
 - **Strategic claims** — those belong in user-authored skills
-  (`tm-corporations`, `tm-economy`, etc.). "Mining Guild is strong on
+  (`tm-corporations`, `tm-strategy`, etc.). "Mining Guild is strong on
   Hellas" is strategy, not memory.
 - **Per-game narration** or scores — those are session-scoped, not
   cross-session.
