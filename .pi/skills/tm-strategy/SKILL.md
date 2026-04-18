@@ -1,11 +1,41 @@
 ---
 name: tm-strategy
-description: General strategy for Terraforming Mars. Game phase definitions (early/mid/late), production valuations, when to invest in production vs. direct TR, mid-game synergies, payment optimization.
+description: General strategy for Terraforming Mars. Terraformer vs. engine archetypes, game phase definitions (early/mid/late), production valuations, mid-game synergies, VP timing, payment optimization. Load at game start.
 ---
 
 # Strategy
 
 Format: 2-player, base game + Prelude, Corporate Era, Draft variant.
+
+## Archetype axis: terraformer vs. engine
+
+The most important strategic question in any game is: **am I the
+terraformer or the engine player?**
+
+**Terraformer** — early plant and heat production, leads on TR and
+milestones. Wants to end the game in gen 9, gen 10 at most. Plays lean
+(fewer cards), focuses on efficient terraforming through standard
+projects and resource conversion. Every gen the game extends favors the
+opponent.
+
+**Engine player** — builds card draw, discounts, and synergies (Jovian
+multipliers, animal VP, bio packages). Catches up and surpasses the
+terraformer through superior scoring in the final gens. May still
+terraform, but should **hold back on the lagging parameter** (the global
+most likely to be last to max) to buy time for their engine to overtake
+the terraformer's score.
+
+In practice, it's a continuum — most setups land somewhere in between.
+But recognizing which side you're on is critical:
+- If you're ahead on TR + milestones/awards, **rush**. Push globals,
+  play few cards, close the game before the opponent's engine outscales
+  you.
+- If you're behind on TR but have strong card synergies building, **slow
+  the game**. Avoid pushing the lagging parameter. Invest in VP cards
+  and let your engine compound.
+
+Re-evaluate each gen — a lead can flip if the opponent lands a key
+synergy piece or claims a milestone you were contesting.
 
 ## Game phases
 

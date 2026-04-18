@@ -169,6 +169,8 @@ These may be empty/sparse — that's fine, play with the info available.
 Load **at game start** (before the first move):
 
 - `tm-memory` — read `MEMORY.md` for observations from prior sessions.
+- `tm-strategy` — core strategy framework (archetypes, phases,
+  production valuations, synergies). Consult throughout the game.
 - `tm-corporations` — to pick a corp in Setup.
 - `tm-maps-<map>` — the one matching the current game (`hellas` /
   `tharsis` / `elysium`).
@@ -177,8 +179,7 @@ Load **at game start** (before the first move):
 
 Load **mid-game as needed**:
 
-- `tm-strategy` — when weighing production investments, game phase
-  timing, synergy development, payment choices.
+
 - `tm-milestones-awards` — when claimable milestones or fundable awards
   become relevant.
 - `tm-endgame` — when 2 of 3 globals are maxed.
