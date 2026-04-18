@@ -47,7 +47,27 @@ Valid `map` values: `"Tharsis"`, `"Hellas"`, `"Elysium"`.
 
 Save the returned `gameId` somewhere stable (e.g. `/tmp/current_game.txt`).
 
-## 2. The turn loop
+## 2. Per-generation checklist
+
+At the **start of each generation's action phase**, re-read
+`tm-strategy` and your corp file (`tm-corporations/corps/<name>.md`),
+then run through this checklist before making any moves:
+
+1. **What phase am I in?** Early (1–3), mid (4–7), or late (8+)?
+2. **Am I the terraformer or engine player?** Check TR lead, milestone
+   status, and production levels vs. opponent.
+3. **Production payoff test**: for every production card in hand, will it
+   pay for itself ≥2 gens before game end? If not, don’t play it.
+4. **Milestones**: any claimable this turn? In 2-player, each is a 10 VP
+   swing — claim immediately.
+5. **Awards**: am I winning any funded awards? Should I fund one to lock
+   in a lead?
+6. **Bonus bumps**: is O₂ near 8% (bonus temp) or temp near 0°C (bonus
+   ocean)? Time plays to trigger these.
+7. **Lagging parameter**: which global is furthest from max? If I’m the
+   engine player, avoid pushing it. If I’m the terraformer, push it.
+
+## 3. The turn loop
 
 ```bash
 bash scripts/turn.sh <gameId>
@@ -60,7 +80,7 @@ bash scripts/turn.sh <gameId>
 
 If you read `GAME_OVER`, stop and report final scores.
 
-## 3. Submit a move
+## 4. Submit a move
 
 ```bash
 bash scripts/submit.sh <gameId> '<move-json>'
@@ -78,7 +98,7 @@ For the full raw response JSON, pass `--raw` as the 3rd arg:
 bash scripts/submit.sh <gameId> '<move-json>' --raw
 ```
 
-## 4. Move JSON reference
+## 5. Move JSON reference
 
 Every move includes `"type"` (case-insensitive) and `"playerId"` (always
 `0` for you). Extra fields per type below.
@@ -144,7 +164,7 @@ Always resolve the pending action before submitting an unrelated move —
 {"megaCredits":0,"heat":11}
 ```
 
-## 5. Card lookup
+## 6. Card lookup
 
 ```bash
 bash scripts/cards.sh <gameId> <cardId> [<cardId> …]   # specific cards
@@ -154,7 +174,7 @@ bash scripts/cards.sh <gameId> --all                   # every card in the game
 
 Prints `id  name  [type]  cost=N  tags=[...]  req=...  VP=...` + description.
 
-## 6. Reference documents
+## 7. Reference documents
 
 When a decision depends on map layout, rules, or corner cases, read the
 relevant user-authored file. Paths from the skill dir, or absolute:
@@ -164,14 +184,17 @@ relevant user-authored file. Paths from the skill dir, or absolute:
 
 These may be empty/sparse — that's fine, play with the info available.
 
-## 7. Which strategy skills to load, when
+## 8. Which strategy skills to load, when
 
 Load **at game start** (before the first move):
 
 - `tm-memory` — read `MEMORY.md` for observations from prior sessions.
 - `tm-strategy` — core strategy framework (archetypes, phases,
   production valuations, synergies). Consult throughout the game.
-- `tm-corporations` — to pick a corp in Setup.
+- `tm-corporations` — read the index to compare offered corps at
+  Setup. After choosing, re-read your corp's individual file
+  (`corps/<name>.md`) each generation alongside `tm-strategy` for
+  corp-specific synergies and play patterns.
 - `tm-maps-<map>` — the one matching the current game (`hellas` /
   `tharsis` / `elysium`).
 - `tm-drafting` — only if `draftVariant: true`.
@@ -187,7 +210,7 @@ Load **mid-game as needed**:
 Use `read` to load the relevant `SKILL.md` files; they're progressive
 disclosure per pi's skills system.
 
-## 8. Game-ending checklist
+## 9. Game-ending checklist
 
 Game ends when all three globals max:
 
