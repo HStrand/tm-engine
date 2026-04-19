@@ -872,12 +872,19 @@ async Task RunHumanVsAiGame()
                         Console.WriteLine($"  🤖 AI: {desc}");
                         Console.ResetColor();
 
-                        // Keep polling if still AI's turn (may have multiple sub-actions)
                         currentMoveNumber = newState.MoveNumber;
-                        if (newState.ActivePlayerId == AiPlayerId)
-                            continue;
 
-                        break;
+                        // Check if the human can now act (handles simultaneous phases like Draft/Setup)
+                        try
+                        {
+                            var (humanMoves, _) = await api.GetLegalMovesAsync(gameId, HumanPlayerId);
+                            if (!humanMoves.WaitingForOtherPlayer || humanMoves.GameOver)
+                                break;
+                        }
+                        catch { }
+
+                        // Still AI's turn — keep polling
+                        continue;
                     }
                 }
                 catch { }
