@@ -64,6 +64,7 @@ public class GameStateResponse
 {
     public GameStateDto State { get; set; } = new();
     public Dictionary<string, string> CardNames { get; set; } = new();
+    public Dictionary<int, int> HandCounts { get; set; } = new();
 }
 
 public class LegalMovesResponse
@@ -103,6 +104,7 @@ public class GameStateDto
     public List<MilestoneClaimDto> ClaimedMilestones { get; set; } = new();
     public List<AwardFundingDto> FundedAwards { get; set; } = new();
     public List<string> Log { get; set; } = new();
+    public JObject? LastMove { get; set; }
 }
 
 public class PlayerStateDto
@@ -276,4 +278,64 @@ public class FinalGreeneryOptionsDto
     public bool CanConvert { get; set; }
     public bool CanPass { get; set; }
     public List<HexCoordDto> ValidGreeneryLocations { get; set; } = new();
+}
+
+// ── Player Status DTOs ──
+
+public class PlayerStatusResponse
+{
+    public List<PlayerStatusDto> Players { get; set; } = new();
+}
+
+public class PlayerStatusDto
+{
+    public int PlayerId { get; set; }
+    public string Corporation { get; set; } = "";
+    public PlayerTagsDto Tags { get; set; } = new();
+    public PlayerPointsDto Points { get; set; } = new();
+}
+
+public class PlayerTagsDto
+{
+    public int Building { get; set; }
+    public int Space { get; set; }
+    public int Power { get; set; }
+    public int Science { get; set; }
+    public int Jovian { get; set; }
+    public int Earth { get; set; }
+    public int Plant { get; set; }
+    public int Microbe { get; set; }
+    public int Animal { get; set; }
+    public int City { get; set; }
+    public int Event { get; set; }
+    public int Wild { get; set; }
+
+    public string FormatNonZero()
+    {
+        var parts = new List<string>();
+        if (Building > 0) parts.Add($"Building:{Building}");
+        if (Space > 0) parts.Add($"Space:{Space}");
+        if (Power > 0) parts.Add($"Power:{Power}");
+        if (Science > 0) parts.Add($"Science:{Science}");
+        if (Jovian > 0) parts.Add($"Jovian:{Jovian}");
+        if (Earth > 0) parts.Add($"Earth:{Earth}");
+        if (Plant > 0) parts.Add($"Plant:{Plant}");
+        if (Microbe > 0) parts.Add($"Microbe:{Microbe}");
+        if (Animal > 0) parts.Add($"Animal:{Animal}");
+        if (City > 0) parts.Add($"City:{City}");
+        if (Event > 0) parts.Add($"Event:{Event}");
+        if (Wild > 0) parts.Add($"Wild:{Wild}");
+        return string.Join(" ", parts);
+    }
+}
+
+public class PlayerPointsDto
+{
+    public int Total { get; set; }
+    public int TR { get; set; }
+    public int VP { get; set; }
+    public int Milestones { get; set; }
+    public int Awards { get; set; }
+    public int Greeneries { get; set; }
+    public int Cities { get; set; }
 }

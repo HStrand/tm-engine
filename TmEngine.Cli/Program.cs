@@ -13,6 +13,11 @@ if (args.Length >= 2 && args[0] == "harness-show")
     await RunHarnessShow(args[1]);
     return;
 }
+if (args.Length >= 2 && args[0] == "harness-show-ai")
+{
+    await RunHarnessShowAi(args[1]);
+    return;
+}
 
 Console.ForegroundColor = ConsoleColor.Cyan;
 Console.WriteLine("╔════════════════════════════════════════╗");
@@ -21,12 +26,13 @@ Console.WriteLine("╚═══════════════════�
 Console.ResetColor();
 Console.WriteLine();
 
-Console.Write("Game mode (1=Human vs Bot, 2=Bot vs Bot) [1]: ");
+Console.Write("Game mode (1=Human vs Bot, 2=Bot vs Bot, 3=Human vs AI) [1]: ");
 var modeInput = Console.ReadLine()?.Trim();
-bool botGameMode = modeInput == "2";
 
-if (botGameMode)
+if (modeInput == "2")
     await RunBotGame();
+else if (modeInput == "3")
+    await RunHumanVsAiGame();
 else
     await RunInteractiveGame();
 
@@ -143,7 +149,7 @@ async Task RunBotGame()
 
                 if (m.GameOver)
                 {
-                    var (finalState, finalNames) = await api.GetGameStateAsync(gameId, 0);
+                    var (finalState, finalNames, _) = await api.GetGameStateAsync(gameId, 0);
                     var display = new GameDisplay();
                     display.ShowFinalScores(finalState, finalNames);
                     gameOver = true;
@@ -191,7 +197,7 @@ async Task RunBotGame()
         int playerId = actingPlayer.Value;
 
         // Get game state for the acting player
-        var (state, stateCardNames) = await api.GetGameStateAsync(gameId, playerId);
+        var (state, stateCardNames, _) = await api.GetGameStateAsync(gameId, playerId);
         bot0.UpdateCardNames(stateCardNames);
         bot1.UpdateCardNames(stateCardNames);
 
@@ -275,7 +281,7 @@ async Task RunBotGame()
                 Console.WriteLine();
 
                 // Show game state after the card was fully resolved
-                var (postState, postCardNames) = await api.GetGameStateAsync(gameId, 0);
+                var (postState, postCardNames, _) = await api.GetGameStateAsync(gameId, 0);
                 var display = new GameDisplay();
                 display.ShowGameState(postState, postCardNames, 0);
 
@@ -414,7 +420,7 @@ async Task RunInteractiveGame()
 
                 if (m.GameOver)
                 {
-                    var (finalState, finalNames) = await api.GetGameStateAsync(gameId, HumanPlayerId);
+                    var (finalState, finalNames, _) = await api.GetGameStateAsync(gameId, HumanPlayerId);
                     presenter.UpdateCardNames(finalNames);
                     display.ShowFinalScores(finalState, finalNames);
                     gameOver = true;
@@ -456,7 +462,7 @@ async Task RunInteractiveGame()
 
                 try
                 {
-                    var (debugState, debugCardNames) = await api.GetGameStateAsync(gameId, HumanPlayerId);
+                    var (debugState, debugCardNames, _) = await api.GetGameStateAsync(gameId, HumanPlayerId);
                     display.ShowGameState(debugState, debugCardNames, HumanPlayerId);
 
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -507,7 +513,7 @@ async Task RunInteractiveGame()
         int playerId = actingPlayer.Value;
 
         // Get game state
-        var (state, stateCardNames) = await api.GetGameStateAsync(gameId, playerId);
+        var (state, stateCardNames, _) = await api.GetGameStateAsync(gameId, playerId);
         presenter.UpdateCardNames(stateCardNames);
         bot.UpdateCardNames(stateCardNames);
         var allCardNames = MergeCardNames(cardNames!, stateCardNames);
@@ -518,7 +524,15 @@ async Task RunInteractiveGame()
 
         if (playerId == HumanPlayerId)
         {
-            display.ShowGameState(state, allCardNames, HumanPlayerId);
+            Dictionary<int, PlayerTagsDto>? tagMap = null;
+            try
+            {
+                var status = await api.GetPlayerStatusAsync(gameId);
+                tagMap = status.Players.ToDictionary(p => p.PlayerId, p => p.Tags);
+            }
+            catch { }
+            var (__, ___, handCounts2) = await api.GetGameStateAsync(gameId, HumanPlayerId);
+            display.ShowGameState(state, allCardNames, HumanPlayerId, handCounts2, tagMap);
             var playerState = state.Players.First(p => p.PlayerId == HumanPlayerId);
             move = presenter.PromptMove(moves!, playerState);
         }
@@ -603,6 +617,62 @@ static void ShowPlayerStatus(PlayerStateDto p, Dictionary<string, string> cardNa
     Console.ResetColor();
 }
 
+static string DescribeAiMove(GameStateDto state, Dictionary<string, string> cardNames)
+{
+    var lm = state.LastMove;
+    if (lm == null) return "(unknown move)";
+
+    string Name(string? id) =>
+        id != null && cardNames.TryGetValue(id, out var n) ? n : id ?? "?";
+
+    var type = lm["type"]?.ToString() ?? "";
+    return type switch
+    {
+        "Setup" => $"chose {Name(lm["corporationId"]?.ToString())}",
+        "PlayPrelude" => $"plays prelude {Name(lm["preludeId"]?.ToString())}",
+        "DraftCard" => $"drafts a card",
+        "BuyCards" =>
+            lm["cardIds"] is Newtonsoft.Json.Linq.JArray arr
+                ? $"buys {arr.Count} card{(arr.Count != 1 ? "s" : "")}"
+                : "buys cards",
+        "PlayCard" => $"plays {Name(lm["cardId"]?.ToString())}",
+        "UseCardAction" => $"uses action on {Name(lm["cardId"]?.ToString())}",
+        "PlaceTile" =>
+            lm["location"] is Newtonsoft.Json.Linq.JObject loc
+                ? $"places tile at ({loc["col"]},{loc["row"]})"
+                : "places a tile",
+        "ClaimMilestone" => $"claims milestone {lm["milestoneName"]}",
+        "FundAward" => $"funds award {lm["awardName"]}",
+        "Pass" => "passes",
+        "EndTurn" => "ends turn",
+        "ConvertHeat" => "converts heat to temperature",
+        "ConvertPlants" =>
+            lm["location"] is Newtonsoft.Json.Linq.JObject gloc
+                ? $"converts plants to greenery at ({gloc["col"]},{gloc["row"]})"
+                : "converts plants to greenery",
+        "Asteroid" => "uses Asteroid standard project",
+        "Aquifer" =>
+            lm["location"] is Newtonsoft.Json.Linq.JObject aloc
+                ? $"places ocean at ({aloc["col"]},{aloc["row"]})"
+                : "places an ocean",
+        "Greenery" =>
+            lm["location"] is Newtonsoft.Json.Linq.JObject grloc
+                ? $"places greenery at ({grloc["col"]},{grloc["row"]})"
+                : "places a greenery",
+        "City" =>
+            lm["location"] is Newtonsoft.Json.Linq.JObject cloc
+                ? $"places city at ({cloc["col"]},{cloc["row"]})"
+                : "places a city",
+        "PowerPlant" => "uses Power Plant standard project",
+        "SellPatents" => "sells patents",
+        "ChooseOption" => $"chooses option {lm["optionIndex"]}",
+        "ChooseTargetPlayer" => $"targets player {lm["targetPlayerId"]}",
+        "ChooseEffectOrder" => "resolves effects",
+        "SelectCard" => $"selects {Name(lm["cardId"]?.ToString())}",
+        _ => type
+    };
+}
+
 static Dictionary<string, string> MergeCardNames(params Dictionary<string, string>[] dicts)
 {
     var result = new Dictionary<string, string>();
@@ -610,6 +680,215 @@ static Dictionary<string, string> MergeCardNames(params Dictionary<string, strin
         foreach (var kv in d)
             result[kv.Key] = kv.Value;
     return result;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  HUMAN VS AI MODE
+// ════════════════════════════════════════════════════════════════
+
+async Task RunHumanVsAiGame()
+{
+    const int HumanPlayerId = 0;
+    const int AiPlayerId = 1;
+
+    Console.WriteLine();
+
+    var map = "Tharsis";
+    bool corporateEra = true;
+    bool draft = true;
+    bool prelude = true;
+
+    Console.Write($"Map ({map}): ");
+    var mapInput = Console.ReadLine()?.Trim();
+    if (!string.IsNullOrEmpty(mapInput)) map = mapInput;
+
+    Console.Write("RNG seed (Enter for random): ");
+    var seedInput = Console.ReadLine()?.Trim();
+    int? seed = int.TryParse(seedInput, out int parsedSeed) ? parsedSeed : null;
+
+    var baseUrl = "http://localhost:7102/api";
+    var api = new ApiClient(baseUrl);
+    var display = new GameDisplay();
+    var presenter = new MovePresenter(HumanPlayerId);
+
+    // Create game
+    Console.WriteLine();
+    var seedInfo = seed.HasValue ? $", Seed={seed}" : "";
+    Console.WriteLine($"Creating game: {map}, CE={corporateEra}, Draft={draft}, Prelude={prelude}{seedInfo}...");
+
+    string gameId;
+    try
+    {
+        gameId = await api.CreateGameAsync(new CreateGameRequest(2, map, corporateEra, draft, prelude, seed));
+    }
+    catch (Exception ex)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.WriteLine($"Failed to create game: {ex.Message}");
+        Console.ResetColor();
+        return;
+    }
+
+    Console.ForegroundColor = ConsoleColor.Green;
+    Console.WriteLine($"Game created: {gameId}");
+    Console.ResetColor();
+    Console.WriteLine();
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Console.WriteLine($"  AI (Claude) plays as Player 1.");
+    Console.WriteLine($"  Tell Claude to use this game ID: {gameId}");
+    Console.ResetColor();
+
+    try
+    {
+        var cardInfo = await api.GetGameCardsAsync(gameId);
+        presenter.UpdateCardInfo(cardInfo);
+    }
+    catch { }
+
+    // Main game loop
+    bool gameOver = false;
+    int noProgressCount = 0;
+    int? lastMoveNumber = null;
+
+    while (!gameOver)
+    {
+        int? actingPlayer = null;
+        AvailableMovesDto? moves = null;
+        Dictionary<string, string>? cardNames = null;
+
+        foreach (int pid in new[] { HumanPlayerId, AiPlayerId })
+        {
+            try
+            {
+                var (m, cn) = await api.GetLegalMovesAsync(gameId, pid);
+                presenter.UpdateCardNames(cn);
+
+                if (m.GameOver)
+                {
+                    var (finalState, finalNames, _) = await api.GetGameStateAsync(gameId, HumanPlayerId);
+                    presenter.UpdateCardNames(finalNames);
+                    display.ShowFinalScores(finalState, finalNames);
+                    gameOver = true;
+                    break;
+                }
+
+                if (!m.WaitingForOtherPlayer)
+                {
+                    actingPlayer = pid;
+                    moves = m;
+                    cardNames = cn;
+                    break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Error: {ex.Message}");
+                Console.ResetColor();
+            }
+        }
+
+        if (gameOver) break;
+
+        if (actingPlayer == null)
+        {
+            await Task.Delay(300);
+            noProgressCount++;
+            if (noProgressCount > 20)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Stuck — no player can act.");
+                Console.ResetColor();
+                break;
+            }
+            continue;
+        }
+
+        noProgressCount = 0;
+        int playerId = actingPlayer.Value;
+
+        var (state, stateCardNames, _) = await api.GetGameStateAsync(gameId, playerId);
+        presenter.UpdateCardNames(stateCardNames);
+        var allCardNames = MergeCardNames(cardNames!, stateCardNames);
+
+        if (playerId == HumanPlayerId)
+        {
+            // Human's turn — interactive prompt
+            Dictionary<int, PlayerTagsDto>? tagMap = null;
+            try
+            {
+                var status = await api.GetPlayerStatusAsync(gameId);
+                tagMap = status.Players.ToDictionary(p => p.PlayerId, p => p.Tags);
+            }
+            catch { }
+            var (__, ___, handCounts2) = await api.GetGameStateAsync(gameId, HumanPlayerId);
+            display.ShowGameState(state, allCardNames, HumanPlayerId, handCounts2, tagMap);
+            var playerState = state.Players.First(p => p.PlayerId == HumanPlayerId);
+            var move = presenter.PromptMove(moves!, playerState);
+            var result = await api.SubmitMoveAsync(gameId, playerId, move);
+
+            if (result.Success)
+            {
+                if (result.CardNames != null)
+                    presenter.UpdateCardNames(result.CardNames);
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Move rejected: {result.Error}");
+                Console.ResetColor();
+            }
+        }
+        else
+        {
+            // AI's turn — poll until Claude submits a move externally
+            var currentMoveNumber = state.MoveNumber;
+            if (lastMoveNumber == currentMoveNumber)
+            {
+                // Still waiting
+                await Task.Delay(500);
+                continue;
+            }
+            lastMoveNumber = currentMoveNumber;
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine();
+            Console.WriteLine($"  ⏳ Waiting for AI (Player 1) to submit a move...");
+            Console.WriteLine($"     (Gen {state.Generation}, Phase: {state.Phase})");
+            Console.ResetColor();
+
+            // Poll until the move number changes
+            while (true)
+            {
+                await Task.Delay(1000);
+                try
+                {
+                    var (newState, newNames, _) = await api.GetGameStateAsync(gameId, HumanPlayerId);
+                    presenter.UpdateCardNames(newNames);
+                    if (newState.MoveNumber != currentMoveNumber)
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkMagenta;
+                        var desc = DescribeAiMove(newState, newNames);
+                        Console.WriteLine($"  🤖 AI: {desc}");
+                        Console.ResetColor();
+
+                        // Keep polling if still AI's turn (may have multiple sub-actions)
+                        currentMoveNumber = newState.MoveNumber;
+                        if (newState.ActivePlayerId == AiPlayerId)
+                            continue;
+
+                        break;
+                    }
+                }
+                catch { }
+            }
+        }
+    }
+
+    Console.WriteLine();
+    Console.ForegroundColor = ConsoleColor.Green;
+    Console.WriteLine("Thanks for playing!");
+    Console.ResetColor();
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -626,7 +905,7 @@ async Task RunHarnessBotMove(string gameId, int playerId)
     if (moves.GameOver) { Console.WriteLine("GAME_OVER"); return; }
     if (moves.WaitingForOtherPlayer) { Console.WriteLine($"WAITING P{playerId}"); return; }
 
-    var (state, stateCardNames) = await api.GetGameStateAsync(gameId, playerId);
+    var (state, stateCardNames, _) = await api.GetGameStateAsync(gameId, playerId);
     bot.UpdateCardNames(stateCardNames);
     var botState = state.Players.First(p => p.PlayerId == playerId);
     var (move, description) = bot.PickMove(moves, botState);
@@ -656,7 +935,7 @@ async Task RunHarnessShow(string gameId)
     var (moves0, cn0) = await api.GetLegalMovesAsync(gameId, 0);
     if (moves0.GameOver)
     {
-        var (finalState, finalNames) = await api.GetGameStateAsync(gameId, 0);
+        var (finalState, finalNames, _) = await api.GetGameStateAsync(gameId, 0);
         new GameDisplay().ShowFinalScores(finalState, finalNames);
         Console.WriteLine("GAME_OVER");
         return;
@@ -667,7 +946,7 @@ async Task RunHarnessShow(string gameId)
         return;
     }
 
-    var (state, stateNames) = await api.GetGameStateAsync(gameId, 0);
+    var (state, stateNames, _) = await api.GetGameStateAsync(gameId, 0);
     var allNames = MergeCardNames(cn0, stateNames);
     new GameDisplay().ShowGameState(state, allNames, 0);
 
@@ -692,6 +971,51 @@ async Task RunHarnessShow(string gameId)
 
     // Dump raw legal moves JSON so Claude can see exact move shapes
     var json = Newtonsoft.Json.JsonConvert.SerializeObject(moves0, Newtonsoft.Json.Formatting.Indented);
+    Console.WriteLine();
+    Console.WriteLine("=== LEGAL MOVES (raw JSON) ===");
+    Console.WriteLine(json);
+}
+
+async Task RunHarnessShowAi(string gameId)
+{
+    // Same as RunHarnessShow but for Player 1 (AI/Claude)
+    const int AiPlayerId = 1;
+    var api = new ApiClient("http://localhost:7102/api");
+    var (moves, cn) = await api.GetLegalMovesAsync(gameId, AiPlayerId);
+    if (moves.GameOver)
+    {
+        var (finalState, finalNames, _) = await api.GetGameStateAsync(gameId, AiPlayerId);
+        new GameDisplay().ShowFinalScores(finalState, finalNames);
+        Console.WriteLine("GAME_OVER");
+        return;
+    }
+    if (moves.WaitingForOtherPlayer)
+    {
+        Console.WriteLine("WAITING_FOR_OPPONENT");
+        return;
+    }
+
+    var (state, stateNames, _) = await api.GetGameStateAsync(gameId, AiPlayerId);
+    var allNames = MergeCardNames(cn, stateNames);
+    new GameDisplay().ShowGameState(state, allNames, AiPlayerId);
+
+    var me = state.Players.First(p => p.PlayerId == AiPlayerId);
+    Console.WriteLine();
+    Console.WriteLine("=== HAND (id \u2192 name) ===");
+    if (me.Hand.Count == 0)
+    {
+        Console.WriteLine("(empty)");
+    }
+    else
+    {
+        foreach (var cardId in me.Hand)
+        {
+            var name = allNames.GetValueOrDefault(cardId, "?");
+            Console.WriteLine($"  {cardId}  {name}");
+        }
+    }
+
+    var json = Newtonsoft.Json.JsonConvert.SerializeObject(moves, Newtonsoft.Json.Formatting.Indented);
     Console.WriteLine();
     Console.WriteLine("=== LEGAL MOVES (raw JSON) ===");
     Console.WriteLine(json);

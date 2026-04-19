@@ -37,14 +37,14 @@ public class ApiClient
         return result.GameId;
     }
 
-    public async Task<(GameStateDto State, Dictionary<string, string> CardNames)> GetGameStateAsync(
+    public async Task<(GameStateDto State, Dictionary<string, string> CardNames, Dictionary<int, int> HandCounts)> GetGameStateAsync(
         string gameId, int playerId)
     {
         var response = await _http.GetAsync($"{_baseUrl}/games/{gameId}?playerId={playerId}");
         response.EnsureSuccessStatusCode();
         var body = await response.Content.ReadAsStringAsync();
         var result = JsonConvert.DeserializeObject<GameStateResponse>(body, _jsonSettings)!;
-        return (result.State, result.CardNames);
+        return (result.State, result.CardNames, result.HandCounts);
     }
 
     public async Task<(AvailableMovesDto Moves, Dictionary<string, string> CardNames)> GetLegalMovesAsync(
@@ -75,5 +75,12 @@ public class ApiClient
             ?? new Dictionary<string, CardInfoDto>();
     }
 
-
+    public async Task<PlayerStatusResponse> GetPlayerStatusAsync(string gameId)
+    {
+        var response = await _http.GetAsync($"{_baseUrl}/games/{gameId}/status");
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadAsStringAsync();
+        return JsonConvert.DeserializeObject<PlayerStatusResponse>(body, _jsonSettings)
+            ?? new PlayerStatusResponse();
+    }
 }

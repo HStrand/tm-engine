@@ -2,7 +2,12 @@ namespace TmEngine.Cli;
 
 public class GameDisplay
 {
-    public void ShowGameState(GameStateDto state, Dictionary<string, string> cardNames, int humanPlayerId)
+    public void ShowGameState(
+        GameStateDto state,
+        Dictionary<string, string> cardNames,
+        int humanPlayerId,
+        Dictionary<int, int>? handCounts = null,
+        Dictionary<int, PlayerTagsDto>? playerTags = null)
     {
         Console.WriteLine();
         Console.ForegroundColor = ConsoleColor.Cyan;
@@ -41,7 +46,9 @@ public class GameDisplay
             }
             else
             {
-                Console.WriteLine($"  Hand: {p.Hand.Count} cards");
+                var count = handCounts != null && handCounts.TryGetValue(p.PlayerId, out var hc)
+                    ? hc : p.Hand.Count;
+                Console.WriteLine($"  Hand: {count} cards");
             }
 
             if (p.PlayedCards.Count > 0 || p.PlayedEvents.Count > 0)
@@ -56,6 +63,17 @@ public class GameDisplay
                 var res = p.CardResources.Select(kv =>
                     $"{cardNames.GetValueOrDefault(kv.Key, kv.Key)}: {kv.Value}");
                 Console.WriteLine($"  Card resources: {string.Join(", ", res)}");
+            }
+
+            if (playerTags != null && playerTags.TryGetValue(p.PlayerId, out var tags))
+            {
+                var tagStr = tags.FormatNonZero();
+                if (!string.IsNullOrEmpty(tagStr))
+                {
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.WriteLine($"  Tags: {tagStr}");
+                    Console.ResetColor();
+                }
             }
 
             Console.WriteLine();
