@@ -8,8 +8,8 @@ description: How to play a Terraforming Mars game via the tm-engine HTTP API. Co
 Mechanical "how to play a TM game through the engine" reference. **Strategy
 lives in other skills** — load them as documented at the bottom of this file.
 
-Repo paths in this doc are relative to **repo root** `C:\Code\tm-engine\`.
-Scripts are at repo root `scripts/` (`C:\Code\tm-engine\scripts\`).
+Repo paths in this doc are relative to the **repo root**.
+Scripts are at `scripts/` under the repo root.
 
 ## 0. Pre-flight
 
