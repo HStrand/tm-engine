@@ -479,6 +479,27 @@ public static class MoveValidator
                 return $"Insufficient payment: need {costAmount}, total value is {totalValue}.";
         }
 
+        // Check that the player can afford the action's resource cost
+        if (entry?.Action?.Cost != null)
+        {
+            var costError = entry.Action.Cost switch
+            {
+                SpendEnergyCost c when player.Resources.Energy < c.Amount =>
+                    $"Not enough energy: have {player.Resources.Energy}, need {c.Amount}.",
+                SpendHeatCost c when player.Resources.Heat < c.Amount =>
+                    $"Not enough heat: have {player.Resources.Heat}, need {c.Amount}.",
+                SpendSteelCost c when player.Resources.Steel < c.Amount =>
+                    $"Not enough steel: have {player.Resources.Steel}, need {c.Amount}.",
+                SpendTitaniumCost c when player.Resources.Titanium < c.Amount =>
+                    $"Not enough titanium: have {player.Resources.Titanium}, need {c.Amount}.",
+                SpendMCCost c when player.Resources.MegaCredits < c.Amount =>
+                    $"Not enough MC: have {player.Resources.MegaCredits}, need {c.Amount}.",
+                _ => (string?)null,
+            };
+            if (costError != null)
+                return costError;
+        }
+
         // Check that action effects don't take production below their floors
         // (e.g., Equatorial Magnetizer: -1 energy prod requires ≥1 energy prod).
         if (entry?.Action != null)
@@ -533,6 +554,11 @@ public static class MoveValidator
             return "No active draft.";
 
         var playerIndex = state.GetPlayerIndex(move.PlayerId);
+
+        // Check if the player has already picked this round
+        if (state.Draft.DraftedCards[playerIndex].Count > state.Draft.DraftRound)
+            return "Player has already drafted a card this round.";
+
         var draftHand = state.Draft.DraftHands[playerIndex];
 
         if (!draftHand.Contains(move.CardId))

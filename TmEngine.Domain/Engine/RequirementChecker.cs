@@ -119,6 +119,14 @@ public static class RequirementChecker
 
         foreach (var effect in effects)
         {
+            // Resource spending (e.g. Local Heat Trapping: spend 5 heat)
+            if (effect is ChangeResourceEffect res && res.Amount < 0)
+            {
+                var available = player.Resources.Get(res.Resource);
+                if (available < -res.Amount)
+                    return $"Not enough {res.Resource}: have {available}, need {-res.Amount}.";
+            }
+
             // Self production decreases
             if (effect is ChangeProductionEffect prod && prod.Amount < 0)
             {
