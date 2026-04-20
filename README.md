@@ -162,13 +162,40 @@ Submits a move for the specified player. The request body contains the move obje
 }
 ```
 
-### Get Game Cards
+### Get Cards
 
 ```
-GET /games/{id}/cards
+GET /cards
+GET /cards?gameId={id}
 ```
 
-Returns metadata for all cards referenced in a game.
+Returns card metadata keyed by card ID. Without `gameId`, returns the full card catalog; with `gameId`, returns only cards referenced by that game. Each entry includes `id`, `name`, `type`, `cost`, `tags`, `requirements`, and `description`.
+
+### Get Player Status
+
+```
+GET /games/{id}/status
+```
+
+Returns the full per-player score breakdown (TR, card VP, milestones, awards, greenery and city VP), tile counts, current resources, production, and tag counts.
+
+**Response** `200 OK`:
+
+```json
+{
+  "players": [
+    {
+      "playerId": 0,
+      "corporation": "Tharsis Republic",
+      "points": { "total": 62, "tr": 28, "vp": 12, "milestones": 5, "awards": 5, "greeneries": 7, "cities": 5 },
+      "tiles": { "greeneries": 7, "cities": 3, "special": 0 },
+      "resources": { ... },
+      "production": { ... },
+      "tags": { "building": 4, "space": 2, ... }
+    }
+  ]
+}
+```
 
 ## Move Commands
 
