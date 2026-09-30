@@ -23,7 +23,7 @@ public class ImportFunctionTests
     private readonly InMemoryGameStore _store = new();
     private readonly FixtureLogSource _logs = new();
 
-    private ImportFunction Function() => new(_store, _logs, Json, NullLogger<ImportFunction>.Instance);
+    private ImportFunction Function() => new(_store, _logs, new RequestLimiter(), Json, NullLogger<ImportFunction>.Instance);
 
     [Fact]
     public async Task ImportBgaGame_CreatesAPlayableGame_FromATableIdAndMove()

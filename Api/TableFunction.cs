@@ -40,7 +40,7 @@ public class TableFunction
     /// <summary>The table as it stands, or with at=N as it stood after move N.</summary>
     [FunctionName("GetTable")]
     public async Task<IActionResult> GetTable(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "games/{id}/table")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "games/{id}/table")] HttpRequest req,
         string id)
     {
         try
@@ -61,7 +61,7 @@ public class TableFunction
     /// <summary>Apply a move for whichever seat it names and return the resulting table.</summary>
     [FunctionName("SubmitTableMove")]
     public async Task<IActionResult> SubmitMove(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "games/{id}/table/moves")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "games/{id}/table/moves")] HttpRequest req,
         string id)
     {
         Move? move;
@@ -107,7 +107,7 @@ public class TableFunction
     /// <summary>The moves played so far, for showing a move list.</summary>
     [FunctionName("GetGameHistory")]
     public async Task<IActionResult> GetHistory(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "games/{id}/history")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "games/{id}/history")] HttpRequest req,
         string id)
     {
         IReadOnlyList<GameState> states;

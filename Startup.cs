@@ -20,5 +20,6 @@ public class Startup : FunctionsStartup
             new BlobServiceClient(Environment.GetEnvironmentVariable("AzureWebJobsStorage")));
         builder.Services.AddSingleton<IGameStore, BlobGameStore>();
         builder.Services.AddSingleton<IBgaLogSource, RegistryBgaLogSource>();
+        builder.Services.AddSingleton(_ => new RequestLimiter());
     }
 }

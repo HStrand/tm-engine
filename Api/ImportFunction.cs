@@ -22,13 +22,19 @@ public class ImportFunction
 {
     private readonly IGameStore _store;
     private readonly IBgaLogSource _logs;
+    private readonly RequestLimiter _limiter;
     private readonly JsonSerializerSettings _jsonSettings;
     private readonly ILogger<ImportFunction> _logger;
 
-    public ImportFunction(IGameStore store, IBgaLogSource logs, JsonSerializerSettings jsonSettings, ILogger<ImportFunction> logger)
+    // Per client and day. Looking at a replay costs one fetch; each "Play from here" costs one fetch and one import.
+    private static readonly int FetchLimit = RequestLimiter.LimitSetting("RegistryFetchDailyLimit", 300);
+    private static readonly int ImportLimit = RequestLimiter.LimitSetting("ImportDailyLimit", 60);
+
+    public ImportFunction(IGameStore store, IBgaLogSource logs, RequestLimiter limiter, JsonSerializerSettings jsonSettings, ILogger<ImportFunction> logger)
     {
         _store = store;
         _logs = logs;
+        _limiter = limiter;
         _jsonSettings = jsonSettings;
         _logger = logger;
     }
@@ -36,9 +42,12 @@ public class ImportFunction
     /// <summary>Whether a scraped game can be played on from, and after which moves.</summary>
     [FunctionName("GetBgaForkPoints")]
     public async Task<IActionResult> GetForkPoints(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "import/bga/{tableId}/fork-points")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "import/bga/{tableId}/fork-points")] HttpRequest req,
         string tableId)
     {
+        if (!_limiter.Allow(req, "fetch", FetchLimit))
+            return TooManyRequests();
+
         var (log, error) = await FetchLog(tableId);
         if (log == null)
             return error!;
@@ -50,8 +59,11 @@ public class ImportFunction
     /// <summary>Create a game from a position in a scraped game, fetching the log by table id.</summary>
     [FunctionName("ImportBgaGame")]
     public async Task<IActionResult> ImportBgaGame(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = "games/import/bga")] HttpRequest req)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "games/import/bga")] HttpRequest req)
     {
+        if (!_limiter.Allow(req, "fetch", FetchLimit) || !_limiter.Allow(req, "import", ImportLimit))
+            return TooManyRequests();
+
         var body = await new StreamReader(req.Body).ReadToEndAsync();
         ImportBgaRequest? request;
         try
@@ -101,7 +113,7 @@ public class ImportFunction
     /// <summary>Who sits where and which replay an imported game came from.</summary>
     [FunctionName("GetGameMeta")]
     public async Task<IActionResult> GetGameMeta(
-        [HttpTrigger(AuthorizationLevel.Function, "get", Route = "games/{id}/meta")] HttpRequest req,
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "games/{id}/meta")] HttpRequest req,
         string id)
     {
         var meta = await _store.LoadMetaAsync(id);
@@ -146,6 +158,9 @@ public class ImportFunction
             return (null, JsonResult(HttpStatusCode.BadGateway, new ErrorResponse("The game log could not be read from the registry.")));
         }
     }
+
+    private ContentResult TooManyRequests() =>
+        JsonResult(HttpStatusCode.TooManyRequests, new ErrorResponse("That is enough new games for today; try again tomorrow."));
 
     private ContentResult JsonResult(HttpStatusCode status, object body)
     {

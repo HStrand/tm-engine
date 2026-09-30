@@ -24,8 +24,11 @@ public class BlobGameStore : IGameStore
     // Single-writer cache of the latest GameState per gameId. Writes are persisted to blob
     // storage as before; reads return the cached state on hit and fall back to blob on miss
     // (cold start, different instance). Safe under Functions' in-process model because per-game
-    // API calls are effectively serialized by the bot loop / client.
-    private static readonly ConcurrentDictionary<string, GameState> _cache = new();
+    // API calls are effectively serialized by the bot loop / client. Bounded, since games are
+    // created by visitors: the least recently used entries go once there are more than MaxCached.
+    private const int MaxCached = 500;
+    private static readonly ConcurrentDictionary<string, (GameState State, long Touched)> _cache = new();
+    private static long _clock;
 
     public BlobGameStore(BlobServiceClient blobService, JsonSerializerSettings jsonSettings)
     {
@@ -36,7 +39,10 @@ public class BlobGameStore : IGameStore
     public async Task<GameState> LoadStateAsync(string gameId)
     {
         if (_cache.TryGetValue(gameId, out var cached))
-            return cached;
+        {
+            _cache[gameId] = (cached.State, Interlocked.Increment(ref _clock));
+            return cached.State;
+        }
 
         await EnsureContainerAsync();
 
@@ -60,7 +66,7 @@ public class BlobGameStore : IGameStore
         var json = response.Value.Content.ToString();
         var state = JsonConvert.DeserializeObject<GameState>(json, _jsonSettings)!;
 
-        _cache[gameId] = state;
+        Remember(gameId, state);
         return state;
     }
 
@@ -80,7 +86,7 @@ public class BlobGameStore : IGameStore
             Conditions = new BlobRequestConditions { IfNoneMatch = ETag.All }
         });
 
-        _cache[gameId] = state;
+        Remember(gameId, state);
     }
 
     public async Task CreateGameAsync(GameState state)
@@ -93,7 +99,7 @@ public class BlobGameStore : IGameStore
         var json = JsonConvert.SerializeObject(state, _jsonSettings);
         await blobClient.UploadAsync(new BinaryData(json));
 
-        _cache[state.GameId] = state;
+        Remember(state.GameId, state);
     }
 
     public async Task<GameState> LoadStateAtAsync(string gameId, int moveNumber)
@@ -164,6 +170,16 @@ public class BlobGameStore : IGameStore
         }));
 
         return states.OrderBy(s => s.MoveNumber).ToList();
+    }
+
+    private static void Remember(string gameId, GameState state)
+    {
+        _cache[gameId] = (state, Interlocked.Increment(ref _clock));
+        if (_cache.Count <= MaxCached) return;
+
+        // Evict a tenth of the cache at a time rather than one entry per write.
+        foreach (var key in _cache.OrderBy(e => e.Value.Touched).Take(MaxCached / 10).Select(e => e.Key).ToList())
+            _cache.TryRemove(key, out _);
     }
 
     // Sits beside the state blobs; their "{gameId}_" prefix keeps it out of the state listing.
