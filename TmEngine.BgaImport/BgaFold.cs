@@ -179,7 +179,7 @@ internal sealed partial class BgaFold
 
     // ── Tiles ──────────────────────────────────────────────────
 
-    [GeneratedRegex(@" places (?:tile )?(.+?) (?:on|into) ")]
+    [GeneratedRegex(@"^(.+?) places (?:tile )?(.+?) (?:on|into) ")]
     private static partial Regex PlacesLine();
 
     private void ApplyTile(BgaMove move, int moveIndex)
@@ -188,17 +188,18 @@ internal sealed partial class BgaFold
             return;
 
         var kind = move.TilePlaced;
+        // The move's own player is often not the one placing (the log files a placement under whoever's
+        // turn it was logged in), so the name in "X places Y on Z" is the owner. Special tiles are logged
+        // as the generic "tile"; their name is in the same text.
+        var named = BgaMoveText.Lines(move).Select(line => PlacesLine().Match(line)).FirstOrDefault(m => m.Success);
+        var owner = _context.ResolvePlayer(named?.Groups[1].Value) ?? move.PlayerId;
         if (kind is not ("City" or "Forest" or "Ocean"))
-        {
-            // Special tiles are logged as the generic "tile"; the name is in the text.
-            var named = BgaMoveText.Lines(move).Select(line => PlacesLine().Match(line)).FirstOrDefault(m => m.Success);
-            kind = named?.Groups[1].Value ?? kind;
-        }
+            kind = named?.Groups[2].Value ?? kind;
 
         if (kind == "Mining")
-            kind = MiningCardBehind(move.PlayerId);
+            kind = MiningCardBehind(owner);
 
-        Tiles[coord] = new FoldTile(kind, kind == "Ocean" ? null : move.PlayerId, moveIndex);
+        Tiles[coord] = new FoldTile(kind, kind == "Ocean" ? null : owner, moveIndex);
         ClaimedHexes.Remove(coord);
     }
 

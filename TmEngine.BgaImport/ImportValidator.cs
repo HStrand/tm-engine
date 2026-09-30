@@ -1,3 +1,4 @@
+using TmEngine.Domain.Cards.Effects;
 using TmEngine.Domain.Cards;
 using TmEngine.Domain.Engine;
 using TmEngine.Domain.Models;
@@ -31,6 +32,7 @@ internal static class ImportValidator
             var trackers = snapshot.PlayerTrackers?.GetValueOrDefault(bgaId) ?? [];
 
             CheckTableau(player, name, trackers, issues);
+            CheckCardTilesArePlaced(state, player, name, issues);
 
             if (scores?.FirstOrDefault(s => s.PlayerId == player.PlayerId) is { } score
                 && snapshot.PlayerVp?.GetValueOrDefault(bgaId)?.TotalDetails is { } expected)
@@ -142,6 +144,30 @@ internal static class ImportValidator
         var missing = context.ProjectDeck.Count - projectCards.Distinct().Count();
         if (missing != 0)
             issues.Add(ImportIssue.Blocking("CARD_ZONES", $"{missing} card(s) from the deck are not in any hand, tableau or pile."));
+    }
+
+    /// <summary>
+    /// A card that places a special tile should have one on the board. A log can lose the placement (the scraper
+    /// saw the card played but never the tile), and then the board, and the score it earns, are wrong.
+    /// </summary>
+    private static void CheckCardTilesArePlaced(GameState state, PlayerState player, string name, List<ImportIssue> issues)
+    {
+        var placed = state.PlacedTiles.Values.Where(t => t.OwnerId == player.PlayerId).Select(t => t.Type)
+            .Concat(state.OffMapTiles.Where(t => t.OwnerId == player.PlayerId).Select(t => t.Type))
+            .ToList();
+
+        foreach (var cardId in player.PlayedCards)
+        {
+            var tiles = CardRegistry.Get(cardId).OnPlayEffects.OfType<PlaceTileEffect>()
+                .Select(e => e.TileType)
+                .Where(t => t is not (TileType.City or TileType.Greenery or TileType.Ocean));
+            foreach (var tile in tiles)
+            {
+                if (placed.Remove(tile)) continue;
+                issues.Add(ImportIssue.Warning("TILE_NOT_IN_LOG",
+                    $"{name}'s {CardRegistry.GetDefinition(cardId).Name} tile is not in the log, so it is missing from the board."));
+            }
+        }
     }
 
     private static void CheckTableau(PlayerState player, string name, Dictionary<string, int> trackers, List<ImportIssue> issues)

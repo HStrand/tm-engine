@@ -11,6 +11,12 @@ public static class Fixtures
     public const string Hellas2p = "game_741102170_93234993.json";
     public const string Tharsis2p = "game_825224074_83900777.json";
 
+    /// <summary>
+    /// Elysium, two players. Many placements are filed under the wrong player, and StrandedKnight's Capital is played
+    /// but its placement was never logged.
+    /// </summary>
+    public const string ElysiumMisfiledTiles = "game_921600960_86296239.json";
+
     /// <summary>Three players, no Prelude, no Corporate Era. Not importable: only two-player games are.</summary>
     public const string Tharsis3p = "game_538921998_93915802.json";
 

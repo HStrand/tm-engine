@@ -492,6 +492,31 @@ public class BgaImporterTests
         Moves = log.Moves.Select(m => m.GameState is null ? m : m with { GameState = change(m.GameState) }).ToList(),
     };
 
+    [Fact]
+    public void Import_TilesBelongToThePlayerNamedInTheText_NotTheMoveTheyWereLoggedUnder()
+    {
+        // Most of FennecFoxEnjoyer's greeneries were logged under moves carrying StrandedKnight's id. Read by the
+        // text instead, the greenery points agree with BGA's at every fork point.
+        foreach (var fork in Fixtures.ForkPoints(Fixtures.ElysiumMisfiledTiles).ForkPoints)
+        {
+            var result = BgaImporter.Import(Fixtures.Load(Fixtures.ElysiumMisfiledTiles), new BgaImportOptions(fork.MoveIndex));
+            Assert.True(result.Success, Describe(result.BlockingIssues));
+            Assert.DoesNotContain(result.Issues, i => i.Code == "SCORE_MISMATCH" && i.Message.Contains("greeneries"));
+        }
+    }
+
+    [Fact]
+    public void Import_WarnsWhenACardsTileNeverAppearsInTheLog()
+    {
+        var fork = GenerationStart(Fixtures.ElysiumMisfiledTiles, generation: 9);
+        var result = BgaImporter.Import(Fixtures.Load(Fixtures.ElysiumMisfiledTiles), new BgaImportOptions(fork.MoveIndex));
+
+        Assert.True(result.Success, Describe(result.BlockingIssues));
+        var missing = Assert.Single(result.Issues, i => i.Code == "TILE_NOT_IN_LOG");
+        Assert.Contains("StrandedKnight's Capital tile", missing.Message);
+        Assert.DoesNotContain(result.State!.PlacedTiles.Values, t => t.Type == TileType.Capital);
+    }
+
     private static ForkPoint GenerationStart(string fixture, int generation) =>
         Fixtures.ForkPoints(fixture).ForkPoints
             .Single(f => f.Generation == generation && f.Kind == ForkKind.GenerationStart);
