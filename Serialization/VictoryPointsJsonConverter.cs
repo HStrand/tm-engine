@@ -25,6 +25,7 @@ public class VictoryPointsJsonConverter : JsonConverter<VictoryPoints>
             "PerResource" => obj.ToObject<PerResourceVictoryPoints>(inner),
             "HasResource" => obj.ToObject<HasResourceVictoryPoints>(inner),
             "PerTag" => obj.ToObject<PerTagVictoryPoints>(inner),
+            "PerBoardFeature" => obj.ToObject<PerBoardFeatureVictoryPoints>(inner),
             _ => null,
         };
     }
@@ -42,6 +43,7 @@ public class VictoryPointsJsonConverter : JsonConverter<VictoryPoints>
             PerResourceVictoryPoints => "PerResource",
             HasResourceVictoryPoints => "HasResource",
             PerTagVictoryPoints => "PerTag",
+            PerBoardFeatureVictoryPoints => "PerBoardFeature",
             _ => value.GetType().Name,
         };
 

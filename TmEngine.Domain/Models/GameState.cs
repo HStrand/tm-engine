@@ -64,6 +64,12 @@ public sealed record GameState
     /// <summary>Remaining prelude cards not dealt during setup (for Valley Trust first action).</summary>
     public ImmutableList<string> PreludeDeck { get; init; } = [];
 
+    /// <summary>Seed for reshuffling the discard pile into a new draw pile. Fixed for the whole game.</summary>
+    public int ShuffleSeed { get; init; }
+
+    /// <summary>How many times the discard pile has been reshuffled; varies the shuffle from one to the next.</summary>
+    public int ReshuffleCount { get; init; }
+
     // ── Setup State (only during Setup phase) ──
 
     public SetupState? Setup { get; init; }

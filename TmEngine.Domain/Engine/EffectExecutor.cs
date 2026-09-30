@@ -454,31 +454,17 @@ public static class EffectExecutor
 
     // ── Cards ──────────────────────────────────────────────────
 
-    private static GameState ApplyDrawCards(GameState state, int playerId, DrawCardsEffect e)
-    {
-        for (int i = 0; i < e.Count; i++)
-        {
-            if (state.DrawPile.IsEmpty)
-                break; // TODO: reshuffle discard pile
-
-            var cardId = state.DrawPile[0];
-            state = state with { DrawPile = state.DrawPile.RemoveAt(0) };
-            state = state.UpdatePlayer(playerId, p => p with { Hand = p.Hand.Add(cardId) });
-        }
-        return state;
-    }
+    private static GameState ApplyDrawCards(GameState state, int playerId, DrawCardsEffect e) =>
+        Deck.DrawToHand(state, playerId, e.Count);
 
     private static GameState ApplyRevealAndAddResource(GameState state, int playerId, RevealAndAddResourceEffect e)
     {
-        if (state.DrawPile.IsEmpty)
+        (state, var revealed) = Deck.Draw(state, 1);
+        if (revealed.IsEmpty)
             return state;
 
-        var cardId = state.DrawPile[0];
-        state = state with
-        {
-            DrawPile = state.DrawPile.RemoveAt(0),
-            DiscardPile = state.DiscardPile.Add(cardId),
-        };
+        var cardId = revealed[0];
+        state = state with { DiscardPile = state.DiscardPile.Add(cardId) };
 
         // Check if the revealed card has the required tag
         var tags = CardRegistry.GetTags(cardId);
@@ -492,13 +478,7 @@ public static class EffectExecutor
 
     private static (GameState, PendingAction?) ApplyDrawKeep(GameState state, int playerId, DrawKeepEffect e)
     {
-        var drawn = ImmutableArray.CreateBuilder<string>();
-        for (int i = 0; i < e.Draw; i++)
-        {
-            if (state.DrawPile.IsEmpty) break;
-            drawn.Add(state.DrawPile[0]);
-            state = state with { DrawPile = state.DrawPile.RemoveAt(0) };
-        }
+        (state, var drawn) = Deck.Draw(state, e.Draw);
 
         if (e.CostPerCard == 0 && drawn.Count <= e.Keep)
         {
@@ -510,7 +490,7 @@ public static class EffectExecutor
             return (state, null);
         }
 
-        return (state, new DrawKeepPending(drawn.ToImmutable(), e.Keep, e.CostPerCard));
+        return (state, new DrawKeepPending([.. drawn], e.Keep, e.CostPerCard));
     }
 
     // ── Card Resources ─────────────────────────────────────────
@@ -980,33 +960,23 @@ public static class EffectExecutor
     {
         var kept = new List<string>();
         var discarded = new List<string>();
-        var allRevealed = new List<string>();
-        var deck = state.DrawPile;
 
-        int found = 0;
-        while (found < e.Count && !deck.IsEmpty)
+        // Rejected cards join the discard pile only once the reveal is over, so a reshuffle partway through
+        // cannot bring them straight back.
+        while (kept.Count < e.Count)
         {
-            var cardId = deck[0];
-            deck = deck.RemoveAt(0);
-            allRevealed.Add(cardId);
+            (state, var revealed) = Deck.Draw(state, 1);
+            if (revealed.IsEmpty)
+                break;
 
-            var tags = CardRegistry.GetTags(cardId);
-            if (tags.Contains(e.Tag))
-            {
+            var cardId = revealed[0];
+            if (CardRegistry.GetTags(cardId).Contains(e.Tag))
                 kept.Add(cardId);
-                found++;
-            }
             else
-            {
                 discarded.Add(cardId);
-            }
         }
 
-        state = state with
-        {
-            DrawPile = deck,
-            DiscardPile = state.DiscardPile.AddRange(discarded),
-        };
+        state = state with { DiscardPile = state.DiscardPile.AddRange(discarded) };
 
         // Add matching cards to player's hand
         state = state.UpdatePlayer(playerId, p => p with
@@ -1021,14 +991,16 @@ public static class EffectExecutor
         GameState state, int playerId, DrawAndPlayOneEffect e)
     {
         // Draw from the appropriate deck
-        var deck = e.CardTypeToFind == CardType.Prelude ? state.PreludeDeck : state.DrawPile;
-
-        var (dealt, remaining) = DeckBuilder.Deal(deck, e.DrawCount);
-
-        // Update the deck
-        state = e.CardTypeToFind == CardType.Prelude
-            ? state with { PreludeDeck = remaining }
-            : state with { DrawPile = remaining };
+        ImmutableList<string> dealt;
+        if (e.CardTypeToFind == CardType.Prelude)
+        {
+            (dealt, var remaining) = DeckBuilder.Deal(state.PreludeDeck, e.DrawCount);
+            state = state with { PreludeDeck = remaining };
+        }
+        else
+        {
+            (state, dealt) = Deck.Draw(state, e.DrawCount);
+        }
 
         if (dealt.Count == 0)
             return (state, null);

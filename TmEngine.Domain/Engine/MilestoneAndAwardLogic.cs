@@ -41,7 +41,7 @@ public static class MilestoneAndAwardLogic
             "Mayor" => CountOwnedTilesOfType(state, player.PlayerId, TileType.City)
                       + CountOwnedTilesOfType(state, player.PlayerId, TileType.Capital),
             "Gardener" => CountOwnedTilesOfType(state, player.PlayerId, TileType.Greenery),
-            "Builder" => CountPlayerTags(player, Tag.Building),
+            "Builder" => CountPlayerTagsWithWild(player, Tag.Building),
             "Planner" => player.Hand.Count,
 
             // Hellas
@@ -49,7 +49,7 @@ public static class MilestoneAndAwardLogic
             "Tactician" => CountCardsWithRequirements(player),
             "Polar Explorer" => CountOwnedTilesInBottomRows(state, player.PlayerId),
             "Energizer" => player.Production.Energy,
-            "Rim Settler" => CountPlayerTags(player, Tag.Jovian),
+            "Rim Settler" => CountPlayerTagsWithWild(player, Tag.Jovian),
 
             // Elysium
             "Generalist" => CountProductionTypesAtLeast1(player),
@@ -130,6 +130,13 @@ public static class MilestoneAndAwardLogic
 
     private static int CountPlayerTags(PlayerState player, Tag tag) =>
         player.CountTag(tag, CardRegistry.GetTags);
+
+    /// <summary>
+    /// Tags for a milestone: a wild tag counts as whichever tag is being counted. Awards do not get this;
+    /// they use <see cref="CountPlayerTags"/>.
+    /// </summary>
+    private static int CountPlayerTagsWithWild(PlayerState player, Tag tag) =>
+        CountPlayerTags(player, tag) + CountPlayerTags(player, Tag.Wild);
 
     private static int CountOwnedTiles(GameState state, int playerId) =>
         state.PlacedTiles.Values.Count(t => t.OwnerId == playerId)

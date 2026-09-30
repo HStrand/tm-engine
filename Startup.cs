@@ -3,6 +3,7 @@ using Azure.Storage.Blobs;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
+using tm_engine.Api;
 using tm_engine.Serialization;
 using tm_engine.Storage;
 
@@ -18,5 +19,6 @@ public class Startup : FunctionsStartup
         builder.Services.AddSingleton(_ =>
             new BlobServiceClient(Environment.GetEnvironmentVariable("AzureWebJobsStorage")));
         builder.Services.AddSingleton<IGameStore, BlobGameStore>();
+        builder.Services.AddSingleton<IBgaLogSource, RegistryBgaLogSource>();
     }
 }

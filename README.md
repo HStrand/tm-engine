@@ -116,7 +116,7 @@ All fields except `seed` are required. `map` accepts `"Tharsis"`, `"Hellas"`, or
 GET /games/{id}?playerId={playerId}
 ```
 
-The optional `playerId` query parameter filters the response to that player's perspective.
+The optional `playerId` query parameter filters the response to that player's perspective. `view=full` shows every player's hand instead (hot-seat play); the draw and discard piles stay hidden. `at={moveNumber}` returns the state after that move rather than the latest one.
 
 **Response** `200 OK`:
 
@@ -126,6 +126,72 @@ The optional `playerId` query parameter filters the response to that player's pe
   "cardNames": { "001": "Card Name", ... }
 }
 ```
+
+### Hot-Seat Table
+
+For one person controlling every seat (the web client's play page). Each response carries everything needed to render the game and offer the next move, so a move is one round trip.
+
+```
+GET  /games/{id}/table?at={moveNumber}
+POST /games/{id}/table/moves
+GET  /games/{id}/history
+```
+
+`table` returns the state with all hands visible (the piles stay hidden), plus `players` (each player's score breakdown, tile and tag counts, as in Get Player Status), `legalMoves` (player id → legal moves, only for players who can act), `cardNames`, the pile sizes, `latestMoveNumber`, and `meta` for imported games. With `at`, it returns the position after that move instead, with no legal moves: moves can only be made from the latest position.
+
+`table/moves` takes a move object as in Submit Move (the player is the move's `playerId`) and returns the new table, or `400` with `error` when the move is not legal.
+
+`history` returns the moves played so far as `{ moveNumber, generation, move }`, with the names of all cards.
+
+### Play On From a BGA Replay
+
+A game scraped from Board Game Arena can be played on from any point in generation 2 or later where a player is about to begin an action (`ActionStart`), including the start of each generation's action phase (`GenerationStart`). Positions in the middle of an action, in the research phase, inside a takeback, or after the first pass of the final generation are not offered. The engine state is rebuilt from the game log: counters come from the log's snapshot at that move, hands, tableaux and tiles from the moves up to it. The draw pile is the cards the real game went on to draw, in order, followed by the unseen cards shuffled with `seed` — so replaying the real moves draws the real cards.
+
+```
+GET  /import/bga/{tableId}/fork-points
+POST /games/import/bga
+POST /games/import/bga-log?moveIndex={moveIndex}&seed={seed}
+GET  /games/{id}/meta
+```
+
+`fork-points` says whether the game can be imported and lists the moves it can be imported after. Every position listed has been built and checked against the log's counters (tags, hand sizes, oceans, pile sizes), so importing it succeeds. Each issue has a `severity` (`Blocking` or `Warning`), a `code` and a `message`.
+
+```json
+{
+  "eligible": true,
+  "forkPoints": [
+    { "moveIndex": 105, "moveNumber": 106, "kind": "GenerationStart", "generation": 4, "activeBgaPlayerId": "86296239" }
+  ],
+  "issues": []
+}
+```
+
+`games/import/bga` fetches the log by table id from the scraper registry (settings `RegistryApiBase`, and `RegistryApiKey` if the registry needs one). `moveIndex` is a zero-based index into the log's moves and snaps back to the nearest fork point unless `snap` is `false`.
+
+```json
+{ "tableId": "824655675", "moveIndex": 117, "seed": 7 }
+```
+
+`games/import/bga-log` takes the game log itself as the request body, for local use without the registry. The CLI wraps it: `dotnet run --project TmEngine.Cli -- import-bga <logFile> <moveIndex> [seed]`.
+
+**Response** `201 Created`, or `422` with `issues` when the position cannot be imported:
+
+```json
+{
+  "gameId": "abc-123",
+  "fork": { "moveIndex": 105, "moveNumber": 106, "kind": "GenerationStart", "generation": 4, "activeBgaPlayerId": "86296239" },
+  "meta": {
+    "seats": [ { "seat": 0, "bgaPlayerId": "98490496", "name": "cdman234", "color": "#ff0000" }, ... ],
+    "source": { "tableId": "824655675", "perspective": "86296239", "moveIndex": 105, "moveNumber": 106 },
+    "shuffleSeed": 7
+  },
+  "issues": []
+}
+```
+
+Engine player ids are seats `0..n-1` in turn order; `meta` (also at `GET /games/{id}/meta`) maps them back to the BGA players.
+
+Not importable: games with more than two players (turn order and drafting have only been verified for two); maps other than Tharsis, Hellas and Elysium; Colonies; logs from old scraper versions (no hands or pile counts); tables played without live scoring (terraform ratings are not recorded); and positions where the log's counters contradict the cards found in it.
 
 ### Get Legal Moves
 
@@ -200,6 +266,14 @@ Returns the full per-player score breakdown (TR, card VP, milestones, awards, gr
 ## Move Commands
 
 Moves are submitted as JSON to `POST /games/{id}/moves?playerId={playerId}`. Every move has a `type` discriminator and `playerId`. Property names are camelCase.
+
+**Paying with heat (Helion).** Moves whose cost in MC comes without a `payment` — standard projects, claiming a milestone, funding an award, buying cards, card actions that cost MC, and a placement on the Hellas South Pole — take an optional `heat`: how much of the cost to pay with heat, MC covering the rest.
+
+```json
+{ "type": "Asteroid", "playerId": 0, "heat": 6 }
+```
+
+It is rejected unless the player may pay with heat, holds that much, the amount is no more than the cost, and their MC covers the remainder. Left out, MC is spent first and heat only covers a shortfall. Moves with a `payment` (playing a card, actions payable with steel or titanium) put heat in the payment instead.
 
 ### Setup Phase
 

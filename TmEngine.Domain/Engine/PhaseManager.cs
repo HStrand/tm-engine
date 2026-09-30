@@ -136,19 +136,15 @@ public static class PhaseManager
         };
 
         // Deal 4 cards to each player
-        var deck = state.DrawPile;
         var availableCards = ImmutableList.CreateBuilder<ImmutableList<string>>();
         var submitted = ImmutableList.CreateBuilder<bool>();
 
         for (int i = 0; i < playerCount; i++)
         {
-            var (dealt, remaining) = DeckBuilder.Deal(deck, Constants.ResearchCardsDealt);
+            (state, var dealt) = Deck.Draw(state, Constants.ResearchCardsDealt);
             availableCards.Add(dealt);
             submitted.Add(false);
-            deck = remaining;
         }
-
-        state = state with { DrawPile = deck };
 
         if (state.DraftVariant)
         {

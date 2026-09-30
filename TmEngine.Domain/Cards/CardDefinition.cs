@@ -85,8 +85,28 @@ public sealed record PerTagVictoryPoints(int PointsPer, Tag TagType) : VictoryPo
     }
 }
 
+/// <summary>Something on the board that a card's victory points are counted from.</summary>
+public enum BoardFeature
+{
+    /// <summary>Ocean tiles next to the owner's Capital tile.</summary>
+    OceansAdjacentToCapital,
+
+    /// <summary>City tiles, anyone's, next to the owner's Commercial District tile.</summary>
+    CitiesAdjacentToCommercialDistrict,
+
+    /// <summary>Every city in play: all players', on Mars and off it.</summary>
+    CitiesInPlay,
+}
+
+/// <summary>Victory points counted from the board (e.g., "1 VP for every 3rd city in play").</summary>
+public sealed record PerBoardFeatureVictoryPoints(int PointsPer, int FeaturesPer, BoardFeature Feature) : VictoryPoints
+{
+    public override int Calculate(VictoryPointContext context) =>
+        (context.CountOnBoard(Feature) / FeaturesPer) * PointsPer;
+}
+
 /// <summary>Context needed to calculate variable VP at end of game.</summary>
 public sealed record VictoryPointContext(
     Func<string, int> GetCardResources,
     Func<Tag, int> CountTags,
-    Func<int> CountAdjacentOceans);
+    Func<BoardFeature, int> CountOnBoard);

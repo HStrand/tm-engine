@@ -77,14 +77,19 @@ public class GamesFunction
         var playerIdStr = req.Query["playerId"];
         int? playerId = !string.IsNullOrEmpty(playerIdStr) ? int.Parse(playerIdStr) : null;
 
+        // at=N returns the state after move N instead of the latest one
+        var atStr = req.Query["at"];
+
         GameState state;
         try
         {
-            state = await _store.LoadStateAsync(id);
+            state = string.IsNullOrEmpty(atStr)
+                ? await _store.LoadStateAsync(id)
+                : await _store.LoadStateAtAsync(id, int.Parse(atStr));
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException ex)
         {
-            return JsonResult(HttpStatusCode.NotFound, new ErrorResponse($"Game '{id}' not found."));
+            return JsonResult(HttpStatusCode.NotFound, new ErrorResponse(ex.Message));
         }
 
         // Extract counts before filtering hides the data
@@ -92,7 +97,10 @@ public class GamesFunction
         var discardPileCount = state.DiscardPile.Count;
         var handCounts = state.Players.ToImmutableDictionary(p => p.PlayerId, p => p.Hand.Count);
 
-        var filtered = GameStateView.FilterForPlayer(state, playerId);
+        // view=full shows every hand, for hot-seat play where one person controls all seats
+        var filtered = req.Query["view"] == "full"
+            ? GameStateView.FilterForHotSeat(state)
+            : GameStateView.FilterForPlayer(state, playerId);
         var cardNames = CardNameResolver.FromGameState(filtered);
         _logger.LogInformation("GetGame completed in {ElapsedMs}ms", sw.ElapsedMilliseconds);
         return JsonResult(HttpStatusCode.OK, new GameStateResponse(filtered, cardNames, drawPileCount, discardPileCount, handCounts));

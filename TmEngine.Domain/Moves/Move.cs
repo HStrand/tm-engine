@@ -7,7 +7,15 @@ namespace TmEngine.Domain.Moves;
 /// Base type for all moves (commands) that can be applied to a GameState.
 /// Each move is an explicit, auditable, deterministic state transition.
 /// </summary>
-public abstract record Move(int PlayerId);
+public abstract record Move(int PlayerId)
+{
+    /// <summary>
+    /// Heat to spend in place of MC on this move's MC cost, for moves that carry no other payment breakdown
+    /// (standard projects, milestones, awards, buying cards, MC card actions, the Hellas South Pole ocean).
+    /// Helion only. Null leaves the split to the engine: MC first, heat for the shortfall.
+    /// </summary>
+    public int? Heat { get; init; }
+}
 
 // ═══════════════════════════════════════════════════════════
 //  SETUP MOVE

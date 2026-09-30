@@ -66,6 +66,19 @@ public class ApiClient
         return JsonConvert.DeserializeObject<SubmitMoveResponse>(body, _jsonSettings)!;
     }
 
+    /// <summary>
+    /// Create a game from a position in a BGA game log. The response carries the new game's id on success
+    /// and the importer's issues either way.
+    /// </summary>
+    public async Task<(bool Created, JObject Body)> ImportBgaLogAsync(string logJson, int moveIndex, int? seed)
+    {
+        var url = $"{_baseUrl}/games/import/bga-log?moveIndex={moveIndex}" + (seed is null ? "" : $"&seed={seed}");
+        var content = new StringContent(logJson, Encoding.UTF8, "application/json");
+        var response = await _http.PostAsync(url, content);
+        var body = await response.Content.ReadAsStringAsync();
+        return (response.IsSuccessStatusCode, JObject.Parse(body));
+    }
+
     public async Task<Dictionary<string, CardInfoDto>> GetGameCardsAsync(string gameId)
     {
         var response = await _http.GetAsync($"{_baseUrl}/games/{gameId}/cards");

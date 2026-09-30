@@ -10,6 +10,17 @@ namespace tm_engine.Api;
 public static class GameStateView
 {
     /// <summary>
+    /// Returns a copy of the game state with every player's cards visible but the piles still hidden,
+    /// for hot-seat play where one person controls all seats.
+    /// </summary>
+    public static GameState FilterForHotSeat(GameState state) => state with
+    {
+        DrawPile = [],
+        DiscardPile = [],
+        PreludeDeck = [],
+    };
+
+    /// <summary>
     /// Returns a copy of the game state with private information hidden.
     /// If playerId is null (spectator), all hands are hidden.
     /// </summary>

@@ -3,7 +3,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
     <RootNamespace>tm_engine</RootNamespace>
-    <DefaultItemExcludes>$(DefaultItemExcludes);TmEngine.Domain/**;TmEngine.Domain.Tests/**;TmEngine.Cli/**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);TmEngine.Domain/**;TmEngine.Domain.Tests/**;TmEngine.Cli/**;TmEngine.BgaImport/**;TmEngine.BgaImport.Tests/**</DefaultItemExcludes>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Blobs" Version="12.27.0" />
@@ -20,6 +20,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="TmEngine.BgaImport\TmEngine.BgaImport.csproj" />
     <ProjectReference Include="TmEngine.Domain\TmEngine.Domain.csproj" />
   </ItemGroup>
 </Project>

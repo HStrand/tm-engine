@@ -18,6 +18,11 @@ if (args.Length >= 2 && args[0] == "harness-show-ai")
     await RunHarnessShowAi(args[1]);
     return;
 }
+if (args.Length >= 3 && args[0] == "import-bga")
+{
+    await RunImportBga(args[1], int.Parse(args[2]), args.Length >= 4 ? int.Parse(args[3]) : null);
+    return;
+}
 
 Console.ForegroundColor = ConsoleColor.Cyan;
 Console.WriteLine("╔════════════════════════════════════════╗");
@@ -934,6 +939,29 @@ async Task RunHarnessBotMove(string gameId, int playerId)
         description = moves.Actions?.CanEndTurn == true ? "ends turn (fallback)" : "passes (fallback)";
     }
     Console.WriteLine($"P{playerId}: {description}");
+}
+
+// import-bga <logFile> <moveIndex> [seed]: create a game from a position in a scraped BGA game log.
+// The move index snaps back to the nearest position that can be imported.
+async Task RunImportBga(string logFile, int moveIndex, int? seed)
+{
+    var api = new ApiClient("http://localhost:7102/api");
+    var (created, body) = await api.ImportBgaLogAsync(await File.ReadAllTextAsync(logFile), moveIndex, seed);
+
+    foreach (var issue in body["issues"] ?? new Newtonsoft.Json.Linq.JArray())
+        Console.WriteLine($"{issue["severity"]}: {issue["message"]}");
+
+    if (!created)
+    {
+        Console.WriteLine(body["error"]?.ToString() ?? "IMPORT_FAILED");
+        return;
+    }
+
+    var fork = body["fork"]!;
+    Console.WriteLine($"Imported at move {fork["moveNumber"]} (start of generation {fork["generation"]}).");
+    foreach (var seat in body["meta"]!["seats"]!)
+        Console.WriteLine($"  Player {seat["seat"]}: {seat["name"]}");
+    Console.WriteLine($"GAME_ID {body["gameId"]}");
 }
 
 async Task RunHarnessShow(string gameId)

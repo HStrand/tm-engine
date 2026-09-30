@@ -374,7 +374,7 @@ public static class LegalMoveGenerator
         GameState state, PlayerState player, MapDefinition map)
     {
         var result = ImmutableList.CreateBuilder<StandardProjectOption>();
-        int mc = player.Resources.MegaCredits;
+        int mc = Wallet.Spendable(player);
 
         // Sell Patents — available if player has cards in hand
         result.Add(new StandardProjectOption(StandardProject.SellPatents, player.Hand.Count > 0, 0));
@@ -413,7 +413,7 @@ public static class LegalMoveGenerator
     {
         if (state.ClaimedMilestones.Count >= Constants.MaxClaimedMilestones)
             return [];
-        if (player.Resources.MegaCredits < Constants.MilestoneCost)
+        if (Wallet.Spendable(player) < Constants.MilestoneCost)
             return [];
 
         var result = ImmutableList.CreateBuilder<ClaimableMilestone>();
@@ -446,7 +446,7 @@ public static class LegalMoveGenerator
             _ => int.MaxValue,
         };
 
-        if (!isFree && player.Resources.MegaCredits < cost)
+        if (!isFree && Wallet.Spendable(player) < cost)
             return [];
 
         var result = ImmutableList.CreateBuilder<FundableAward>();
@@ -624,7 +624,7 @@ public static class LegalMoveGenerator
                 + (player.Resources.Titanium * RequirementChecker.GetTitaniumValue(player))
                 + (RequirementChecker.CanUseHeatAsPayment(player) ? player.Resources.Heat : 0)
                 >= c.Amount,
-            SpendMCCost c => player.Resources.MegaCredits >= c.Amount,
+            SpendMCCost c => Wallet.Spendable(player) >= c.Amount,
             SpendEnergyCost c => player.Resources.Energy >= c.Amount,
             SpendSteelCost c => player.Resources.Steel >= c.Amount,
             SpendTitaniumCost c => player.Resources.Titanium >= c.Amount,

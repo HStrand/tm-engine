@@ -34,7 +34,7 @@ public static class GameEngine
 
         // Apply the move
         var hadPendingAction = state.PendingAction != null;
-        var newState = ApplyMove(state, move);
+        var newState = ApplyMove(Wallet.ExchangeChosenHeat(state, move), move);
 
         // If a pending action was just resolved, resume queued effects or advance phase
         if (hadPendingAction && newState.PendingAction == null)
@@ -175,6 +175,7 @@ public static class GameEngine
             DrawPile = deck,
             DiscardPile = [],
             PreludeDeck = shuffledPreludes,
+            ShuffleSeed = seed,
             Setup = hasCards ? new SetupState
             {
                 DealtCorporations = dealtCorps.ToImmutable(),
@@ -292,13 +293,13 @@ public static class GameEngine
     private static GameState ApplySellPatents(GameState state, SellPatentsMove move)
     {
         var gain = move.CardIds.Length;
-        return state.UpdatePlayer(move.PlayerId, p => p with
+        state = state.UpdatePlayer(move.PlayerId, p => p with
         {
             Hand = p.Hand.RemoveRange(move.CardIds),
             Resources = p.Resources.Add(ResourceType.MegaCredits, gain),
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
-        // TODO: Add discarded cards to discard pile
+        return state with { DiscardPile = state.DiscardPile.AddRange(move.CardIds) };
     }
 
     private static GameState ApplyPowerPlant(GameState state, PowerPlantMove move)
@@ -308,7 +309,7 @@ public static class GameEngine
 
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
-            Resources = p.Resources.Add(ResourceType.MegaCredits, -cost),
+            Resources = Wallet.Pay(p, cost),
             Production = p.Production.Add(ResourceType.Energy, 1),
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
@@ -320,7 +321,7 @@ public static class GameEngine
     {
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
-            Resources = p.Resources.Add(ResourceType.MegaCredits, -Constants.AsteroidCost),
+            Resources = Wallet.Pay(p, Constants.AsteroidCost),
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
 
@@ -332,7 +333,7 @@ public static class GameEngine
     {
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
-            Resources = p.Resources.Add(ResourceType.MegaCredits, -Constants.AquiferCost),
+            Resources = Wallet.Pay(p, Constants.AquiferCost),
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
 
@@ -344,7 +345,7 @@ public static class GameEngine
     {
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
-            Resources = p.Resources.Add(ResourceType.MegaCredits, -Constants.GreeneryCost),
+            Resources = Wallet.Pay(p, Constants.GreeneryCost),
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
 
@@ -359,7 +360,7 @@ public static class GameEngine
     {
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
-            Resources = p.Resources.Add(ResourceType.MegaCredits, -Constants.CityCost),
+            Resources = Wallet.Pay(p, Constants.CityCost),
             Production = p.Production.Add(ResourceType.MegaCredits, 1),
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
@@ -389,7 +390,7 @@ public static class GameEngine
     {
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
-            Resources = p.Resources.Add(ResourceType.MegaCredits, -Constants.MilestoneCost),
+            Resources = Wallet.Pay(p, Constants.MilestoneCost),
             ActionsThisTurn = p.ActionsThisTurn + 1,
         });
 
@@ -427,7 +428,7 @@ public static class GameEngine
 
             state = state.UpdatePlayer(move.PlayerId, p => p with
             {
-                Resources = p.Resources.Add(ResourceType.MegaCredits, -cost),
+                Resources = Wallet.Pay(p, cost),
                 ActionsThisTurn = p.ActionsThisTurn + 1,
             });
         }
@@ -672,7 +673,7 @@ public static class GameEngine
             state = state.UpdatePlayer(move.PlayerId, p => p with
             {
                 Hand = p.Hand.AddRange(move.CardIds),
-                Resources = drawKeepCost > 0 ? p.Resources.Add(ResourceType.MegaCredits, -drawKeepCost) : p.Resources,
+                Resources = Wallet.Pay(p, drawKeepCost),
             });
             var discarded = drawKeep.DrawnCardIds.Where(id => !move.CardIds.Contains(id));
             return state with
@@ -687,7 +688,7 @@ public static class GameEngine
 
         state = state.UpdatePlayer(move.PlayerId, p => p with
         {
-            Resources = p.Resources.Add(ResourceType.MegaCredits, -cost),
+            Resources = Wallet.Pay(p, cost),
             Hand = p.Hand.AddRange(move.CardIds),
         });
 
@@ -1089,7 +1090,7 @@ public static class GameEngine
                     };
                 }),
                 SpendMCCost c => state.UpdatePlayer(move.PlayerId, p => p with
-                    { Resources = p.Resources.Add(ResourceType.MegaCredits, -c.Amount) }),
+                    { Resources = Wallet.Pay(p, c.Amount) }),
                 SpendEnergyCost c => state.UpdatePlayer(move.PlayerId, p => p with
                     { Resources = p.Resources.Add(ResourceType.Energy, -c.Amount) }),
                 SpendSteelCost c => state.UpdatePlayer(move.PlayerId, p => p with
@@ -1300,12 +1301,7 @@ public static class GameEngine
                         return p with { CardResources = p.CardResources.SetItem(olympusEffect.CardId, current - 1) };
                     });
                     // Draw a card
-                    if (!state.DrawPile.IsEmpty)
-                    {
-                        var cardId = state.DrawPile[0];
-                        state = state with { DrawPile = state.DrawPile.RemoveAt(0) };
-                        state = state.UpdatePlayer(move.PlayerId, p => p with { Hand = p.Hand.Add(cardId) });
-                    }
+                    state = Deck.DrawToHand(state, move.PlayerId, 1);
                 }
                 return state;
             }
@@ -1398,12 +1394,7 @@ public static class GameEngine
             state = state with { DiscardPile = state.DiscardPile.AddRange(move.CardIds) };
 
             // Draw 1 card
-            if (!state.DrawPile.IsEmpty)
-            {
-                var cardId = state.DrawPile[0];
-                state = state with { DrawPile = state.DrawPile.RemoveAt(0) };
-                state = state.UpdatePlayer(move.PlayerId, p => p with { Hand = p.Hand.Add(cardId) });
-            }
+            state = Deck.DrawToHand(state, move.PlayerId, 1);
             return state with { PendingAction = null };
         }
 

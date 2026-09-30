@@ -26,6 +26,12 @@ public class MoveJsonConverter : JsonConverter<Move>
         var playerId = obj["playerId"]?.Value<int>()
             ?? throw new JsonSerializationException("Move JSON must include a 'playerId' field.");
 
+        var move = ReadMove(type, playerId, obj);
+        return obj["heat"] is { Type: JTokenType.Integer } heat ? move with { Heat = heat.Value<int>() } : move;
+    }
+
+    private static Move ReadMove(string type, int playerId, JObject obj)
+    {
         return type.ToLowerInvariant() switch
         {
             "setup" => new SetupMove(

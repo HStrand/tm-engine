@@ -8,6 +8,7 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Newtonsoft.Json;
+using TmEngine.BgaImport;
 using TmEngine.Domain.Models;
 
 namespace tm_engine.Storage;
@@ -94,6 +95,79 @@ public class BlobGameStore : IGameStore
 
         _cache[state.GameId] = state;
     }
+
+    public async Task<GameState> LoadStateAtAsync(string gameId, int moveNumber)
+    {
+        await EnsureContainerAsync();
+
+        var blobClient = _container.GetBlobClient($"{gameId}/{gameId}_{moveNumber}.json");
+        try
+        {
+            var response = await blobClient.DownloadContentAsync();
+            return JsonConvert.DeserializeObject<GameState>(response.Value.Content.ToString(), _jsonSettings)!;
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            throw new InvalidOperationException($"Game '{gameId}' has no move {moveNumber}.");
+        }
+    }
+
+    public async Task SaveMetaAsync(string gameId, GameMeta meta)
+    {
+        await EnsureContainerAsync();
+
+        var json = JsonConvert.SerializeObject(meta, _jsonSettings);
+        await _container.GetBlobClient(MetaBlobName(gameId)).UploadAsync(new BinaryData(json), overwrite: true);
+    }
+
+    public async Task<GameMeta?> LoadMetaAsync(string gameId)
+    {
+        await EnsureContainerAsync();
+
+        try
+        {
+            var response = await _container.GetBlobClient(MetaBlobName(gameId)).DownloadContentAsync();
+            return JsonConvert.DeserializeObject<GameMeta>(response.Value.Content.ToString(), _jsonSettings);
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<GameState>> LoadAllStatesAsync(string gameId)
+    {
+        await EnsureContainerAsync();
+
+        var names = new List<string>();
+        await foreach (var blob in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, $"{gameId}/{gameId}_", CancellationToken.None))
+        {
+            names.Add(blob.Name);
+        }
+
+        if (names.Count == 0)
+            throw new InvalidOperationException($"Game '{gameId}' not found.");
+
+        using var throttle = new SemaphoreSlim(16);
+        var states = await Task.WhenAll(names.Select(async name =>
+        {
+            await throttle.WaitAsync();
+            try
+            {
+                var response = await _container.GetBlobClient(name).DownloadContentAsync();
+                return JsonConvert.DeserializeObject<GameState>(response.Value.Content.ToString(), _jsonSettings)!;
+            }
+            finally
+            {
+                throttle.Release();
+            }
+        }));
+
+        return states.OrderBy(s => s.MoveNumber).ToList();
+    }
+
+    // Sits beside the state blobs; their "{gameId}_" prefix keeps it out of the state listing.
+    private static string MetaBlobName(string gameId) => $"{gameId}/meta.json";
 
     private static int ParseMoveNumber(string blobName, string gameId)
     {

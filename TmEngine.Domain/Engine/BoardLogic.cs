@@ -334,6 +334,20 @@ public static class BoardLogic
     }
 
     /// <summary>
+    /// Count city tiles adjacent to the given hex (regardless of owner).
+    /// </summary>
+    public static int CountAdjacentCities(GameState state, HexCoord coord) =>
+        coord.GetAdjacentCoords().Count(adj =>
+            state.PlacedTiles.TryGetValue(adj, out var tile) && tile.Type is TileType.City or TileType.Capital);
+
+    /// <summary>
+    /// Count every city in play: all players' cities on Mars and off it.
+    /// </summary>
+    public static int CountCitiesInPlay(GameState state) =>
+        state.PlacedTiles.Values.Count(t => t.Type is TileType.City or TileType.Capital)
+        + state.OffMapTiles.Count(t => t.Type == TileType.City);
+
+    /// <summary>
     /// Count greenery tiles adjacent to the given hex (regardless of owner).
     /// </summary>
     public static int CountAdjacentGreeneries(GameState state, HexCoord coord)
@@ -435,7 +449,7 @@ public static class BoardLogic
         {
             state = state.UpdatePlayer(playerId, p => p with
             {
-                Resources = p.Resources.Add(ResourceType.MegaCredits, -Constants.HellasSouthPoleCost),
+                Resources = Wallet.Pay(p, Constants.HellasSouthPoleCost),
             });
 
             var oceanMap = MapDefinitions.GetMap(state.Map);
@@ -482,7 +496,7 @@ public static class BoardLogic
         foreach (var loc in locations)
         {
             var extra = GetExtraPlacementCost(state, loc);
-            if (extra == 0 || player.Resources.MegaCredits >= extra)
+            if (extra == 0 || Wallet.Spendable(player) >= extra)
                 builder.Add(loc);
         }
         return builder.ToImmutable();
@@ -496,14 +510,6 @@ public static class BoardLogic
     private static bool HasMiningBonus(HexDefinition hex) =>
         hex.Bonuses.Contains(PlacementBonus.Steel) || hex.Bonuses.Contains(PlacementBonus.Titanium);
 
-    private static GameState DrawCardForPlayer(GameState state, int playerId)
-    {
-        if (state.DrawPile.IsEmpty)
-            return state; // TODO: reshuffle discard pile when draw pile is empty
-
-        var cardId = state.DrawPile[0];
-        state = state with { DrawPile = state.DrawPile.RemoveAt(0) };
-        state = state.UpdatePlayer(playerId, p => p with { Hand = p.Hand.Add(cardId) });
-        return state;
-    }
+    private static GameState DrawCardForPlayer(GameState state, int playerId) =>
+        Deck.DrawToHand(state, playerId, 1);
 }

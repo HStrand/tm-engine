@@ -74,7 +74,8 @@ public static class RequirementChecker
             // Tile requirements
             "greeneries" when CountOwnedTilesOfType(state, player.PlayerId, TileType.Greenery) < req.Count =>
                 $"Need {req.Count} greenery tiles.",
-            "cities" when CountOwnedCities(state, player.PlayerId) < req.Count =>
+            // "Cities in play" counts every player's cities.
+            "cities" when BoardLogic.CountCitiesInPlay(state) < req.Count =>
                 $"Need {req.Count} cities in play.",
 
             _ => null,
@@ -83,10 +84,6 @@ public static class RequirementChecker
 
     private static int CountOwnedTilesOfType(GameState state, int playerId, TileType type) =>
         state.PlacedTiles.Values.Count(t => t.OwnerId == playerId && t.Type == type);
-
-    private static int CountOwnedCities(GameState state, int playerId) =>
-        state.PlacedTiles.Values.Count(t => t.OwnerId == playerId && (t.Type == TileType.City || t.Type == TileType.Capital))
-        + state.OffMapTiles.Count(t => t.OwnerId == playerId && t.Type == TileType.City);
 
     /// <summary>
     /// Check if a player can perform the mandatory effects of a card.
@@ -395,6 +392,7 @@ public static class RequirementChecker
         {
             FixedVictoryPoints f => f.Points > 0,
             PerResourceVictoryPoints => true, // resource-based VP is always potentially positive
+            PerBoardFeatureVictoryPoints => true,
             HasResourceVictoryPoints => true,
             PerTagVictoryPoints => true,
             _ => false,

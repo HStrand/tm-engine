@@ -146,55 +146,36 @@ public static class Scoring
     /// <summary>
     /// Sum VP from all played cards (including events) and card resources.
     /// </summary>
-    private static int CalculateCardPoints(GameState state, PlayerState player)
+    private static int CalculateCardPoints(GameState state, PlayerState player) =>
+        player.PlayedCards.Concat(player.PlayedEvents).Sum(cardId => CalculateCardPoints(state, player, cardId));
+
+    /// <summary>
+    /// VP a single played card is worth to its owner in the current state.
+    /// </summary>
+    public static int CalculateCardPoints(GameState state, PlayerState player, string cardId)
     {
-        int total = 0;
+        if (!CardRegistry.TryGet(cardId, out var entry) || entry.Definition.VictoryPoints is not { } vp)
+            return 0;
 
-        var vpContext = new VictoryPointContext(
-            GetCardResources: cardId => player.CardResources.GetValueOrDefault(cardId, 0),
+        return vp.Calculate(new VictoryPointContext(
+            GetCardResources: id => player.CardResources.GetValueOrDefault(id, 0),
             CountTags: tag => player.CountTag(tag, CardRegistry.GetTags),
-            CountAdjacentOceans: () => 0); // Default — Capital overrides per-tile
-
-        // Played cards (blue + green)
-        foreach (var cardId in player.PlayedCards)
-        {
-            total += GetCardVP(cardId, state, player, vpContext);
-        }
-
-        // Played events (red) — events can have VP too
-        foreach (var cardId in player.PlayedEvents)
-        {
-            total += GetCardVP(cardId, state, player, vpContext);
-        }
-
-        return total;
+            CountOnBoard: feature => CountOnBoard(state, player.PlayerId, feature)));
     }
 
-    private static int GetCardVP(string cardId, GameState state, PlayerState player, VictoryPointContext baseContext)
+    private static int CountOnBoard(GameState state, int playerId, BoardFeature feature)
     {
-        if (!CardRegistry.TryGet(cardId, out var entry))
-            return 0;
+        PlacedTile? OwnTile(TileType type) =>
+            state.PlacedTiles.Values.FirstOrDefault(t => t.Type == type && t.OwnerId == playerId);
 
-        var vp = entry.Definition.VictoryPoints;
-        if (vp == null)
-            return 0;
-
-        // For Capital city: count adjacent oceans for VP
-        if (entry.Definition.Name == "Capital")
+        return feature switch
         {
-            var capitalTile = state.PlacedTiles.Values.FirstOrDefault(t =>
-                t.Type == TileType.Capital && t.OwnerId == player.PlayerId);
-
-            if (capitalTile != null)
-            {
-                var capitalContext = baseContext with
-                {
-                    CountAdjacentOceans = () => BoardLogic.CountAdjacentOceans(state, capitalTile.Location),
-                };
-                return vp.Calculate(capitalContext);
-            }
-        }
-
-        return vp.Calculate(baseContext);
+            BoardFeature.OceansAdjacentToCapital =>
+                OwnTile(TileType.Capital) is { } capital ? BoardLogic.CountAdjacentOceans(state, capital.Location) : 0,
+            BoardFeature.CitiesAdjacentToCommercialDistrict =>
+                OwnTile(TileType.CommercialDistrict) is { } district ? BoardLogic.CountAdjacentCities(state, district.Location) : 0,
+            BoardFeature.CitiesInPlay => BoardLogic.CountCitiesInPlay(state),
+            _ => 0,
+        };
     }
 }

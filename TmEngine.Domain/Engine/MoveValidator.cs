@@ -12,7 +12,10 @@ namespace TmEngine.Domain.Engine;
 /// </summary>
 public static class MoveValidator
 {
-    public static string? Validate(GameState state, Move move)
+    public static string? Validate(GameState state, Move move) =>
+        ValidateMove(state, move) ?? Wallet.ValidateHeat(state, move);
+
+    private static string? ValidateMove(GameState state, Move move)
     {
         // Universal checks
         if (state.IsGameOver())
@@ -177,7 +180,7 @@ public static class MoveValidator
 
         // Hellas South Pole: the 6 MC extra placement cost must also be covered
         var extra = BoardLogic.GetExtraPlacementCost(state, move.Location);
-        if (extra > 0 && player.Resources.MegaCredits < extra)
+        if (extra > 0 && Wallet.Spendable(player) < extra)
             return $"Need {extra} MC for Hellas South Pole ocean bonus, have {player.Resources.MegaCredits}.";
 
         return null;
@@ -215,7 +218,7 @@ public static class MoveValidator
 
     private static string? ValidateResourceCost(PlayerState player, int cost, string projectName)
     {
-        if (player.Resources.MegaCredits < cost)
+        if (Wallet.Spendable(player) < cost)
             return $"Need {cost} MC for {projectName}, have {player.Resources.MegaCredits}.";
 
         return null;
@@ -223,7 +226,7 @@ public static class MoveValidator
 
     private static string? ValidateAsteroidProject(GameState state, PlayerState player)
     {
-        if (player.Resources.MegaCredits < Constants.AsteroidCost)
+        if (Wallet.Spendable(player) < Constants.AsteroidCost)
             return $"Need {Constants.AsteroidCost} MC for Asteroid, have {player.Resources.MegaCredits}.";
 
         // Can still play even if temperature is maxed (just no TR gain)
@@ -233,7 +236,7 @@ public static class MoveValidator
     private static string? ValidateAquiferProject(GameState state, AquiferMove move)
     {
         var player = state.GetPlayer(move.PlayerId);
-        if (player.Resources.MegaCredits < Constants.AquiferCost)
+        if (Wallet.Spendable(player) < Constants.AquiferCost)
             return $"Need {Constants.AquiferCost} MC for Aquifer, have {player.Resources.MegaCredits}.";
 
         var map = MapDefinitions.GetMap(state.Map);
@@ -249,7 +252,7 @@ public static class MoveValidator
         var player = state.GetPlayer(move.PlayerId);
         var extra = BoardLogic.GetExtraPlacementCost(state, move.Location);
         var total = Constants.GreeneryCost + extra;
-        if (player.Resources.MegaCredits < total)
+        if (Wallet.Spendable(player) < total)
             return $"Need {total} MC for Greenery{(extra > 0 ? " (incl. South Pole 6 MC)" : "")}, have {player.Resources.MegaCredits}.";
 
         var validPlacements = BoardLogic.GetValidGreeneryPlacements(state, move.PlayerId);
@@ -261,7 +264,7 @@ public static class MoveValidator
         var player = state.GetPlayer(move.PlayerId);
         var extra = BoardLogic.GetExtraPlacementCost(state, move.Location);
         var total = Constants.CityCost + extra;
-        if (player.Resources.MegaCredits < total)
+        if (Wallet.Spendable(player) < total)
             return $"Need {total} MC for City{(extra > 0 ? " (incl. South Pole 6 MC)" : "")}, have {player.Resources.MegaCredits}.";
 
         var validPlacements = BoardLogic.GetValidCityPlacements(state);
@@ -280,7 +283,7 @@ public static class MoveValidator
         if (player.ActionsThisTurn >= 2)
             return "Already took 2 actions this turn.";
 
-        if (player.Resources.MegaCredits < Constants.MilestoneCost)
+        if (Wallet.Spendable(player) < Constants.MilestoneCost)
             return $"Need {Constants.MilestoneCost} MC to claim a milestone.";
 
         if (state.ClaimedMilestones.Count >= Constants.MaxClaimedMilestones)
@@ -336,7 +339,7 @@ public static class MoveValidator
             _ => int.MaxValue,
         };
 
-        if (player.Resources.MegaCredits < cost)
+        if (Wallet.Spendable(player) < cost)
             return $"Need {cost} MC to fund an award, have {player.Resources.MegaCredits}.";
 
         return null;
@@ -492,7 +495,7 @@ public static class MoveValidator
                     $"Not enough steel: have {player.Resources.Steel}, need {c.Amount}.",
                 SpendTitaniumCost c when player.Resources.Titanium < c.Amount =>
                     $"Not enough titanium: have {player.Resources.Titanium}, need {c.Amount}.",
-                SpendMCCost c when player.Resources.MegaCredits < c.Amount =>
+                SpendMCCost c when Wallet.Spendable(player) < c.Amount =>
                     $"Not enough MC: have {player.Resources.MegaCredits}, need {c.Amount}.",
                 _ => (string?)null,
             };
@@ -536,7 +539,7 @@ public static class MoveValidator
 
         var player = state.GetPlayer(move.PlayerId);
         var cost = move.CardIds.Length * Constants.CardBuyCost;
-        if (player.Resources.MegaCredits < cost)
+        if (Wallet.Spendable(player) < cost)
             return $"Need {cost} MC to buy {move.CardIds.Length} cards, have {player.Resources.MegaCredits}.";
 
         return null;
@@ -702,7 +705,7 @@ public static class MoveValidator
                         ? $"Can keep at most {pending.KeepCount} cards."
                         : buy.CardIds.Any(id => !pending.DrawnCardIds.Contains(id))
                         ? "Selected card is not among the drawn cards."
-                        : buy.CardIds.Length * pending.CostPerCard > state.GetPlayer(move.PlayerId).Resources.MegaCredits
+                        : buy.CardIds.Length * pending.CostPerCard > Wallet.Spendable(state.GetPlayer(move.PlayerId))
                         ? "Not enough MC to buy selected cards."
                         : null)
                     : (buy.CardIds.Length != pending.KeepCount
