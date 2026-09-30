@@ -492,6 +492,29 @@ public class GameEngineTests
         Assert.True(result.IsError);
     }
 
+    [Fact]
+    public void Capital_PlacesACapitalTile_NotAPlainCity()
+    {
+        var state = CreateTestGame();
+        state = state.UpdatePlayer(0, p => p with
+        {
+            Hand = p.Hand.Add("008"), // Capital: needs 4 oceans, -2 energy production
+            Production = p.Production with { Energy = 2 },
+        });
+        state = state with { OceansPlaced = 4 };
+
+        var (played, result) = GameEngine.Apply(state, new PlayCardMove(0, "008", new PaymentInfo(26, 0, 0, 0)));
+        Assert.True(result.IsSuccess, result.ToString());
+        var pending = Assert.IsType<PlaceTilePending>(played.PendingAction);
+        Assert.Equal(TileType.Capital, pending.TileType);
+
+        var (placed, placedResult) = GameEngine.Apply(played, new PlaceTileMove(0, pending.ValidLocations[0]));
+        Assert.True(placedResult.IsSuccess, placedResult.ToString());
+        Assert.Equal(TileType.Capital, placed.PlacedTiles[pending.ValidLocations[0]].Type);
+        // It still counts as a city.
+        Assert.Equal(1, BoardLogic.CountCitiesInPlay(placed));
+    }
+
     // ── Temperature Bonus Effects ──────────────────────────────
 
     [Fact]

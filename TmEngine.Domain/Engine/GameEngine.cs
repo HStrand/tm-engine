@@ -810,7 +810,7 @@ public static class GameEngine
             {
                 TileType.Greenery => GlobalParameters.PlaceGreenery(state, move.PlayerId, move.Location),
                 TileType.Ocean => GlobalParameters.PlaceOcean(state, move.PlayerId, move.Location),
-                TileType.City or TileType.Capital => GlobalParameters.PlaceCity(state, move.PlayerId, move.Location),
+                TileType.City or TileType.Capital => GlobalParameters.PlaceCity(state, move.PlayerId, move.Location, pending.TileType),
                 _ => GlobalParameters.PlaceTileOnBoard(state, pending.TileType, move.PlayerId, move.Location),
             };
 

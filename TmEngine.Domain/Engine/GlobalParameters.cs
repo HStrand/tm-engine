@@ -143,10 +143,11 @@ public static class GlobalParameters
     /// - Ownership marker
     /// - Placement bonuses
     /// - Triggers: PlaceCityTileOnMars + PlaceAnyCityTile
+    /// Capital is a city for every rule but keeps its own tile type, for its ocean-adjacency points.
     /// </summary>
-    public static GameState PlaceCity(GameState state, int playerId, HexCoord location)
+    public static GameState PlaceCity(GameState state, int playerId, HexCoord location, TileType tileType = TileType.City)
     {
-        state = PlaceTileOnBoard(state, TileType.City, playerId, location);
+        state = PlaceTileOnBoard(state, tileType, playerId, location);
         state = TriggerSystem.FireTrigger(state, playerId, TriggerCondition.PlaceCityTileOnMars);
         state = TriggerSystem.FireTrigger(state, playerId, TriggerCondition.PlaceAnyCityTile);
         return state;
