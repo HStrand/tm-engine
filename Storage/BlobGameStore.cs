@@ -21,13 +21,13 @@ public class BlobGameStore : IGameStore
     private readonly JsonSerializerSettings _jsonSettings;
     private bool _containerEnsured;
 
-    // Single-writer cache of the latest GameState per gameId. Writes are persisted to blob
-    // storage as before; reads return the cached state on hit and fall back to blob on miss
-    // (cold start, different instance). Safe under Functions' in-process model because per-game
-    // API calls are effectively serialized by the bot loop / client. Bounded, since games are
-    // created by visitors: the least recently used entries go once there are more than MaxCached.
+    // Cache of the latest GameState per gameId. Every save also rewrites a small head blob, and a cache
+    // hit is trusted only while the head's ETag is the one the cache saw: another instance (the app scales
+    // out, and a deployment overlaps the old host with the new) may have moved the game on since. Bounded,
+    // since games are created by visitors: the least recently used entries go once there are more than
+    // MaxCached.
     private const int MaxCached = 500;
-    private static readonly ConcurrentDictionary<string, (GameState State, long Touched)> _cache = new();
+    private static readonly ConcurrentDictionary<string, (GameState State, ETag Head, long Touched)> _cache = new();
     private static long _clock;
 
     public BlobGameStore(BlobServiceClient blobService, JsonSerializerSettings jsonSettings)
@@ -38,13 +38,25 @@ public class BlobGameStore : IGameStore
 
     public async Task<GameState> LoadStateAsync(string gameId)
     {
-        if (_cache.TryGetValue(gameId, out var cached))
+        await EnsureContainerAsync();
+
+        var head = _container.GetBlobClient(HeadBlobName(gameId));
+        var current = await HeadOf(head);
+        if (_cache.TryGetValue(gameId, out var cached) && current is { } etag && cached.Head == etag)
         {
-            _cache[gameId] = (cached.State, Interlocked.Increment(ref _clock));
+            _cache[gameId] = (cached.State, cached.Head, Interlocked.Increment(ref _clock));
             return cached.State;
         }
 
-        await EnsureContainerAsync();
+        // Games saved before the head blob existed are found by listing their moves.
+        if (current is not null)
+        {
+            var headJson = (await head.DownloadContentAsync()).Value.Content.ToString();
+            var moveNumber = JsonConvert.DeserializeObject<HeadRecord>(headJson)!.MoveNumber;
+            var state = await LoadStateAtAsync(gameId, moveNumber);
+            Remember(gameId, state, current.Value);
+            return state;
+        }
 
         var prefix = $"{gameId}/{gameId}_";
         var blobs = new List<BlobItem>();
@@ -64,10 +76,10 @@ public class BlobGameStore : IGameStore
         var blobClient = _container.GetBlobClient(latestBlob.Name);
         var response = await blobClient.DownloadContentAsync();
         var json = response.Value.Content.ToString();
-        var state = JsonConvert.DeserializeObject<GameState>(json, _jsonSettings)!;
+        var latest = JsonConvert.DeserializeObject<GameState>(json, _jsonSettings)!;
 
-        Remember(gameId, state);
-        return state;
+        Remember(gameId, latest, await WriteHead(gameId, latest.MoveNumber));
+        return latest;
     }
 
     public async Task SaveStateAsync(string gameId, GameState state)
@@ -86,7 +98,7 @@ public class BlobGameStore : IGameStore
             Conditions = new BlobRequestConditions { IfNoneMatch = ETag.All }
         });
 
-        Remember(gameId, state);
+        Remember(gameId, state, await WriteHead(gameId, state.MoveNumber));
     }
 
     public async Task CreateGameAsync(GameState state)
@@ -99,7 +111,7 @@ public class BlobGameStore : IGameStore
         var json = JsonConvert.SerializeObject(state, _jsonSettings);
         await blobClient.UploadAsync(new BinaryData(json));
 
-        Remember(state.GameId, state);
+        Remember(state.GameId, state, await WriteHead(state.GameId, state.MoveNumber));
     }
 
     public async Task<GameState> LoadStateAtAsync(string gameId, int moveNumber)
@@ -172,9 +184,33 @@ public class BlobGameStore : IGameStore
         return states.OrderBy(s => s.MoveNumber).ToList();
     }
 
-    private static void Remember(string gameId, GameState state)
+    private sealed record HeadRecord(int MoveNumber);
+
+    private static string HeadBlobName(string gameId) => $"{gameId}/head.json";
+
+    /// <summary>The head blob's ETag, or null when the game has none yet.</summary>
+    private static async Task<ETag?> HeadOf(BlobClient head)
     {
-        _cache[gameId] = (state, Interlocked.Increment(ref _clock));
+        try
+        {
+            return (await head.GetPropertiesAsync()).Value.ETag;
+        }
+        catch (RequestFailedException ex) when (ex.Status == 404)
+        {
+            return null;
+        }
+    }
+
+    private async Task<ETag> WriteHead(string gameId, int moveNumber)
+    {
+        var json = JsonConvert.SerializeObject(new HeadRecord(moveNumber));
+        var result = await _container.GetBlobClient(HeadBlobName(gameId)).UploadAsync(new BinaryData(json), overwrite: true);
+        return result.Value.ETag;
+    }
+
+    private static void Remember(string gameId, GameState state, ETag head)
+    {
+        _cache[gameId] = (state, head, Interlocked.Increment(ref _clock));
         if (_cache.Count <= MaxCached) return;
 
         // Evict a tenth of the cache at a time rather than one entry per write.
