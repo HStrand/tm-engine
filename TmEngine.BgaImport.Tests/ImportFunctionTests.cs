@@ -95,7 +95,8 @@ public class ImportFunctionTests
         var body = Body(await Function().GetForkPoints(new DefaultHttpContext().Request, "824655675"), HttpStatusCode.OK);
 
         Assert.True(body.Value<bool>("eligible"));
-        Assert.Equal(Enumerable.Range(2, 9), body["forkPoints"]!.Select(f => f.Value<int>("generation")).Distinct());
+        Assert.Equal(Enumerable.Range(1, 10), body["forkPoints"]!.Select(f => f.Value<int>("generation")).Distinct());
+        Assert.Equal("GameStart", body["forkPoints"]![0]!.Value<string>("kind"));
         Assert.Contains(body["forkPoints"]!, f => f.Value<string>("kind") == "ActionStart");
     }
 

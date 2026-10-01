@@ -17,6 +17,16 @@ public sealed record GameSetupOptions(
     bool PreludeExpansion);
 
 /// <summary>
+/// What each player is dealt at the start of a game (lists indexed by player) and the piles left after dealing.
+/// </summary>
+public sealed record SetupDeal(
+    ImmutableList<ImmutableList<string>> Corporations,
+    ImmutableList<ImmutableList<string>> Preludes,
+    ImmutableList<ImmutableList<string>> Cards,
+    ImmutableList<string> DrawPile,
+    ImmutableList<string> PreludeDeck);
+
+/// <summary>
 /// The core game engine. All methods are pure functions: state + input → new state.
 /// </summary>
 public static class GameEngine
@@ -72,6 +82,56 @@ public static class GameEngine
     /// </summary>
     public static GameState Setup(GameSetupOptions options, int seed)
     {
+        var rng = new Random(seed);
+        var expansions = DeckBuilder.GetEnabledExpansions(options);
+
+        // Build and shuffle decks
+        var deck = DeckBuilder.BuildProjectDeck(expansions, rng);
+        var shuffledCorps = DeckBuilder.Shuffle(DeckBuilder.GetCorporationIds(expansions), rng);
+        var shuffledPreludes = options.PreludeExpansion
+            ? DeckBuilder.Shuffle(DeckBuilder.GetPreludeIds(), rng)
+            : ImmutableList<string>.Empty;
+
+        // Deal to each player
+        var dealtCorps = ImmutableList.CreateBuilder<ImmutableList<string>>();
+        var dealtPreludes = ImmutableList.CreateBuilder<ImmutableList<string>>();
+        var dealtCards = ImmutableList.CreateBuilder<ImmutableList<string>>();
+
+        for (int i = 0; i < options.PlayerCount; i++)
+        {
+            // Deal corporations
+            var (playerCorps, remainingCorps) = DeckBuilder.Deal(shuffledCorps, Constants.CorporationsDealt);
+            dealtCorps.Add(playerCorps);
+            shuffledCorps = remainingCorps;
+
+            // Deal preludes
+            if (options.PreludeExpansion)
+            {
+                var (playerPreludes, remainingPreludes) = DeckBuilder.Deal(shuffledPreludes, Constants.PreludesDealt);
+                dealtPreludes.Add(playerPreludes);
+                shuffledPreludes = remainingPreludes;
+            }
+            else
+            {
+                dealtPreludes.Add([]);
+            }
+
+            // Deal project cards
+            var (playerCards, remainingDeck) = DeckBuilder.Deal(deck, Constants.InitialCardsDealt);
+            dealtCards.Add(playerCards);
+            deck = remainingDeck;
+        }
+
+        return Setup(options, seed, new SetupDeal(
+            dealtCorps.ToImmutable(), dealtPreludes.ToImmutable(), dealtCards.ToImmutable(), deck, shuffledPreludes));
+    }
+
+    /// <summary>
+    /// Set up a new game in which the cards have already been dealt, as when a game played elsewhere is
+    /// picked up from its start. The seed then only decides later reshuffles.
+    /// </summary>
+    public static GameState Setup(GameSetupOptions options, int seed, SetupDeal deal)
+    {
         if (options.PlayerCount < Constants.MinPlayers || options.PlayerCount > Constants.MaxPlayers)
             throw new ArgumentOutOfRangeException(nameof(options),
                 $"Player count must be between {Constants.MinPlayers} and {Constants.MaxPlayers}.");
@@ -101,56 +161,6 @@ public static class GameEngine
             players.Add(player);
         }
 
-        var rng = new Random(seed);
-        var expansions = DeckBuilder.GetEnabledExpansions(options);
-
-        // Build and shuffle decks
-        var projectDeck = DeckBuilder.BuildProjectDeck(expansions, rng);
-        var allCorps = DeckBuilder.GetCorporationIds(expansions);
-        var allPreludes = options.PreludeExpansion ? DeckBuilder.GetPreludeIds() : [];
-
-        // Deal to each player
-        var corpsPerPlayer = Constants.CorporationsDealt;
-
-        var dealtCorps = ImmutableList.CreateBuilder<ImmutableList<string>>();
-        var dealtPreludes = ImmutableList.CreateBuilder<ImmutableList<string>>();
-        var dealtCards = ImmutableList.CreateBuilder<ImmutableList<string>>();
-        var submittedMoves = ImmutableList.CreateBuilder<SetupMove?>();
-        var deck = projectDeck;
-
-        // Shuffle corporations and preludes for dealing
-        var shuffledCorps = DeckBuilder.Shuffle(allCorps, rng);
-        var shuffledPreludes = options.PreludeExpansion
-            ? DeckBuilder.Shuffle(allPreludes, rng)
-            : ImmutableList<string>.Empty;
-
-        for (int i = 0; i < options.PlayerCount; i++)
-        {
-            // Deal corporations
-            var (playerCorps, remainingCorps) = DeckBuilder.Deal(shuffledCorps, corpsPerPlayer);
-            dealtCorps.Add(playerCorps);
-            shuffledCorps = remainingCorps;
-
-            // Deal preludes
-            if (options.PreludeExpansion)
-            {
-                var (playerPreludes, remainingPreludes) = DeckBuilder.Deal(shuffledPreludes, Constants.PreludesDealt);
-                dealtPreludes.Add(playerPreludes);
-                shuffledPreludes = remainingPreludes;
-            }
-            else
-            {
-                dealtPreludes.Add([]);
-            }
-
-            // Deal project cards
-            var (playerCards, remainingDeck) = DeckBuilder.Deal(deck, Constants.InitialCardsDealt);
-            dealtCards.Add(playerCards);
-            deck = remainingDeck;
-
-            submittedMoves.Add(null);
-        }
-
         var hasCards = CardRegistry.All.Count > 0;
 
         return new GameState
@@ -172,16 +182,16 @@ public static class GameEngine
             PlacedTiles = ImmutableDictionary<HexCoord, PlacedTile>.Empty,
             ClaimedMilestones = [],
             FundedAwards = [],
-            DrawPile = deck,
+            DrawPile = deal.DrawPile,
             DiscardPile = [],
-            PreludeDeck = shuffledPreludes,
+            PreludeDeck = deal.PreludeDeck,
             ShuffleSeed = seed,
             Setup = hasCards ? new SetupState
             {
-                DealtCorporations = dealtCorps.ToImmutable(),
-                DealtPreludes = dealtPreludes.ToImmutable(),
-                DealtCards = dealtCards.ToImmutable(),
-                SubmittedMoves = submittedMoves.ToImmutable(),
+                DealtCorporations = deal.Corporations,
+                DealtPreludes = deal.Preludes,
+                DealtCards = deal.Cards,
+                SubmittedMoves = [.. Enumerable.Repeat<SetupMove?>(null, options.PlayerCount)],
             } : null,
             MoveNumber = 0,
         };

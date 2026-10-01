@@ -20,6 +20,9 @@ public sealed record ImportIssue(IssueSeverity Severity, string Code, string Mes
 
 public enum ForkKind
 {
+    /// <summary>The cards have been dealt and nobody has chosen a corporation, preludes or opening cards yet.</summary>
+    GameStart,
+
     /// <summary>Start of a generation's action phase: research is done and nobody has acted yet.</summary>
     GenerationStart,
 

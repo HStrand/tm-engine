@@ -616,6 +616,11 @@ public static class MoveValidator
                 return $"Card {cardId} was not dealt to this player.";
         }
 
+        var cost = move.CardIdsToBuy.Length * Constants.CardBuyCost;
+        var startingMC = CardRegistry.StartingMegaCredits(move.CorporationId);
+        if (cost > startingMC)
+            return $"Need {cost} MC to buy {move.CardIdsToBuy.Length} cards, but {CardRegistry.GetDefinition(move.CorporationId).Name} starts with {startingMC}.";
+
         return null;
     }
 

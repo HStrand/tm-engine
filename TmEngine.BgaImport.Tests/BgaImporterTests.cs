@@ -1,3 +1,5 @@
+using System.Collections.Immutable;
+using TmEngine.Domain.Engine;
 using TmEngine.Domain.Models;
 
 namespace TmEngine.BgaImport.Tests;
@@ -8,6 +10,31 @@ public class BgaImporterTests
     public static readonly TheoryData<string> Importable = new() { Fixtures.Elysium2p, Fixtures.Hellas2p, Fixtures.Tharsis2p };
 
     // ── Fork points ────────────────────────────────────────────
+
+    [Theory]
+    [MemberData(nameof(Importable))]
+    public void FindForkPoints_BeginsWithTheStartOfTheGame(string fixture)
+    {
+        var log = Fixtures.Load(fixture);
+
+        var first = Fixtures.ForkPoints(fixture).ForkPoints[0];
+
+        // The log's first move announces the game; the starting player of generation 1 holds seat 0.
+        Assert.Equal(ForkKind.GameStart, first.Kind);
+        Assert.Equal(0, first.MoveIndex);
+        Assert.Equal(1, first.Generation);
+        Assert.Equal(log.Moves[0].GameState!.StartingPlayer, first.ActiveBgaPlayerId);
+        Assert.Single(Fixtures.ForkPoints(fixture).ForkPoints, f => f.Generation == 1);
+    }
+
+    [Fact]
+    public void FindForkPoints_HasNoStartOfTheGame_WhenTheLogDoesNotRecordWhatWasDealt()
+    {
+        var forks = BgaImporter.FindForkPoints(WithoutStartingHands(Fixtures.Load(Fixtures.Tharsis2p))).ForkPoints;
+
+        Assert.NotEmpty(forks);
+        Assert.DoesNotContain(forks, f => f.Kind == ForkKind.GameStart);
+    }
 
     [Theory]
     [MemberData(nameof(Importable))]
@@ -94,7 +121,9 @@ public class BgaImporterTests
 
         // The move before is in generation 5's research phase, where there is nothing to fork.
         Assert.Equal(lastOfGeneration4, BgaImporter.SnapToForkPoint(forkPoints, generation5.MoveIndex - 1));
-        Assert.Null(BgaImporter.SnapToForkPoint(forkPoints, 5));
+
+        // Anywhere in generation 1 goes back to the deal.
+        Assert.Equal(ForkKind.GameStart, BgaImporter.SnapToForkPoint(forkPoints, 5)!.Kind);
     }
 
     [Fact]
@@ -112,9 +141,21 @@ public class BgaImporterTests
     }
 
     [Fact]
-    public void ImportAtOrBefore_Fails_WhenThereIsNoEarlierPosition()
+    public void ImportAtOrBefore_InGeneration1_GoesBackToTheStartOfTheGame()
     {
         var result = BgaImporter.ImportAtOrBefore(Fixtures.Load(Fixtures.Elysium2p), new BgaImportOptions(MoveIndex: 5));
+
+        Assert.True(result.Success, Describe(result.BlockingIssues));
+        Assert.Equal(ForkKind.GameStart, result.Fork!.Kind);
+        Assert.Equal(GamePhase.Setup, result.State!.Phase);
+    }
+
+    [Fact]
+    public void ImportAtOrBefore_Fails_WhenThereIsNoEarlierPosition()
+    {
+        var log = WithoutStartingHands(Fixtures.Load(Fixtures.Elysium2p));
+
+        var result = BgaImporter.ImportAtOrBefore(log, new BgaImportOptions(MoveIndex: 5));
 
         Assert.False(result.Success);
         Assert.Contains(result.Issues, i => i.Code == "NOT_A_FORK_POINT");
@@ -161,9 +202,19 @@ public class BgaImporterTests
     }
 
     [Fact]
+    public void FindForkPoints_WithoutLiveScoring_LeavesOnlyTheStartOfTheGame()
+    {
+        // Terraform ratings are unknown for every later position, but the start needs none.
+        var result = BgaImporter.FindForkPoints(WithoutLiveScoring(Fixtures.Load(Fixtures.Tharsis2p)));
+
+        Assert.True(result.Eligible, Describe(result.Issues));
+        Assert.Equal(ForkKind.GameStart, Assert.Single(result.ForkPoints).Kind);
+    }
+
+    [Fact]
     public void FindForkPoints_FindsNone_WhenNoPositionSurvivesValidation()
     {
-        var result = BgaImporter.FindForkPoints(WithoutLiveScoring(Fixtures.Load(Fixtures.Tharsis2p)));
+        var result = BgaImporter.FindForkPoints(WithoutStartingHands(WithoutLiveScoring(Fixtures.Load(Fixtures.Tharsis2p))));
 
         Assert.False(result.Eligible);
         Assert.Empty(result.ForkPoints);
@@ -210,6 +261,90 @@ public class BgaImporterTests
 
         Assert.False(result.Success);
         Assert.Contains(result.BlockingIssues, i => i.Code is "TAG_COUNT" or "HAND_COUNT");
+    }
+
+    // ── Imported state: start of the game ──────────────────────
+
+    [Fact]
+    public void Import_AtTheStartOfTheGame_DealsWhatTheRealGameDealt()
+    {
+        var (state, meta) = Import(Fixtures.Elysium2p, Fixtures.ForkPoints(Fixtures.Elysium2p).ForkPoints[0]);
+        var stranded = meta.Seats.Single(s => s.Name == "StrandedKnight").Seat;
+        var setup = state.Setup!;
+
+        Assert.Equal(GamePhase.Setup, state.Phase);
+        Assert.Equal(1, state.Generation);
+        Assert.Equal(0, state.FirstPlayerId);
+        Assert.Equal(Ids("Point Luna", "PhoboLog"), setup.DealtCorporations[stranded]);
+        Assert.Equal(Ids("Huge Asteroid", "Mohole Excavation", "Polar Industries", "Research Network"), setup.DealtPreludes[stranded]);
+        Assert.Equal(10, setup.DealtCards[stranded].Count);
+        Assert.Contains(CardNameMap.Resolve("Space Hotels")!, setup.DealtCards[stranded]);
+        Assert.All(setup.SubmittedMoves, Assert.Null);
+
+        Assert.All(state.Players, p =>
+        {
+            Assert.Empty(p.Hand);
+            Assert.Equal(Constants.StartingTR, p.TerraformRating);
+            Assert.Equal(0, p.Resources.MegaCredits);
+        });
+        Assert.Empty(state.PlacedTiles);
+        Assert.Empty(state.DiscardPile);
+
+        // Every project card is either dealt or in the deck, and no dealt prelude is left in the prelude deck.
+        var dealt = setup.DealtCards.SelectMany(c => c).ToList();
+        Assert.Equal(20, dealt.Count);
+        Assert.Empty(state.DrawPile.Intersect(dealt));
+        Assert.Equal(state.DrawPile.Count, state.DrawPile.Distinct().Count());
+        Assert.Empty(state.PreludeDeck.Intersect(setup.DealtPreludes.SelectMany(p => p)));
+        Assert.Equal(Fixtures.ForkPoints(Fixtures.Elysium2p).ForkPoints[0].MoveIndex, meta.Source.MoveIndex);
+    }
+
+    [Theory]
+    [MemberData(nameof(Importable))]
+    public void Import_AtTheStartOfTheGame_TheRealOpeningLeadsToTheRealPosition(string fixture)
+    {
+        var log = Fixtures.Load(fixture);
+        var result = BgaImporter.Import(log, new BgaImportOptions(MoveIndex: 0));
+        Assert.True(result.Success, Describe(result.BlockingIssues));
+        Assert.DoesNotContain(result.Issues, i => i.Code == "NEXT_MOVE_NOT_LEGAL");
+
+        var (context, _) = BgaImportContext.Create(log);
+        var state = result.State!;
+        foreach (var seat in result.Meta!.Seats)
+        {
+            var opening = ImportValidator.RealOpening(context!, state.Setup!, seat.BgaPlayerId, seat.Seat)!;
+            (state, var outcome) = GameEngine.Apply(state, opening);
+            Assert.IsType<Success>(outcome);
+        }
+
+        // The first snapshot with pile counts is the one taken once everyone has chosen.
+        Assert.Equal(log.PreludeOn == true ? GamePhase.PreludePlacement : GamePhase.Action, state.Phase);
+        Assert.Equal(log.Moves.First(m => m.GameState?.DiscardPile is not null).GameState!.DiscardPile, state.DiscardPile.Count);
+        foreach (var seat in result.Meta.Seats)
+            Assert.Equal(CardNameMap.Resolve(log.Players[seat.BgaPlayerId].Corporation!), state.GetPlayer(seat.Seat).CorporationId);
+    }
+
+    [Fact]
+    public void Import_AtTheStartOfTheGame_PutsTheCardsTheRealGameDrew_OnTopOfTheDeck()
+    {
+        var log = Fixtures.Load(Fixtures.Elysium2p);
+        var (state, meta) = Import(Fixtures.Elysium2p, Fixtures.ForkPoints(Fixtures.Elysium2p).ForkPoints[0]);
+
+        // Point Luna draws Tundra Farming for its own Earth tag as soon as it is chosen, then cdman234's
+        // UNMI Contractor draws Mineral Deposit and StrandedKnight's Research Network draws three.
+        Assert.Equal(
+            Ids("Tundra Farming", "Mineral Deposit", "Nitrophilic Moss", "Great Escarpment Consortium", "Arctic Algae"),
+            state.DrawPile.Take(5));
+
+        var (context, _) = BgaImportContext.Create(log);
+        foreach (var seat in meta.Seats)
+            (state, _) = GameEngine.Apply(state, ImportValidator.RealOpening(context!, state.Setup!, seat.BgaPlayerId, seat.Seat)!);
+
+        var stranded = state.GetPlayer(meta.Seats.Single(s => s.Name == "StrandedKnight").Seat);
+        Assert.Contains(CardNameMap.Resolve("Tundra Farming")!, stranded.Hand);
+        Assert.Equal(6, stranded.Hand.Count);
+        Assert.Equal(38 - 5 * 3, stranded.Resources.MegaCredits);
+        Assert.Equal(194, state.DrawPile.Count);
     }
 
     // ── Imported state: start of a generation ──────────────────
@@ -386,7 +521,8 @@ public class BgaImporterTests
     {
         var log = Fixtures.Load(fixture);
 
-        foreach (var fork in Fixtures.ForkPoints(fixture).ForkPoints)
+        // The log has no pile counts until the players have chosen their opening hands.
+        foreach (var fork in Fixtures.ForkPoints(fixture).ForkPoints.Where(f => f.Kind != ForkKind.GameStart))
         {
             var state = BgaImporter.Import(log, new BgaImportOptions(fork.MoveIndex)).State!;
             var snapshot = log.Moves.Take(fork.MoveIndex + 1).Last(m => m.GameState is not null).GameState!;
@@ -461,8 +597,8 @@ public class BgaImporterTests
         var log = Fixtures.Load(fixture);
         var forks = Fixtures.ForkPoints(fixture).ForkPoints;
 
-        // Every generation start, and a spread of the positions inside generations.
-        var sample = forks.Where((f, i) => f.Kind == ForkKind.GenerationStart || i % 5 == 0);
+        // The start of the game, every generation start, and a spread of the positions inside generations.
+        var sample = forks.Where((f, i) => f.Kind != ForkKind.ActionStart || i % 5 == 0);
 
         var failures = new List<string>();
         foreach (var fork in sample)
@@ -486,6 +622,14 @@ public class BgaImporterTests
             v => v.Key,
             v => v.Value with { TotalDetails = (v.Value.TotalDetails ?? new BgaVpTotals()) with { Tr = 20 } }),
     });
+
+    /// <summary>The log as older scraper versions wrote it, without what each player was dealt.</summary>
+    private static BgaGameLog WithoutStartingHands(BgaGameLog log) => log with
+    {
+        Players = log.Players.ToDictionary(p => p.Key, p => p.Value with { StartingHand = null }),
+    };
+
+    private static ImmutableList<string> Ids(params string[] names) => [.. names.Select(n => CardNameMap.Resolve(n)!)];
 
     private static BgaGameLog WithSnapshots(BgaGameLog log, Func<BgaSnapshot, BgaSnapshot> change) => log with
     {

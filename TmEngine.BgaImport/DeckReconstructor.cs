@@ -56,6 +56,16 @@ internal static class DeckReconstructor
     }
 
     /// <summary>
+    /// The draw pile at the start of the game, once every player has been dealt their opening cards.
+    /// </summary>
+    public static ImmutableList<string> ReconstructAtGameStart(BgaImportContext context, HashSet<string> dealt, int shuffleSeed)
+    {
+        var upcoming = UpcomingDraws(context, forkIndex: -1, dealt);
+        var unseen = context.ProjectDeck.Except(dealt).Except(upcoming).Order().ToImmutableArray();
+        return [.. upcoming, .. DeckBuilder.Shuffle(unseen, new Random(shuffleSeed))];
+    }
+
+    /// <summary>
     /// Cards the real game drew after the fork, in the order the log first names them. Stops at a reshuffle:
     /// cards drawn after one were in the discard pile at the fork.
     /// </summary>
@@ -65,7 +75,7 @@ internal static class DeckReconstructor
         var upcoming = new List<string>();
         var seen = new HashSet<string>();
 
-        var drawPile = context.SnapshotAt(forkIndex)?.DrawPile;
+        var drawPile = forkIndex < 0 ? null : context.SnapshotAt(forkIndex)?.DrawPile;
         for (int i = forkIndex + 1; i < moves.Count; i++)
         {
             var move = moves[i];

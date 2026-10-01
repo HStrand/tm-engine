@@ -65,6 +65,17 @@ public sealed class RandomPlayer(int seed)
         var id = player.PlayerId;
         if (moves.PendingAction is { } pending)
             return Resolve(pending, player);
+        if (moves.Setup is { } setup)
+        {
+            var corporation = Pick(setup.AvailableCorporations);
+            return new SetupMove(
+                id,
+                corporation,
+                [.. Subset(setup.AvailablePreludes, setup.PreludesToKeep, atLeast: setup.PreludesToKeep)],
+                [.. Subset(setup.AvailableCards, setup.StartingMegaCredits[corporation] / setup.CostPerCard)]);
+        }
+        if (moves.Prelude is { } prelude)
+            return new PlayPreludeMove(id, Pick(prelude.RemainingPreludes));
         if (moves.Draft is { } draft)
             return new DraftCardMove(id, Pick(draft.DraftHand));
         if (moves.BuyCards is { } buy)

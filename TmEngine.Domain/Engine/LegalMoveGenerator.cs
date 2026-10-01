@@ -55,7 +55,17 @@ public sealed record PreludeOptions(ImmutableList<string> RemainingPreludes);
 public sealed record SetupOptions(
     ImmutableList<string> AvailableCorporations,
     ImmutableList<string> AvailablePreludes,
-    ImmutableList<string> AvailableCards);
+    ImmutableList<string> AvailableCards)
+{
+    /// <summary>How many of the preludes must be kept; 0 without the Prelude expansion.</summary>
+    public int PreludesToKeep => AvailablePreludes.Count > 0 ? Constants.PreludesKept : 0;
+
+    public int CostPerCard => Constants.CardBuyCost;
+
+    /// <summary>Corporation id → the MC it starts with, which caps how many cards can be bought.</summary>
+    public ImmutableDictionary<string, int> StartingMegaCredits =>
+        AvailableCorporations.ToImmutableDictionary(id => id, CardRegistry.StartingMegaCredits);
+}
 
 public sealed record DraftOptions(ImmutableList<string> DraftHand, int PassingToPlayerId);
 

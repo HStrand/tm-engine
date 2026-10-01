@@ -48,6 +48,12 @@ public static class CardRegistry
 
     public static CardDefinition GetDefinition(string cardId) => Get(cardId).Definition;
 
+    /// <summary>The MC a corporation starts the game with, which its player's opening cards are bought from.</summary>
+    public static int StartingMegaCredits(string corporationId) =>
+        TryGet(corporationId, out var corporation)
+            ? corporation.OnPlayEffects.OfType<ChangeResourceEffect>().Where(e => e.Resource == ResourceType.MegaCredits).Sum(e => e.Amount)
+            : 0;
+
     public static ImmutableArray<Tag> GetTags(string cardId) =>
         TryGet(cardId, out var entry) ? entry.Definition.Tags : [];
 

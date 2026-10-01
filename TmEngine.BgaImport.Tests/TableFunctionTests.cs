@@ -144,7 +144,8 @@ public class TableFunctionTests
         if (Environment.GetEnvironmentVariable("TM_CONTRACT_FIXTURE_DIR") is { Length: > 0 } directory)
         {
             var forkPoints = Fixtures.ForkPoints(Fixtures.Elysium2p);
-            var imported = BgaImporter.Import(Fixtures.Load(Fixtures.Elysium2p), new BgaImportOptions(forkPoints.ForkPoints[0].MoveIndex, GameId: "game-1"));
+            var firstGenerationStart = forkPoints.ForkPoints.First(f => f.Kind == ForkKind.GenerationStart);
+            var imported = BgaImporter.Import(Fixtures.Load(Fixtures.Elysium2p), new BgaImportOptions(firstGenerationStart.MoveIndex, GameId: "game-1"));
 
             File.WriteAllText(Path.Combine(directory, "hot-seat-session.json"), exchanges.ToString(Formatting.None));
             File.WriteAllText(Path.Combine(directory, "fork-points.json"), JsonConvert.SerializeObject(
@@ -152,6 +153,74 @@ public class TableFunctionTests
             File.WriteAllText(Path.Combine(directory, "import.json"), JsonConvert.SerializeObject(
                 new ImportResponse(imported.State!.GameId, imported.Fork, imported.Meta, imported.Issues), Json));
         }
+    }
+
+    /// <summary>
+    /// A game picked up from the deal: both players choose their opening through the endpoints, play their
+    /// preludes and go on into the action phase. With TM_CONTRACT_FIXTURE_DIR set, the exchange is written out
+    /// as a fixture for the web client's tests.
+    /// </summary>
+    [Fact]
+    public async Task HotSeatSession_FromTheStartOfTheGame_PlaysTheOpeningThroughTheEndpoints()
+    {
+        const string gameId = "game-start";
+        var imported = BgaImporter.Import(Fixtures.Load(Fixtures.Elysium2p), new BgaImportOptions(MoveIndex: 0, ShuffleSeed: 7, GameId: gameId));
+        await _store.CreateGameAsync(imported.State!);
+        await _store.SaveMetaAsync(gameId, imported.Meta!);
+
+        // Both seats choose at once, each from what they were dealt. StrandedKnight (seat 1) was dealt
+        // Point Luna and PhoboLog.
+        var opening = await GetTable(gameId);
+        var legalMoves = (JObject)opening["legalMoves"]!;
+        Assert.Equal(["0", "1"], legalMoves.Properties().Select(p => p.Name).Order());
+        var setup = legalMoves["1"]!["setup"]!;
+        var pointLuna = CardNameMap.Resolve("Point Luna")!;
+        var phoboLog = CardNameMap.Resolve("PhoboLog")!;
+        Assert.Equal([pointLuna, phoboLog], setup["availableCorporations"]!.Values<string>());
+        Assert.Equal(4, setup["availablePreludes"]!.Count());
+        Assert.Equal(10, setup["availableCards"]!.Count());
+        Assert.Equal(2, setup.Value<int>("preludesToKeep"));
+        Assert.Equal(3, setup.Value<int>("costPerCard"));
+        Assert.Equal(38, setup["startingMegaCredits"]!.Value<int>(pointLuna));
+        Assert.Equal("Point Luna", opening["cardNames"]!.Value<string>(pointLuna));
+
+        // PhoboLog starts with 23 MC, which buys seven cards and not eight.
+        var tooMany = new JObject
+        {
+            ["type"] = "Setup",
+            ["playerId"] = 1,
+            ["corporationId"] = phoboLog,
+            ["preludeIds"] = new JArray(setup["availablePreludes"]!.Take(2)),
+            ["cardIdsToBuy"] = new JArray(setup["availableCards"]!.Take(8)),
+        };
+        var refused = Body(await Function().SubmitMove(Post(tooMany.ToString()), gameId), HttpStatusCode.BadRequest);
+        Assert.Contains("Phobolog starts with 23", refused.Value<string>("error"));
+
+        var player = new RandomPlayer(seed: 3);
+        var exchanges = new JArray { new JObject { ["table"] = opening } };
+        var moveTypes = new List<string>();
+        for (int i = 0; i < 30; i++)
+        {
+            var current = await _store.LoadStateAsync(gameId);
+            if (player.NextMove(current) is not { } move)
+                break;
+
+            var moveJson = JsonConvert.SerializeObject(move, typeof(Move), Json);
+            var table = Body(await Function().SubmitMove(Post(moveJson), gameId), HttpStatusCode.OK);
+
+            moveTypes.Add(move.GetType().Name);
+            exchanges.Add(new JObject { ["move"] = JObject.Parse(moveJson), ["table"] = table });
+        }
+
+        // The opening is two setup moves, then each player's two preludes, then the action phase.
+        Assert.Equal([nameof(SetupMove), nameof(SetupMove)], moveTypes.Take(2));
+        Assert.Equal(4, moveTypes.Count(t => t == nameof(PlayPreludeMove)));
+        var final = await _store.LoadStateAsync(gameId);
+        Assert.True(final.Phase is not (GamePhase.Setup or GamePhase.PreludePlacement), $"Still in {final.Phase}.");
+        Assert.All(final.Players, p => Assert.False(string.IsNullOrEmpty(p.CorporationId)));
+
+        if (Environment.GetEnvironmentVariable("TM_CONTRACT_FIXTURE_DIR") is { Length: > 0 } directory)
+            File.WriteAllText(Path.Combine(directory, "game-start-session.json"), exchanges.ToString(Formatting.None));
     }
 
     private async Task<GameState> ImportGeneration4()

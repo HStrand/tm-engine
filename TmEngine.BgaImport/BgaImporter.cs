@@ -1,13 +1,15 @@
 using System.Collections.Immutable;
 using TmEngine.Domain.Cards;
 using TmEngine.Domain.Cards.Effects;
+using TmEngine.Domain.Engine;
 using TmEngine.Domain.Models;
 
 namespace TmEngine.BgaImport;
 
 /// <summary>
 /// Turns a position in a BGA game log into an engine <see cref="GameState"/> that can be played on from.
-/// Counters (resources, production, terraform rating, global parameters) are read from the log's snapshot at
+/// The start of the game is the engine's own setup with the log's deal in place of a random one. For later
+/// positions, counters (resources, production, terraform rating, global parameters) are read from the log's snapshot at
 /// the fork; card zones and the board are accumulated from the moves; the deck is rebuilt by
 /// <see cref="DeckReconstructor"/>. The result is checked against the snapshot by <see cref="ImportValidator"/>.
 /// </summary>
@@ -81,6 +83,9 @@ public static class BgaImporter
     private static BgaImportResult Build(
         BgaImportContext context, List<ForkPoint> candidates, ForkPoint fork, BgaImportOptions options, List<ImportIssue> issues)
     {
+        if (fork.Kind == ForkKind.GameStart)
+            return BuildGameStart(context, fork, options, issues);
+
         var log = context.Log;
 
         var snapshot = context.SnapshotAt(fork.MoveIndex);
@@ -139,12 +144,97 @@ public static class BgaImporter
         if (issues.Any(i => i.Severity == IssueSeverity.Blocking))
             return Failed(issues, fork);
 
+        return new BgaImportResult(state, Meta(context, fork, options), fork, [.. issues]);
+    }
+
+    private static GameMeta Meta(BgaImportContext context, ForkPoint fork, BgaImportOptions options)
+    {
+        var log = context.Log;
         var seats = context.Seats
             .Select((bgaId, seat) => new SeatMeta(seat, bgaId, log.Players[bgaId].PlayerName, log.Players[bgaId].Color))
             .ToImmutableList();
         var source = new SourceRef(log.TableId ?? log.ReplayId, log.PlayerPerspective, fork.MoveIndex, fork.MoveNumber);
+        return new GameMeta(seats, source, options.ShuffleSeed);
+    }
 
-        return new BgaImportResult(state, new GameMeta(seats, source, options.ShuffleSeed), fork, [.. issues]);
+    // ── Game start ─────────────────────────────────────────────
+
+    /// <summary>
+    /// The engine's setup phase with the real game's deal: each player chooses again from the corporations,
+    /// preludes and project cards they were dealt, and the deck holds the cards the real game went on to draw.
+    /// </summary>
+    private static BgaImportResult BuildGameStart(BgaImportContext context, ForkPoint fork, BgaImportOptions options, List<ImportIssue> issues)
+    {
+        var log = context.Log;
+        var preludesDealt = log.PreludeOn == true ? Constants.PreludesDealt : 0;
+
+        var corporations = Dealt(context, "corporations", h => h.Corporations, Constants.CorporationsDealt, CardType.Corporation, issues);
+        var preludes = Dealt(context, "preludes", h => h.Preludes, preludesDealt, CardType.Prelude, issues);
+        var cards = Dealt(context, "project cards", h => h.ProjectCards, Constants.InitialCardsDealt, null, issues);
+
+        foreach (var (bgaId, seat) in context.Seats.Select((id, seat) => (id, seat)))
+        {
+            var player = log.Players[bgaId];
+            if (!corporations[seat].Contains(CardNameMap.Resolve(player.Corporation!)!))
+            {
+                issues.Add(ImportIssue.Blocking("STARTING_HAND",
+                    $"{player.PlayerName} played {player.Corporation}, which is not among the corporations the log says they were dealt."));
+            }
+        }
+
+        var dealtCards = cards.SelectMany(c => c).ToList();
+        if (dealtCards.Distinct().Count() != dealtCards.Count || dealtCards.Any(c => !context.ProjectDeck.Contains(c)))
+            issues.Add(ImportIssue.Blocking("STARTING_HAND", "The opening hands in the log are not distinct cards from this game's deck."));
+
+        if (issues.Any(i => i.Severity == IssueSeverity.Blocking))
+            return Failed(issues, fork);
+
+        var dealtPreludes = preludes.SelectMany(p => p).ToHashSet();
+        var preludeDeck = log.PreludeOn == true
+            ? DeckBuilder.Shuffle([.. CardRegistry.GetPreludeIds().Where(id => !dealtPreludes.Contains(id))], new Random(options.ShuffleSeed))
+            : [];
+
+        var setup = new GameSetupOptions(
+            PlayerCount: log.Players.Count,
+            Map: context.Map,
+            CorporateEra: log.CorporateEraOn == true,
+            DraftVariant: log.DraftOn == true,
+            PreludeExpansion: log.PreludeOn == true);
+        var deal = new SetupDeal(
+            corporations, preludes, cards,
+            DeckReconstructor.ReconstructAtGameStart(context, [.. dealtCards], options.ShuffleSeed),
+            preludeDeck);
+
+        // Seat 0 is whoever started generation 1, which is where the engine's setup puts the first player.
+        var state = GameEngine.Setup(setup, options.ShuffleSeed, deal) with { GameId = options.GameId ?? Guid.NewGuid().ToString() };
+
+        issues.AddRange(ImportValidator.CheckOpeningIsLegal(context, state));
+        if (issues.Any(i => i.Severity == IssueSeverity.Blocking))
+            return Failed(issues, fork);
+
+        return new BgaImportResult(state, Meta(context, fork, options), fork, [.. issues]);
+    }
+
+    /// <summary>One kind of card from each player's starting hand, by seat, as engine card ids.</summary>
+    private static ImmutableList<ImmutableList<string>> Dealt(
+        BgaImportContext context, string what, Func<BgaStartingHand, List<string>?> select, int expected, CardType? type, List<ImportIssue> issues)
+    {
+        var dealt = ImmutableList.CreateBuilder<ImmutableList<string>>();
+        foreach (var bgaId in context.Seats)
+        {
+            var player = context.Log.Players[bgaId];
+            var ids = expected == 0
+                ? []
+                : (select(player.StartingHand!) ?? []).Select(CardNameMap.Resolve).OfType<string>().ToImmutableList();
+
+            if (ids.Count != expected || (type is { } required && ids.Any(id => CardRegistry.GetDefinition(id).Type != required)))
+            {
+                issues.Add(ImportIssue.Blocking("STARTING_HAND",
+                    $"The log should list the {expected} {what} {player.PlayerName} was dealt, but lists {ids.Count}."));
+            }
+            dealt.Add(ids);
+        }
+        return dealt.ToImmutable();
     }
 
     private static BgaImportResult Failed(List<ImportIssue> issues, ForkPoint? fork = null) =>

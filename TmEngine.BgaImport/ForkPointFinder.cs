@@ -5,7 +5,8 @@ namespace TmEngine.BgaImport;
 /// <summary>
 /// Finds the moves in a log after which the position can be rebuilt as an engine state.
 /// Only positions where nothing is half-resolved qualify, because the log does not record pending choices:
-/// the start of a generation's action phase, and every point in it where a player is about to begin an action.
+/// the start of the game, the start of a generation's action phase, and every point in it where a player is
+/// about to begin an action.
 /// </summary>
 internal static partial class ForkPointFinder
 {
@@ -33,9 +34,13 @@ internal static partial class ForkPointFinder
         var moves = context.Log.Moves;
         var forks = new List<ForkPoint>();
 
+        if (GameStart(context) is { } gameStart)
+            forks.Add(gameStart);
+
         foreach (var (generation, first, last) in Generations(context))
         {
-            // Generation 1 opens with setup, preludes and corporation first actions, which are not modelled here.
+            // Generation 1 opens with setup, preludes and corporation first actions. The log does not say how far
+            // through those the players are, so the generation can only be picked up from the deal.
             if (generation < 2
                 || ResearchEnd(context, first) is not { } researchEnd
                 || context.ResolvePlayer(context.SnapshotAt(researchEnd)?.StartingPlayer) is not { } firstPlayer)
@@ -48,6 +53,24 @@ internal static partial class ForkPointFinder
         }
 
         return forks;
+    }
+
+    /// <summary>
+    /// The position after the log's first move, which announces the game: everyone has been dealt their
+    /// corporations, preludes and project cards (the scraper records them per player) and has chosen nothing.
+    /// </summary>
+    private static ForkPoint? GameStart(BgaImportContext context)
+    {
+        var moves = context.Log.Moves;
+        if (moves.Count < 2
+            || moves[0].CardsKept is { Count: > 0 }
+            || context.Log.Players.Values.Any(p => p.StartingHand is null))
+        {
+            return null;
+        }
+
+        var firstPlayer = context.ResolvePlayer(context.SnapshotAt(0)?.StartingPlayer) ?? context.Seats[0];
+        return new ForkPoint(0, moves[0].MoveNumber, ForkKind.GameStart, Generation: 1, firstPlayer);
     }
 
     private static IEnumerable<(int Generation, int First, int Last)> Generations(BgaImportContext context)

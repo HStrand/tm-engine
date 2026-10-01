@@ -2,6 +2,7 @@ using TmEngine.Domain.Cards.Effects;
 using TmEngine.Domain.Cards;
 using TmEngine.Domain.Engine;
 using TmEngine.Domain.Models;
+using TmEngine.Domain.Moves;
 
 namespace TmEngine.BgaImport;
 
@@ -125,6 +126,68 @@ internal static class ImportValidator
         }
 
         return issues;
+    }
+
+    /// <summary>
+    /// The start of the game has no counters to check against. Instead the real game's own opening (each
+    /// player's corporation, preludes and cards bought) must be one the engine accepts from the imported deal.
+    /// </summary>
+    public static List<ImportIssue> CheckOpeningIsLegal(BgaImportContext context, GameState state)
+    {
+        var issues = new List<ImportIssue>();
+        var setup = state.Setup!;
+
+        try
+        {
+            foreach (var (bgaId, seat) in context.Seats.Select((id, seat) => (id, seat)))
+            {
+                if (LegalMoveGenerator.GetLegalMoves(state, seat).Setup is null)
+                {
+                    issues.Add(ImportIssue.Blocking("ENGINE_REJECTS_STATE", "The engine does not offer the players their opening choices."));
+                    return issues;
+                }
+
+                if (RealOpening(context, setup, bgaId, seat) is not { } move)
+                    continue;
+
+                var (next, result) = GameEngine.Apply(state, move);
+                if (result is Error error)
+                {
+                    issues.Add(ImportIssue.Warning("NEXT_MOVE_NOT_LEGAL",
+                        $"The engine does not allow the opening {context.Log.Players[bgaId].PlayerName} chose in the real game: {error.Message}"));
+                    return issues;
+                }
+                state = next;
+            }
+        }
+        catch (Exception e)
+        {
+            issues.Add(ImportIssue.Blocking("ENGINE_REJECTS_STATE", $"The engine cannot play the opening of this game: {e.Message}"));
+        }
+
+        return issues;
+    }
+
+    /// <summary>
+    /// The opening a player chose in the real game, or null when the log does not say. What a player kept is
+    /// logged as one list: corporation, project cards and preludes together.
+    /// </summary>
+    public static SetupMove? RealOpening(BgaImportContext context, SetupState setup, string bgaId, int seat)
+    {
+        var kept = context.Log.Moves
+            .TakeWhile(m => m.CardPlayed is null)
+            .Where(m => m.ActionType != "cancelled")
+            .Select(m => m.CardsKept?.GetValueOrDefault(bgaId))
+            .LastOrDefault(cards => cards is { Count: > 0 })
+            ?.Select(CardNameMap.Resolve).ToHashSet();
+        if (kept is null)
+            return null;
+
+        return new SetupMove(
+            seat,
+            CardNameMap.Resolve(context.Log.Players[bgaId].Corporation!)!,
+            [.. setup.DealtPreludes[seat].Where(kept.Contains)],
+            [.. setup.DealtCards[seat].Where(kept.Contains)]);
     }
 
     /// <summary>Every project card in the game's deck must be in exactly one place.</summary>
