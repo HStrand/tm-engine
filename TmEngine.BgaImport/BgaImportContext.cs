@@ -22,6 +22,23 @@ internal sealed class BgaImportContext
 
     private BgaSnapshot?[] _snapshots = [];
 
+    private Opening? _opening;
+    private bool _openingLooked;
+
+    /// <summary>How generation 1 reaches its action phase, or null when the log's opening is not understood.</summary>
+    public Opening? Opening
+    {
+        get
+        {
+            if (!_openingLooked)
+            {
+                _opening = OpeningTracker.Find(this);
+                _openingLooked = true;
+            }
+            return _opening;
+        }
+    }
+
     public int SeatOf(string bgaPlayerId) => Seats.IndexOf(bgaPlayerId);
 
     /// <summary>The most recent snapshot at or before a move. Not every move carries one.</summary>

@@ -144,7 +144,7 @@ public class TableFunctionTests
         if (Environment.GetEnvironmentVariable("TM_CONTRACT_FIXTURE_DIR") is { Length: > 0 } directory)
         {
             var forkPoints = Fixtures.ForkPoints(Fixtures.Elysium2p);
-            var firstGenerationStart = forkPoints.ForkPoints.First(f => f.Kind == ForkKind.GenerationStart);
+            var firstGenerationStart = forkPoints.ForkPoints.First(f => f.Kind == ForkKind.GenerationStart && f.Generation == 2);
             var imported = BgaImporter.Import(Fixtures.Load(Fixtures.Elysium2p), new BgaImportOptions(firstGenerationStart.MoveIndex, GameId: "game-1"));
 
             File.WriteAllText(Path.Combine(directory, "hot-seat-session.json"), exchanges.ToString(Formatting.None));

@@ -12,6 +12,10 @@ internal enum TurnEventKind
     ConvertHeat,
     ConvertPlants,
     SellPatents,
+
+    /// <summary>A corporation's first action, which generation 1 opens with for its player.</summary>
+    FirstAction,
+
     Pass,
 
     /// <summary>The player ended their turn after one action.</summary>
@@ -91,6 +95,32 @@ internal static partial class TurnTracker
 
     /// <summary>The turn events in the moves from <paramref name="first"/> to <paramref name="last"/>, in order.</summary>
     public static List<TurnEvent> Events(BgaImportContext context, int first, int last)
+    {
+        var events = LoggedEvents(context, first, last);
+
+        // Corporation first actions have no line of their own in the log; the opening tracker finds them.
+        foreach (var firstAction in context.Opening?.FirstActions ?? [])
+        {
+            if (firstAction.MoveIndex < first || firstAction.MoveIndex > last)
+                continue;
+
+            // A prelude played as a first action (Valley Trust) is logged as a card played.
+            var logged = events.FindIndex(e => e.MoveIndex == firstAction.MoveIndex && e.PlayerId == firstAction.PlayerId && e.Kind == TurnEventKind.PlayCard);
+            if (logged >= 0)
+            {
+                events[logged] = events[logged] with { Kind = TurnEventKind.FirstAction };
+                continue;
+            }
+
+            var next = events.FindIndex(e => e.MoveIndex >= firstAction.MoveIndex);
+            events.Insert(next < 0 ? events.Count : next, firstAction);
+        }
+
+        return events;
+    }
+
+    /// <summary>The turn events the log itself spells out. Leaves out corporation first actions; see <see cref="Events"/>.</summary>
+    public static List<TurnEvent> LoggedEvents(BgaImportContext context, int first, int last)
     {
         var events = new List<TurnEvent>();
         for (int i = first; i <= last; i++)

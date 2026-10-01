@@ -13,7 +13,7 @@ namespace TmEngine.BgaImport;
 /// </summary>
 internal static class ImportValidator
 {
-    public static List<ImportIssue> Validate(BgaImportContext context, GameState state, BgaSnapshot snapshot)
+    public static List<ImportIssue> Validate(BgaImportContext context, GameState state, BgaSnapshot snapshot, int forkIndex)
     {
         var issues = new List<ImportIssue>();
 
@@ -23,7 +23,7 @@ internal static class ImportValidator
         if (oceans != state.OceansPlaced)
             issues.Add(ImportIssue.Blocking("OCEAN_COUNT", $"{state.OceansPlaced} oceans have been placed but {oceans} ocean tiles were found in the log."));
 
-        CheckTerraformRatingIsRecorded(context, state, issues);
+        CheckTerraformRatingIsRecorded(context, state, forkIndex, issues);
 
         var scores = ScoresOrNull(state, issues);
         foreach (var player in state.Players)
@@ -101,6 +101,7 @@ internal static class ImportValidator
             TurnEventKind.ConvertHeat => actions.CanConvertHeat,
             TurnEventKind.ConvertPlants => actions.CanConvertPlants,
             TurnEventKind.SellPatents => player.Hand.Count > 0,
+            TurnEventKind.FirstAction => actions.CanPerformFirstAction,
             TurnEventKind.Pass => actions.CanPass,
             TurnEventKind.EndTurn => actions.CanEndTurn,
             _ => true,
@@ -118,6 +119,7 @@ internal static class ImportValidator
                 TurnEventKind.ConvertHeat => "converted heat",
                 TurnEventKind.ConvertPlants => "converted plants",
                 TurnEventKind.SellPatents => "sold patents",
+                TurnEventKind.FirstAction => "took their corporation's first action",
                 TurnEventKind.Pass => "passed",
                 _ => "ended their turn",
             };
@@ -169,18 +171,11 @@ internal static class ImportValidator
     }
 
     /// <summary>
-    /// The opening a player chose in the real game, or null when the log does not say. What a player kept is
-    /// logged as one list: corporation, project cards and preludes together.
+    /// The opening a player chose in the real game, or null when the log does not say.
     /// </summary>
     public static SetupMove? RealOpening(BgaImportContext context, SetupState setup, string bgaId, int seat)
     {
-        var kept = context.Log.Moves
-            .TakeWhile(m => m.CardPlayed is null)
-            .Where(m => m.ActionType != "cancelled")
-            .Select(m => m.CardsKept?.GetValueOrDefault(bgaId))
-            .LastOrDefault(cards => cards is { Count: > 0 })
-            ?.Select(CardNameMap.Resolve).ToHashSet();
-        if (kept is null)
+        if (OpeningTracker.Keeps(context, bgaId) is not { } kept)
             return null;
 
         return new SetupMove(
@@ -262,16 +257,13 @@ internal static class ImportValidator
     /// Terraform rating is read from BGA's live scoring table. On tables played without live scoring the table
     /// stays at its initial 20 for the whole game, which would silently import everyone at TR 20.
     /// </summary>
-    private static void CheckTerraformRatingIsRecorded(BgaImportContext context, GameState state, List<ImportIssue> issues)
+    private static void CheckTerraformRatingIsRecorded(BgaImportContext context, GameState state, int forkIndex, List<ImportIssue> issues)
     {
         if (state.Players.Any(p => p.TerraformRating != Constants.StartingTR))
             return;
 
-        var moves = context.Log.Moves;
-        var earlierGenerations = Enumerable.Range(0, moves.Count)
-            .TakeWhile(i => context.SnapshotAt(i)?.Generation is not { } generation || generation < state.Generation)
-            .Select(i => moves[i]);
-        if (earlierGenerations.Any(m => m.ActionType != "cancelled" && BgaMoveText.TerraformGains(m).Any()))
+        var movesSoFar = context.Log.Moves.Take(forkIndex + 1);
+        if (movesSoFar.Any(m => m.ActionType != "cancelled" && BgaMoveText.TerraformGains(m).Any()))
         {
             issues.Add(ImportIssue.Blocking("NO_LIVE_SCORING",
                 "This table was played without live scoring, so the log does not record terraform ratings."));

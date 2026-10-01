@@ -23,7 +23,10 @@ public enum ForkKind
     /// <summary>The cards have been dealt and nobody has chosen a corporation, preludes or opening cards yet.</summary>
     GameStart,
 
-    /// <summary>Start of a generation's action phase: research is done and nobody has acted yet.</summary>
+    /// <summary>
+    /// Start of a generation's action phase: research is done (in generation 1, the opening hands are chosen
+    /// and the preludes played) and nobody has acted yet.
+    /// </summary>
     GenerationStart,
 
     /// <summary>Inside the action phase, with a player about to begin an action.</summary>

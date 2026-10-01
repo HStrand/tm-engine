@@ -5,8 +5,8 @@ namespace TmEngine.BgaImport;
 /// <summary>
 /// Finds the moves in a log after which the position can be rebuilt as an engine state.
 /// Only positions where nothing is half-resolved qualify, because the log does not record pending choices:
-/// the start of the game, the start of a generation's action phase, and every point in it where a player is
-/// about to begin an action.
+/// the start of the game, the start of a generation's action phase (in generation 1, once the preludes have
+/// been played), and every point in it where a player is about to begin an action.
 /// </summary>
 internal static partial class ForkPointFinder
 {
@@ -39,10 +39,9 @@ internal static partial class ForkPointFinder
 
         foreach (var (generation, first, last) in Generations(context))
         {
-            // Generation 1 opens with setup, preludes and corporation first actions. The log does not say how far
-            // through those the players are, so the generation can only be picked up from the deal.
-            if (generation < 2
-                || ResearchEnd(context, first) is not { } researchEnd
+            // Generation 1 has no research phase: its action phase follows the opening hands and the preludes.
+            var actionPhaseStart = generation == 1 ? OpeningEnd(context, last) : ResearchEnd(context, first);
+            if (actionPhaseStart is not { } researchEnd
                 || context.ResolvePlayer(context.SnapshotAt(researchEnd)?.StartingPlayer) is not { } firstPlayer)
             {
                 continue;
@@ -91,6 +90,24 @@ internal static partial class ForkPointFinder
 
         if (generation is { } final)
             yield return (final, first, count - 1);
+    }
+
+    /// <summary>
+    /// The move before the first action of generation 1. The opening hands and preludes leading up to it are
+    /// not positions to fork (which preludes remain to be played is not something the importer rebuilds), and
+    /// the last prelude's effects can run over several moves, so the position is taken from where the action
+    /// phase visibly begins. Null when the opening is not understood or nobody ever acts.
+    /// </summary>
+    private static int? OpeningEnd(BgaImportContext context, int lastOfGeneration)
+    {
+        if (context.Opening is not { } opening
+            || TurnTracker.Events(context, opening.LastMove + 1, lastOfGeneration).FirstOrDefault() is not { } firstAction)
+        {
+            return null;
+        }
+
+        var end = firstAction.MoveIndex - 1;
+        return end >= opening.LastMove && end + 1 < context.Log.Moves.Count ? end : null;
     }
 
     /// <summary>

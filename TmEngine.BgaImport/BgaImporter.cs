@@ -102,8 +102,10 @@ public static class BgaImporter
         var actionPhaseStart = candidates.Last(f => f.Kind == ForkKind.GenerationStart && f.MoveIndex <= fork.MoveIndex).MoveIndex;
         var turn = new TurnSoFar(
             TurnTracker.Events(context, actionPhaseStart + 1, fork.MoveIndex),
-            PlayersWhoGainedTerraformRating(context, actionPhaseStart + 1, fork.MoveIndex),
-            fork.ActiveBgaPlayerId);
+            // In generation 1 the preludes come before the action phase and can raise the rating too.
+            PlayersWhoGainedTerraformRating(context, fork.Generation == 1 ? 0 : actionPhaseStart + 1, fork.MoveIndex),
+            fork.ActiveBgaPlayerId,
+            fork.Generation);
 
         var players = context.Seats
             .Select((bgaId, seat) => BuildPlayer(context, fold, snapshot, turn, bgaId, seat, issues))
@@ -136,10 +138,11 @@ public static class BgaImporter
                 .Select(c => new AwardFunding(c.Name, c.Seat)).ToImmutableList(),
             DrawPile = piles.Draw,
             DiscardPile = piles.Discard,
+            PreludeDeck = fork.Generation == 1 ? UndealtPreludes(context, options.ShuffleSeed) : [],
             ShuffleSeed = options.ShuffleSeed,
         };
 
-        issues.AddRange(ImportValidator.Validate(context, state, snapshot));
+        issues.AddRange(ImportValidator.Validate(context, state, snapshot, fork.MoveIndex));
         issues.AddRange(ImportValidator.CheckNextMoveIsLegal(context, state, fork));
         if (issues.Any(i => i.Severity == IssueSeverity.Blocking))
             return Failed(issues, fork);
@@ -189,10 +192,6 @@ public static class BgaImporter
         if (issues.Any(i => i.Severity == IssueSeverity.Blocking))
             return Failed(issues, fork);
 
-        var dealtPreludes = preludes.SelectMany(p => p).ToHashSet();
-        var preludeDeck = log.PreludeOn == true
-            ? DeckBuilder.Shuffle([.. CardRegistry.GetPreludeIds().Where(id => !dealtPreludes.Contains(id))], new Random(options.ShuffleSeed))
-            : [];
 
         var setup = new GameSetupOptions(
             PlayerCount: log.Players.Count,
@@ -203,7 +202,7 @@ public static class BgaImporter
         var deal = new SetupDeal(
             corporations, preludes, cards,
             DeckReconstructor.ReconstructAtGameStart(context, [.. dealtCards], options.ShuffleSeed),
-            preludeDeck);
+            UndealtPreludes(context, options.ShuffleSeed));
 
         // Seat 0 is whoever started generation 1, which is where the engine's setup puts the first player.
         var state = GameEngine.Setup(setup, options.ShuffleSeed, deal) with { GameId = options.GameId ?? Guid.NewGuid().ToString() };
@@ -213,6 +212,22 @@ public static class BgaImporter
             return Failed(issues, fork);
 
         return new BgaImportResult(state, Meta(context, fork, options), fork, [.. issues]);
+    }
+
+    /// <summary>
+    /// The preludes nobody was dealt, shuffled by seed. Valley Trust's first action draws from them; the log
+    /// does not say in which order they lay.
+    /// </summary>
+    private static ImmutableList<string> UndealtPreludes(BgaImportContext context, int shuffleSeed)
+    {
+        if (context.Log.PreludeOn != true)
+            return [];
+
+        var dealt = context.Log.Players.Values
+            .SelectMany(p => p.StartingHand?.Preludes ?? [])
+            .Select(CardNameMap.Resolve)
+            .ToHashSet();
+        return DeckBuilder.Shuffle([.. CardRegistry.GetPreludeIds().Where(id => !dealt.Contains(id))], new Random(shuffleSeed));
     }
 
     /// <summary>One kind of card from each player's starting hand, by seat, as engine card ids.</summary>
@@ -243,7 +258,7 @@ public static class BgaImporter
     // ── Players ────────────────────────────────────────────────
 
     /// <summary>What the action phase's moves up to the fork say about whose turn it is and what has been used up.</summary>
-    private sealed record TurnSoFar(List<TurnEvent> Events, HashSet<string> GainedTerraformRating, string ActivePlayerId);
+    private sealed record TurnSoFar(List<TurnEvent> Events, HashSet<string> GainedTerraformRating, string ActivePlayerId, int Generation);
 
     private static HashSet<string> PlayersWhoGainedTerraformRating(BgaImportContext context, int first, int last) =>
         Enumerable.Range(first, Math.Max(0, last - first + 1))
@@ -285,8 +300,14 @@ public static class BgaImporter
             ? CardRegistry.Get(lastCardId).OnPlayEffects
             : [];
 
+        var corporation = CardRegistry.Get(CardNameMap.Resolve(context.Log.Players[bgaId].Corporation!)!);
+
         return PlayerState.CreateInitial(seat, terraformRating ?? 0) with
         {
+            // A first action is the first thing its player does in generation 1, so it is still owed until
+            // they have done something. Vitor's free award is funded the same way.
+            PerformedFirstAction = turn.Generation > 1 || corporation.FirstActionEffects.IsEmpty || ownEvents.Count > 0,
+            HasFreeAwardFunding = turn.Generation == 1 && corporation.OnPlayEffects.OfType<GrantFreeAwardEffect>().Any() && ownEvents.Count == 0,
             Passed = ownEvents.Any(e => e.Kind == TurnEventKind.Pass),
             ActionsThisTurn = bgaId == turn.ActivePlayerId ? TurnTracker.ActionsThisTurn(turn.Events, bgaId) : 0,
             UsedCardActions = usedActions,

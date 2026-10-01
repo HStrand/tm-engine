@@ -24,7 +24,52 @@ public class BgaImporterTests
         Assert.Equal(0, first.MoveIndex);
         Assert.Equal(1, first.Generation);
         Assert.Equal(log.Moves[0].GameState!.StartingPlayer, first.ActiveBgaPlayerId);
-        Assert.Single(Fixtures.ForkPoints(fixture).ForkPoints, f => f.Generation == 1);
+        Assert.Single(Fixtures.ForkPoints(fixture).ForkPoints, f => f.Kind == ForkKind.GameStart);
+    }
+
+    [Fact]
+    public void FindForkPoints_PicksGeneration1UpOnceThePreludesArePlayed()
+    {
+        // Moves 5-9 are the four preludes; cdman234 then plays Nuclear Zone (10-12) and Mineral Deposit (13),
+        // and StrandedKnight plays Space Hotels (15-16) and Great Escarpment Consortium (17-18).
+        var forks = Fixtures.ForkPoints(Fixtures.Elysium2p).ForkPoints
+            .Where(f => f.MoveNumber is > 1 and <= 19)
+            .Select(f => (f.MoveNumber, f.Kind, f.ActiveBgaPlayerId));
+
+        const string cdman = "98490496", stranded = "86296239";
+        Assert.Equal(
+            [
+                (9, ForkKind.GenerationStart, cdman),
+                (12, ForkKind.ActionStart, cdman),
+                (14, ForkKind.ActionStart, stranded),
+                (16, ForkKind.ActionStart, stranded),
+                (19, ForkKind.ActionStart, cdman),
+            ],
+            forks);
+    }
+
+    [Fact]
+    public void FindForkPoints_StartsGeneration1WhereTheFirstActionBegins_NotWhereTheLastPreludeIsPlayed()
+    {
+        // jesse1288's last prelude is move 7; move 8 only announces Abtsein's turn, which begins with move 9.
+        Assert.Equal(8, GenerationStart(Fixtures.Tharsis2p, generation: 1).MoveNumber);
+
+        // Flaming Pile's UNMI Contractor (move 10) draws its card in move 11; Rutabaga00 acts in move 12.
+        Assert.Equal(11, GenerationStart(Fixtures.Hellas2p, generation: 1).MoveNumber);
+    }
+
+    [Fact]
+    public void FindForkPoints_HasNoMiddleOfGeneration1_WhenThePreludesCannotBeFollowed()
+    {
+        // With one prelude play missing from the log, the fourth "prelude" is cdman234's Nuclear Zone and
+        // the end of the opening cannot be told.
+        var log = Fixtures.Load(Fixtures.Elysium2p);
+        var withoutOnePrelude = log with { Moves = log.Moves.Where(m => m.CardPlayed != "Mohole Excavation").ToList() };
+        var (context, _) = BgaImportContext.Create(withoutOnePrelude);
+
+        Assert.Null(context!.Opening);
+        Assert.DoesNotContain(ForkPointFinder.Find(context), f => f.Generation == 1 && f.Kind != ForkKind.GameStart);
+        Assert.Contains(ForkPointFinder.Find(context), f => f.Generation == 2);
     }
 
     [Fact]
@@ -38,7 +83,7 @@ public class BgaImporterTests
 
     [Theory]
     [MemberData(nameof(Importable))]
-    public void FindForkPoints_IncludesTheStartOfEveryGenerationAfterTheFirst(string fixture)
+    public void FindForkPoints_IncludesTheStartOfEveryGeneration(string fixture)
     {
         var log = Fixtures.Load(fixture);
 
@@ -46,7 +91,7 @@ public class BgaImporterTests
 
         Assert.True(result.Eligible, Describe(result.Issues));
         Assert.Equal(
-            Enumerable.Range(2, log.Generations!.Value - 1),
+            Enumerable.Range(1, log.Generations!.Value),
             result.ForkPoints.Where(f => f.Kind == ForkKind.GenerationStart).Select(f => f.Generation));
     }
 
@@ -122,7 +167,7 @@ public class BgaImporterTests
         // The move before is in generation 5's research phase, where there is nothing to fork.
         Assert.Equal(lastOfGeneration4, BgaImporter.SnapToForkPoint(forkPoints, generation5.MoveIndex - 1));
 
-        // Anywhere in generation 1 goes back to the deal.
+        // While the preludes are being played, the only position to go back to is the deal.
         Assert.Equal(ForkKind.GameStart, BgaImporter.SnapToForkPoint(forkPoints, 5)!.Kind);
     }
 
@@ -141,7 +186,7 @@ public class BgaImporterTests
     }
 
     [Fact]
-    public void ImportAtOrBefore_InGeneration1_GoesBackToTheStartOfTheGame()
+    public void ImportAtOrBefore_DuringThePreludes_GoesBackToTheStartOfTheGame()
     {
         var result = BgaImporter.ImportAtOrBefore(Fixtures.Load(Fixtures.Elysium2p), new BgaImportOptions(MoveIndex: 5));
 
@@ -204,7 +249,8 @@ public class BgaImporterTests
     [Fact]
     public void FindForkPoints_WithoutLiveScoring_LeavesOnlyTheStartOfTheGame()
     {
-        // Terraform ratings are unknown for every later position, but the start needs none.
+        // Terraform ratings are unknown for every later position (jesse1288's preludes already raise his), but
+        // the start needs none.
         var result = BgaImporter.FindForkPoints(WithoutLiveScoring(Fixtures.Load(Fixtures.Tharsis2p)));
 
         Assert.True(result.Eligible, Describe(result.Issues));
@@ -345,6 +391,75 @@ public class BgaImporterTests
         Assert.Equal(6, stranded.Hand.Count);
         Assert.Equal(38 - 5 * 3, stranded.Resources.MegaCredits);
         Assert.Equal(194, state.DrawPile.Count);
+    }
+
+    // ── Imported state: generation 1 ───────────────────────────
+
+    [Fact]
+    public void Import_AfterThePreludes_HasWhatTheOpeningAndThePreludesGaveEachPlayer()
+    {
+        var (state, meta) = Import(Fixtures.Elysium2p, GenerationStart(Fixtures.Elysium2p, generation: 1));
+        var stranded = state.GetPlayer(meta.Seats.Single(s => s.Name == "StrandedKnight").Seat);
+        var cdman = state.GetPlayer(meta.Seats.Single(s => s.Name == "cdman234").Seat);
+
+        Assert.Equal(GamePhase.Action, state.Phase);
+        Assert.Equal(1, state.Generation);
+        Assert.Equal(cdman.PlayerId, state.ActivePlayerId);
+        Assert.Null(state.Setup);
+        Assert.Null(state.Prelude);
+
+        Assert.Equal(Ids("Metals Company", "UNMI Contractor"), cdman.PlayedCards);
+        Assert.Equal(Ids("Mohole Excavation", "Research Network"), stranded.PlayedCards);
+
+        // CrediCor's 57 MC less seven cards; Point Luna's 38 less five. UNMI Contractor gave cdman234 3 TR and a
+        // card; StrandedKnight drew one for Point Luna's Earth tag and three with Research Network.
+        Assert.Equal(36, cdman.Resources.MegaCredits);
+        Assert.Equal(23, stranded.Resources.MegaCredits);
+        Assert.Equal(23, cdman.TerraformRating);
+        Assert.True(cdman.IncreasedTRThisGeneration);
+        Assert.False(stranded.IncreasedTRThisGeneration);
+        Assert.Equal(8, cdman.Hand.Count);
+        Assert.Equal(9, stranded.Hand.Count);
+        Assert.Contains(CardNameMap.Resolve("Mineral Deposit")!, cdman.Hand);
+        Assert.Contains(CardNameMap.Resolve("Tundra Farming")!, stranded.Hand);
+
+        // The real game's next draw is the three cards for placing Nuclear Zone on Olympus Mons.
+        Assert.Equal(Ids("Aerobraked Ammonia Asteroid", "Special Design", "Ecological Zone"), state.DrawPile.Take(3));
+    }
+
+    [Fact]
+    public void Import_AfterThePreludes_StillOwesACorporationsFirstAction()
+    {
+        // Rutabaga00 plays Inventrix, whose first action draws three cards: move 12, his first of the game.
+        var (state, meta) = Import(Fixtures.Hellas2p, GenerationStart(Fixtures.Hellas2p, generation: 1));
+        var rutabaga = state.GetPlayer(meta.Seats.Single(s => s.Name == "Rutabaga00").Seat);
+        var flamingPile = state.GetPlayer(meta.Seats.Single(s => s.Name == "Flaming Pile").Seat);
+
+        Assert.False(rutabaga.PerformedFirstAction);
+        Assert.True(flamingPile.PerformedFirstAction);
+        Assert.Equal(4, rutabaga.Hand.Count);
+
+        var moves = LegalMoveGenerator.GetLegalMoves(state, rutabaga.PlayerId).Actions!;
+        Assert.True(moves.CanPerformFirstAction);
+
+        // Taking it draws the three cards the real game drew.
+        var (after, result) = GameEngine.Apply(state, new TmEngine.Domain.Moves.PerformFirstActionMove(rutabaga.PlayerId));
+        Assert.IsType<Success>(result);
+        Assert.Equal(
+            Ids("House Printing", "Space Hotels", "Acquired Company").Order(),
+            after.GetPlayer(rutabaga.PlayerId).Hand.Except(rutabaga.Hand).Order());
+    }
+
+    [Fact]
+    public void Import_InGeneration1_CountsAFirstActionAsTheActionItIs()
+    {
+        // By move 17 Rutabaga00 has taken Inventrix's first action and used the Power Plant standard project.
+        var (state, meta) = Import(Fixtures.Hellas2p, ForkAtMove(Fixtures.Hellas2p, 17));
+        var rutabaga = state.GetPlayer(meta.Seats.Single(s => s.Name == "Rutabaga00").Seat);
+
+        Assert.True(rutabaga.PerformedFirstAction);
+        Assert.Equal(7, rutabaga.Hand.Count);
+        Assert.Equal(1, state.Generation);
     }
 
     // ── Imported state: start of a generation ──────────────────

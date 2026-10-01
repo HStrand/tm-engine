@@ -66,6 +66,24 @@ public class ImportFunctionTests
     }
 
     [Fact]
+    public async Task ImportBgaGame_PicksUpTheMiddleOfGeneration1()
+    {
+        _logs.Add("824655675", Fixtures.Elysium2p);
+
+        // Move index 12 is cdman234's second action of the game; he is about to play it at index 11.
+        var response = await Function().ImportBgaGame(Post("""{"tableId":"824655675","moveIndex":12}"""));
+
+        var body = Body(response, HttpStatusCode.Created);
+        Assert.Equal(11, body["fork"]!.Value<int>("moveIndex"));
+        Assert.Equal(1, body["fork"]!.Value<int>("generation"));
+
+        var state = await _store.LoadStateAsync(body.Value<string>("gameId")!);
+        Assert.Equal(GamePhase.Action, state.Phase);
+        Assert.Equal(1, state.GetPlayer(state.ActivePlayerId).ActionsThisTurn);
+        Assert.Null(new RandomPlayer(seed: 2).Play(state, maxMoves: 300).Failure);
+    }
+
+    [Fact]
     public async Task ImportBgaGame_RefusesAMoveBetweenForkPoints_WhenSnapIsOff()
     {
         _logs.Add("824655675", Fixtures.Elysium2p);
