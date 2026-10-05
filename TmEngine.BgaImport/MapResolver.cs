@@ -16,16 +16,19 @@ public static class MapResolver
         ["eccentric"] = "excentric",
     };
 
-    private static readonly MapName[] SupportedMaps = [MapName.Tharsis, MapName.Hellas, MapName.Elysium];
+    private static readonly MapName[] SupportedMaps =
+        [MapName.Tharsis, MapName.Hellas, MapName.Elysium, MapName.VastitasBorealis];
 
     public static Result Resolve(BgaGameLog log)
     {
         var seen = MilestoneAndAwardNamesIn(log);
 
         MapName? labelled = null;
-        if (!string.IsNullOrWhiteSpace(log.Map))
+        // "Random" is the table option, written by parses that did not find which map came up: no label.
+        if (!string.IsNullOrWhiteSpace(log.Map) && !log.Map.Trim().Equals("Random", StringComparison.OrdinalIgnoreCase))
         {
-            if (!Enum.TryParse<MapName>(log.Map.Trim(), ignoreCase: true, out var parsed) || !SupportedMaps.Contains(parsed))
+            // BGA writes map names with spaces ("Vastitas Borealis"); the enum has none.
+            if (!Enum.TryParse<MapName>(log.Map.Replace(" ", ""), ignoreCase: true, out var parsed) || !SupportedMaps.Contains(parsed))
                 return new Result(null, $"Map '{log.Map}' is not supported by the engine.");
             labelled = parsed;
         }

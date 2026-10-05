@@ -403,6 +403,7 @@ public static class BoardLogic
         // Hex-printed bonuses
         bool gainedMineral = false;
         bool gainedOceanBonus = false;
+        bool gainedTemperatureBonus = false;
 
         foreach (var bonus in hex.Bonuses)
         {
@@ -425,6 +426,8 @@ public static class BoardLogic
                 gainedMineral = true;
             if (bonus is PlacementBonus.Ocean)
                 gainedOceanBonus = true;
+            if (bonus is PlacementBonus.Temperature)
+                gainedTemperatureBonus = true;
         }
 
         // Fire triggered effect once per tile placement if any mineral was gained (Mining Guild)
@@ -466,13 +469,27 @@ public static class BoardLogic
             }
         }
 
+        // Temperature placement bonus (Vastitas Borealis centre hex): charge 4 MC and raise the
+        // temperature one step. BGA logs the payment after the ocean-adjacency money, and charges
+        // it even when the temperature is already at its maximum. Affordability is the caller's
+        // job, as for the South Pole.
+        if (gainedTemperatureBonus)
+        {
+            state = state.UpdatePlayer(playerId, p => p with
+            {
+                Resources = Wallet.Pay(p, Constants.VastitasCentreCost),
+            });
+            state = GlobalParameters.RaiseTemperature(state, playerId);
+        }
+
         return state;
     }
 
     /// <summary>
     /// Returns the extra MC cost (beyond any card or standard project cost) the
-    /// player must pay to place a tile on this hex. Currently only Hellas South
-    /// Pole (hex with the Ocean placement bonus): 6 MC.
+    /// player must pay to place a tile on this hex: 6 MC on the Hellas South Pole
+    /// (the hex with the Ocean placement bonus) and 4 MC on the Vastitas Borealis
+    /// centre hex (the hex with the Temperature placement bonus).
     /// </summary>
     public static int GetExtraPlacementCost(GameState state, HexCoord location)
     {
@@ -481,6 +498,8 @@ public static class BoardLogic
             return 0;
         if (hex.Bonuses.Contains(PlacementBonus.Ocean))
             return Constants.HellasSouthPoleCost;
+        if (hex.Bonuses.Contains(PlacementBonus.Temperature))
+            return Constants.VastitasCentreCost;
         return 0;
     }
 

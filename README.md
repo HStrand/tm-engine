@@ -2,7 +2,7 @@
 
 A stateless, serverless game engine for Terraforming Mars, built with C#/.NET 8.0 and Azure Functions.
 
-Supports the base game, Prelude expansion, and Hellas & Elysium maps. Corporate Era and Draft variants are supported.
+Supports the base game, Prelude expansion, and the Hellas, Elysium and Vastitas Borealis maps. Corporate Era and Draft variants are supported.
 
 ## Running Locally
 
@@ -100,7 +100,7 @@ POST /games
 }
 ```
 
-All fields except `seed` are required. `map` accepts `"Tharsis"`, `"Hellas"`, or `"Elysium"`.
+All fields except `seed` are required. `map` accepts `"Tharsis"`, `"Hellas"`, `"Elysium"`, or `"Vastitas Borealis"`.
 
 **Response** `201 Created`:
 
@@ -191,7 +191,7 @@ GET  /games/{id}/meta
 
 Engine player ids are seats `0..n-1` in turn order; `meta` (also at `GET /games/{id}/meta`) maps them back to the BGA players.
 
-Not importable: games with more than two players (turn order and drafting have only been verified for two); maps other than Tharsis, Hellas and Elysium; Colonies; logs from old scraper versions (no hands or pile counts); tables played without live scoring (terraform ratings are not recorded); and positions where the log's counters contradict the cards found in it.
+Not importable: games with more than two players (turn order and drafting have only been verified for two); maps other than Tharsis, Hellas, Elysium and Vastitas Borealis; Colonies; logs from old scraper versions (no hands or pile counts); tables played without live scoring (terraform ratings are not recorded); and positions where the log's counters contradict the cards found in it.
 
 ### Get Legal Moves
 

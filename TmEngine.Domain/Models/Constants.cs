@@ -77,6 +77,9 @@ public static class Constants
     // Hellas south pole special
     public const int HellasSouthPoleCost = 6;
 
+    // Vastitas Borealis centre hex special
+    public const int VastitasCentreCost = 4;
+
     // Prelude compensation when player can't afford to play a prelude
     public const int PreludeCompensation = 15;
 }

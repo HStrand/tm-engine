@@ -1,3 +1,5 @@
+using System.Runtime.Serialization;
+
 namespace TmEngine.Domain.Models;
 
 /// <summary>
@@ -85,7 +87,11 @@ public enum MapName
 {
     Tharsis,
     Hellas,
-    Elysium
+    Elysium,
+
+    /// <summary>Written "Vastitas Borealis" in JSON and in BGA game logs.</summary>
+    [EnumMember(Value = "Vastitas Borealis")]
+    VastitasBorealis
 }
 
 /// <summary>
@@ -146,5 +152,6 @@ public enum PlacementBonus
     Plants,
     Cards,
     Heat,
-    Ocean // Hellas south pole special: pay 6 MC to gain an ocean placement
+    Ocean, // Hellas south pole special: pay 6 MC to gain an ocean placement
+    Temperature // Vastitas Borealis centre hex special: pay 4 MC to raise the temperature one step
 }

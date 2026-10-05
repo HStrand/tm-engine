@@ -23,11 +23,17 @@ public static class Fixtures
     /// <summary>Played on Vastitas Borealis but the log's map field says Tharsis.</summary>
     public const string MislabelledVastitas = "game_829956648_86296239_mislabelled.json";
 
+    /// <summary>
+    /// Vastitas Borealis, two players: the same game as <see cref="MislabelledVastitas"/>, scraped again with the
+    /// map named correctly. A greenery goes on the centre hex, paying 4 M€ for a temperature step.
+    /// </summary>
+    public const string Vastitas2p = "game_829956648_86296239.json";
+
     /// <summary>Old scraper version: no hands, pile counts or special tiles.</summary>
     public const string OldFormat = "game_691299249_old_format.json";
 
     /// <summary>Logs on engine-supported maps in a current scraper format.</summary>
-    public static readonly TheoryData<string> OnSupportedMaps = new() { Elysium2p, Hellas2p, Tharsis2p, Tharsis3p };
+    public static readonly TheoryData<string> OnSupportedMaps = new() { Elysium2p, Hellas2p, Tharsis2p, Tharsis3p, Vastitas2p };
 
     private static readonly ConcurrentDictionary<string, BgaGameLog> Cache = new();
 

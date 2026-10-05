@@ -16,7 +16,7 @@ public sealed record MapDefinition(
     int MaxOceans = Constants.DefaultMaxOceans);
 
 /// <summary>
-/// Static definitions for all three in-scope maps: Tharsis, Hellas, Elysium.
+/// Static definitions for the in-scope maps: Tharsis, Hellas, Elysium, Vastitas Borealis.
 /// Hex coordinates use odd-row offset right, matching the replay viewer convention.
 /// </summary>
 public static class MapDefinitions
@@ -26,6 +26,7 @@ public static class MapDefinitions
         MapName.Tharsis => Tharsis,
         MapName.Hellas => Hellas,
         MapName.Elysium => Elysium,
+        MapName.VastitasBorealis => VastitasBorealis,
         _ => throw new ArgumentOutOfRangeException(nameof(name))
     };
 
@@ -414,6 +415,146 @@ public static class MapDefinitions
         return BuildMap(MapName.Elysium, layout, named, oceans, bonuses, volcanoes,
             milestones: ["Generalist", "Specialist", "Ecologist", "Tycoon", "Legend"],
             awards: ["Celebrity", "Industrialist", "Desert Settler", "Estate Dealer", "Benefactor"]);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    //  VASTITAS BOREALIS
+    // ═══════════════════════════════════════════════════════════
+
+    public static readonly MapDefinition VastitasBorealis = BuildVastitasBorealis();
+
+    /// <summary>
+    /// The board as BGA plays it, reconstructed from 61 scraped Vastitas games: the hexes tiles
+    /// were placed on, where oceans and Mohole Areas went, and what each placement paid out.
+    /// It agrees with the board image the replay viewer draws.
+    /// </summary>
+    private static MapDefinition BuildVastitasBorealis()
+    {
+        var layout = new Dictionary<int, int[]>
+        {
+            [1] = [3, 4, 5, 6, 7],
+            [2] = [3, 4, 5, 6, 7, 8],
+            [3] = [2, 3, 4, 5, 6, 7, 8],
+            [4] = [2, 3, 4, 5, 6, 7, 8, 9],
+            [5] = [1, 2, 3, 4, 5, 6, 7, 8, 9],
+            [6] = [2, 3, 4, 5, 6, 7, 8, 9],
+            [7] = [2, 3, 4, 5, 6, 7, 8],
+            [8] = [3, 4, 5, 6, 7, 8],
+            [9] = [3, 4, 5, 6, 7],
+        };
+
+        var named = new Dictionary<string, HexCoord>
+        {
+            ["Hecates Tholus"] = new(5, 1),
+            ["Elysium Mons"] = new(8, 2),
+            ["Alba Mons"] = new(2, 4),
+            ["Viking 2"] = new(9, 4),
+            ["Uranius Tholus"] = new(2, 7),
+            ["Viking 1"] = new(3, 9),
+        };
+
+        // Ocean-reserved hexes (12 on Vastitas Borealis)
+        var oceans = new HashSet<HexCoord>
+        {
+            new(3, 3), new(4, 3),
+            new(4, 4),
+            new(3, 5), new(6, 5), new(7, 5), new(8, 5),
+            new(5, 6), new(6, 6), new(7, 6),
+            new(4, 7), new(5, 7),
+        };
+
+        var bonuses = new Dictionary<HexCoord, PlacementBonus[]>
+        {
+            // Row 1
+            [new(3, 1)] = [PlacementBonus.Plants],
+            [new(4, 1)] = [],
+            [new(5, 1)] = [PlacementBonus.Steel], // Hecates Tholus
+            [new(6, 1)] = [],
+            [new(7, 1)] = [],
+
+            // Row 2
+            [new(3, 2)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(4, 2)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(5, 2)] = [],
+            [new(6, 2)] = [],
+            [new(7, 2)] = [PlacementBonus.Plants],
+            [new(8, 2)] = [PlacementBonus.Cards], // Elysium Mons
+
+            // Row 3
+            [new(2, 3)] = [PlacementBonus.Cards],
+            [new(3, 3)] = [PlacementBonus.Plants, PlacementBonus.Plants], // ocean
+            [new(4, 3)] = [PlacementBonus.Plants, PlacementBonus.Plants], // ocean
+            [new(5, 3)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(6, 3)] = [PlacementBonus.Plants],
+            [new(7, 3)] = [],
+            [new(8, 3)] = [],
+
+            // Row 4
+            [new(2, 4)] = [PlacementBonus.Steel, PlacementBonus.Steel], // Alba Mons
+            [new(3, 4)] = [PlacementBonus.Titanium],
+            [new(4, 4)] = [PlacementBonus.Plants, PlacementBonus.Plants], // ocean
+            [new(5, 4)] = [PlacementBonus.Plants],
+            [new(6, 4)] = [],
+            [new(7, 4)] = [PlacementBonus.Cards],
+            [new(8, 4)] = [PlacementBonus.Plants],
+            [new(9, 4)] = [], // Viking 2
+
+            // Row 5
+            [new(1, 5)] = [],
+            [new(2, 5)] = [],
+            [new(3, 5)] = [PlacementBonus.Plants], // ocean
+            [new(4, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(5, 5)] = [PlacementBonus.Temperature], // centre: pay 4 MC, raise the temperature
+            [new(6, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants], // ocean
+            [new(7, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants], // ocean
+            [new(8, 5)] = [PlacementBonus.Plants, PlacementBonus.Plants], // ocean
+            [new(9, 5)] = [PlacementBonus.Cards, PlacementBonus.Cards],
+
+            // Row 6
+            [new(2, 6)] = [PlacementBonus.Cards, PlacementBonus.Cards],
+            [new(3, 6)] = [],
+            [new(4, 6)] = [PlacementBonus.Plants],
+            [new(5, 6)] = [PlacementBonus.Heat, PlacementBonus.Heat], // ocean
+            [new(6, 6)] = [PlacementBonus.Heat, PlacementBonus.Plants], // ocean
+            [new(7, 6)] = [PlacementBonus.Cards], // ocean
+            [new(8, 6)] = [PlacementBonus.Plants],
+            [new(9, 6)] = [PlacementBonus.Titanium, PlacementBonus.Titanium],
+
+            // Row 7
+            [new(2, 7)] = [PlacementBonus.Titanium], // Uranius Tholus
+            [new(3, 7)] = [PlacementBonus.Steel],
+            [new(4, 7)] = [], // ocean
+            [new(5, 7)] = [PlacementBonus.Heat, PlacementBonus.Heat], // ocean
+            [new(6, 7)] = [PlacementBonus.Plants, PlacementBonus.Plants],
+            [new(7, 7)] = [PlacementBonus.Plants],
+            [new(8, 7)] = [],
+
+            // Row 8
+            [new(3, 8)] = [PlacementBonus.Plants],
+            [new(4, 8)] = [],
+            [new(5, 8)] = [PlacementBonus.Plants],
+            [new(6, 8)] = [PlacementBonus.Plants, PlacementBonus.Steel],
+            [new(7, 8)] = [PlacementBonus.Steel],
+            [new(8, 8)] = [PlacementBonus.Plants],
+
+            // Row 9
+            [new(3, 9)] = [], // Viking 1
+            [new(4, 9)] = [],
+            [new(5, 9)] = [PlacementBonus.Cards],
+            [new(6, 9)] = [PlacementBonus.Titanium],
+            [new(7, 9)] = [PlacementBonus.Steel],
+        };
+
+        // Volcanic sites where Lava Flows can be placed; Geologist also counts tiles on or next to them
+        var volcanoes = ImmutableArray.Create(
+            new HexCoord(5, 1),  // Hecates Tholus
+            new HexCoord(8, 2),  // Elysium Mons
+            new HexCoord(2, 4),  // Alba Mons
+            new HexCoord(2, 7)); // Uranius Tholus
+
+        return BuildMap(MapName.VastitasBorealis, layout, named, oceans, bonuses, volcanoes,
+            milestones: ["Agronomist", "Engineer", "Spacefarer", "Geologist", "Farmer"],
+            awards: ["Traveller", "Landscaper", "Highlander", "Promoter", "Blacksmith"]);
     }
 
     // ═══════════════════════════════════════════════════════════

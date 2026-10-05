@@ -5,7 +5,7 @@ using TmEngine.Domain.Models;
 namespace TmEngine.Domain.Engine;
 
 /// <summary>
-/// Checks milestone eligibility and scores awards for all three maps.
+/// Checks milestone eligibility and scores awards for every map.
 /// </summary>
 public static class MilestoneAndAwardLogic
 {
@@ -58,6 +58,13 @@ public static class MilestoneAndAwardLogic
             "Tycoon" => player.PlayedCards.Count, // blue + green cards (not events)
             "Legend" => player.PlayedEvents.Count,
 
+            // Vastitas Borealis
+            "Agronomist" => CountPlayerTagsWithWild(player, Tag.Plant),
+            "Engineer" => player.Production.Energy + player.Production.Heat,
+            "Spacefarer" => CountPlayerTagsWithWild(player, Tag.Space),
+            "Geologist" => CountOwnedTilesOnOrNextToVolcanoes(state, player.PlayerId),
+            "Farmer" => CountAnimalAndMicrobeResources(player),
+
             _ => 0,
         };
     }
@@ -84,6 +91,11 @@ public static class MilestoneAndAwardLogic
             "Ecologist" => 4,
             "Tycoon" => 15,
             "Legend" => 5,
+            "Agronomist" => 4,
+            "Engineer" => 10,
+            "Spacefarer" => 4,
+            "Geologist" => 3,
+            "Farmer" => 5,
             _ => int.MaxValue,
         };
     }
@@ -120,6 +132,14 @@ public static class MilestoneAndAwardLogic
             "Estate Dealer" => CountTilesAdjacentToOcean(state, player.PlayerId),
             "Benefactor" => player.TerraformRating,
 
+            // Vastitas Borealis
+            "Traveller" => CountPlayerTags(player, Tag.Jovian) + CountPlayerTags(player, Tag.Earth),
+            "Landscaper" => LargestGroupOfOwnedTiles(state, player.PlayerId),
+            "Highlander" => CountOwnedTiles(state, player.PlayerId, onBoardOnly: true)
+                            - CountTilesAdjacentToOcean(state, player.PlayerId),
+            "Promoter" => player.PlayedEvents.Count,
+            "Blacksmith" => player.Production.Steel + player.Production.Titanium,
+
             _ => 0,
         };
     }
@@ -138,9 +158,61 @@ public static class MilestoneAndAwardLogic
     private static int CountPlayerTagsWithWild(PlayerState player, Tag tag) =>
         CountPlayerTags(player, tag) + CountPlayerTags(player, Tag.Wild);
 
-    private static int CountOwnedTiles(GameState state, int playerId) =>
+    private static int CountOwnedTiles(GameState state, int playerId, bool onBoardOnly = false) =>
         state.PlacedTiles.Values.Count(t => t.OwnerId == playerId)
-        + state.OffMapTiles.Count(t => t.OwnerId == playerId);
+        + (onBoardOnly ? 0 : state.OffMapTiles.Count(t => t.OwnerId == playerId));
+
+    /// <summary>Geologist: tiles on a volcanic area or next to one.</summary>
+    private static int CountOwnedTilesOnOrNextToVolcanoes(GameState state, int playerId)
+    {
+        var volcanic = new HashSet<HexCoord>();
+        foreach (var volcano in MapDefinitions.GetMap(state.Map).VolcanicAreas)
+        {
+            volcanic.Add(volcano);
+            foreach (var adjacent in volcano.GetAdjacentCoords())
+                volcanic.Add(adjacent);
+        }
+
+        return state.PlacedTiles.Values.Count(t => t.OwnerId == playerId && volcanic.Contains(t.Location));
+    }
+
+    /// <summary>Farmer: animals and microbes on the player's cards.</summary>
+    private static int CountAnimalAndMicrobeResources(PlayerState player) =>
+        player.CardResources
+            .Where(kv => EffectExecutor.CardHasResourceType(kv.Key, CardResourceType.Animal)
+                         || EffectExecutor.CardHasResourceType(kv.Key, CardResourceType.Microbe))
+            .Sum(kv => kv.Value);
+
+    /// <summary>Landscaper: the largest group of the player's tiles that are connected to each other.</summary>
+    private static int LargestGroupOfOwnedTiles(GameState state, int playerId)
+    {
+        var owned = state.PlacedTiles.Values.Where(t => t.OwnerId == playerId).Select(t => t.Location).ToHashSet();
+        var seen = new HashSet<HexCoord>();
+        var largest = 0;
+
+        foreach (var start in owned)
+        {
+            if (!seen.Add(start))
+                continue;
+
+            var size = 0;
+            var open = new Stack<HexCoord>([start]);
+            while (open.Count > 0)
+            {
+                var hex = open.Pop();
+                size++;
+                foreach (var adjacent in hex.GetAdjacentCoords())
+                {
+                    if (owned.Contains(adjacent) && seen.Add(adjacent))
+                        open.Push(adjacent);
+                }
+            }
+
+            largest = Math.Max(largest, size);
+        }
+
+        return largest;
+    }
 
     private static int CountOwnedTilesOfType(GameState state, int playerId, TileType type) =>
         state.PlacedTiles.Values.Count(t => t.OwnerId == playerId && t.Type == type)
