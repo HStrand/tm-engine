@@ -410,7 +410,7 @@ public static class LegalMoveGenerator
             mc >= Constants.GreeneryCost && greeneryLocations.Length > 0, Constants.GreeneryCost, greeneryLocations));
 
         // City
-        var cityLocations = BoardLogic.GetValidCityPlacements(state);
+        var cityLocations = BoardLogic.GetValidCityPlacements(state, player.PlayerId);
         cityLocations = FilterAffordableAfterSpending(state, cityLocations, mc - Constants.CityCost);
         result.Add(new StandardProjectOption(StandardProject.City,
             mc >= Constants.CityCost && cityLocations.Length > 0, Constants.CityCost, cityLocations));

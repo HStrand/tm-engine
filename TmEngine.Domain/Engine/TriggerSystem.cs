@@ -248,17 +248,7 @@ public static class TriggerSystem
     public static GameState FireCardTagTriggers(
         GameState state, int playerId, string cardId, CardDefinition card)
     {
-        var conditions = new List<TriggerCondition>();
-        foreach (var tag in card.Tags)
-        {
-            var condition = EffectToCondition(tag);
-            if (condition != null)
-                conditions.Add(condition.Value);
-        }
-
-        // Compound tag triggers
-        if (card.Tags.Contains(Tag.Space) && card.Tags.Contains(Tag.Event))
-            conditions.Add(TriggerCondition.PlaySpaceEventTag);
+        var conditions = TagConditions(card);
 
         // Fire all WhenAnyone triggers (these are always immediate)
         foreach (var condition in conditions)
@@ -282,6 +272,23 @@ public static class TriggerSystem
         return state;
     }
 
+    /// <summary>The trigger conditions a played card's tags fire, including the Space + Event compound.</summary>
+    private static List<TriggerCondition> TagConditions(CardDefinition card)
+    {
+        var conditions = new List<TriggerCondition>();
+        foreach (var tag in card.Tags)
+        {
+            var condition = EffectToCondition(tag);
+            if (condition != null)
+                conditions.Add(condition.Value);
+        }
+
+        if (card.Tags.Contains(Tag.Space) && card.Tags.Contains(Tag.Event))
+            conditions.Add(TriggerCondition.PlaySpaceEventTag);
+
+        return conditions;
+    }
+
     public static string DescribeTriggerEntry(TriggerQueueEntry entry)
     {
         if (!CardRegistry.TryGet(entry.OwnerCardId, out var cardEntry))
@@ -298,12 +305,9 @@ public static class TriggerSystem
     {
         var result = ImmutableArray.CreateBuilder<TriggerQueueEntry>();
 
-        foreach (var tag in card.Tags)
+        foreach (var condition in TagConditions(card))
         {
-            var condition = EffectToCondition(tag);
-            if (condition == null) continue;
-
-            var triggers = CollectWhenYouTriggers(player, condition.Value, cardId);
+            var triggers = CollectWhenYouTriggers(player, condition, cardId);
             foreach (var trigger in triggers)
             {
                 var inner = GetInnerEffect(trigger);
@@ -322,21 +326,16 @@ public static class TriggerSystem
     public static GameState FireNonInteractiveWhenYouTriggers(
         GameState state, int playerId, PlayerState player, CardDefinition card, string cardId)
     {
+        var conditions = TagConditions(card);
+
         // WhenAnyone triggers always fire immediately
         foreach (var p in state.Players)
-        {
-            state = FireAnyoneTriggersForPlayer(state, p,
-                card.Tags.Select(t => EffectToCondition(t)).Where(c => c != null).Select(c => c!.Value),
-                cardId);
-        }
+            state = FireAnyoneTriggersForPlayer(state, p, conditions, cardId);
 
         // Fire non-interactive WhenYou triggers
-        foreach (var tag in card.Tags)
+        foreach (var condition in conditions)
         {
-            var condition = EffectToCondition(tag);
-            if (condition == null) continue;
-
-            var triggers = CollectWhenYouTriggers(player, condition.Value, cardId);
+            var triggers = CollectWhenYouTriggers(player, condition, cardId);
             foreach (var trigger in triggers)
             {
                 var inner = GetInnerEffect(trigger);

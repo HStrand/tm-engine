@@ -429,7 +429,7 @@ public static class EffectExecutor
             PlacementConstraint.OceanOnLand => BoardLogic.GetValidLandPlacements(state, playerId),
 
             PlacementConstraint.Volcanic =>
-                BoardLogic.GetValidVolcanicPlacements(state, basePlacements),
+                BoardLogic.GetValidVolcanicPlacements(state, basePlacements, playerId),
 
             _ => basePlacements,
         };
@@ -449,7 +449,7 @@ public static class EffectExecutor
             return reserved;
 
         // On other maps, use normal city placement rules
-        return BoardLogic.GetValidCityPlacements(state);
+        return BoardLogic.GetValidCityPlacements(state, playerId);
     }
 
     // ── Cards ──────────────────────────────────────────────────

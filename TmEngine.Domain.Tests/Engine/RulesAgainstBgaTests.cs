@@ -18,6 +18,8 @@ public class RulesAgainstBgaTests
     private const string ResearchCoordination = "P40"; // one wild tag
     private const string Helion = "CORP03";
     private const string Credicor = "CORP01";
+    private const string Fish = "052";
+    private const string ViralEnhancers = "074";
 
     private static GameState CreateState(Func<PlayerState, PlayerState>? player0 = null) => new()
     {
@@ -390,5 +392,57 @@ public class RulesAgainstBgaTests
 
         Assert.Equal(11, Wallet.Spendable(player));
         Assert.Equal(new ResourceSet(MegaCredits: 0, Steel: 4, Titanium: 5, Plants: 6, Energy: 7, Heat: 1), Wallet.Pay(player, 10));
+    }
+
+    // ── Land Claim ─────────────────────────────────────────────
+
+    [Fact]
+    public void LandClaim_KeepsOtherPlayersOffTheHex_ForEveryKindOfTile()
+    {
+        // BGA table 924354275: the engine offered a greenery on the hex the opponent had claimed.
+        var claimed = new HexCoord(4, 6);
+        var state = CreateState() with { ClaimedHexes = ImmutableDictionary<HexCoord, int>.Empty.Add(claimed, 1) };
+
+        foreach (var tile in Enum.GetValues<TileType>().Where(t => t != TileType.Ocean && t != TileType.MoholeArea))
+        {
+            Assert.DoesNotContain(claimed, BoardLogic.GetValidTilePlacements(state, tile, playerId: 0));
+        }
+        Assert.Contains(claimed, BoardLogic.GetValidGreeneryPlacements(state, playerId: 1));
+        Assert.Contains(claimed, BoardLogic.GetValidCityPlacements(state, playerId: 1));
+        Assert.Contains(claimed, BoardLogic.GetValidTilePlacements(state, TileType.NaturalPreserve, playerId: 1));
+    }
+
+    // ── Trigger ordering ───────────────────────────────────────
+
+    [Fact]
+    public void Fish_StillCutsPlantProduction_WhenViralEnhancersAsksItsQuestion()
+    {
+        // BGA table 924354275: with Viral Enhancers in play, Fish went straight to the Viral Enhancers
+        // choice and nobody lost plant production.
+        var state = CreateState(p => p with
+        {
+            Hand = [Fish],
+            PlayedCards = [ViralEnhancers],
+            Resources = new ResourceSet(MegaCredits: 20),
+            Production = new ProductionSet(Plants: 2),
+        }) with { Temperature = 2 };
+        state = state.UpdatePlayer(1, p => p with { Production = new ProductionSet(Plants: 3) });
+
+        var (afterPlay, played) = GameEngine.Apply(state, new PlayCardMove(0, Fish, new PaymentInfo(MegaCredits: 9)));
+        Assert.True(played.IsSuccess);
+        var reduce = Assert.IsType<ReduceProductionPending>(afterPlay.PendingAction);
+        Assert.Equal([0, 1], reduce.ValidTargetPlayerIds);
+
+        var (afterTarget, targeted) = GameEngine.Apply(afterPlay, new ChooseTargetPlayerMove(0, 1));
+        Assert.True(targeted.IsSuccess);
+        Assert.Equal(2, afterTarget.GetPlayer(1).Production.Plants);
+        var viral = Assert.IsType<ChooseOptionPending>(afterTarget.PendingAction);
+        Assert.Equal(Fish, viral.SourceCardId);
+
+        var (afterChoice, chosen) = GameEngine.Apply(afterTarget, new ChooseOptionMove(0, 1));
+        Assert.True(chosen.IsSuccess);
+        Assert.Null(afterChoice.PendingAction);
+        Assert.Equal(1, afterChoice.GetPlayer(0).CardResources[Fish]);
+        Assert.Equal(2, afterChoice.GetPlayer(1).Production.Plants);
     }
 }

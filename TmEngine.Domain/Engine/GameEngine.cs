@@ -1007,24 +1007,19 @@ public static class GameEngine
         var (newState, pending) = EffectExecutor.ExecuteWithOrdering(state, move.PlayerId, entry.OnPlayEffects, move.CardId);
         state = newState;
 
-        // If on-play effects produced a pending, fire triggers then set pending.
-        // (We already checked for interactive triggers above and found none, so triggers
-        // should be non-interactive. But if one somehow sets a PendingAction, queue it.)
+        // The on-play effects are waiting on the player (Fish choosing whose plant production to
+        // cut). Fire the immediate triggers now; interactive ones (Viral Enhancers, Olympus
+        // Conference) go in the trigger queue and get their turn once the on-play pending resolves.
+        // Firing them now would replace the on-play pending and lose the effect.
         if (pending != null)
         {
-            state = TriggerSystem.FireCardTagTriggers(state, move.PlayerId, move.CardId, card);
-            if (state.PendingAction != null)
-            {
-                // A trigger unexpectedly produced a pending — queue on-play pending for after
-                var triggerPending = state.PendingAction;
-                state = state with { PendingAction = null };
-                // The trigger pending resolves first, then the on-play pending resumes
-                // Store on-play as a deferred entry in the trigger queue
-                var onPlayEntry = new TriggerQueueEntry(move.CardId, Trigger: null, TriggeringCardId: null)
-                    { DeferredEffectIndices = EffectExecutor.GetOrderableIndices(entry.OnPlayEffects) };
-                state = state with { TriggerQueue = [onPlayEntry] };
-                return state with { PendingAction = triggerPending };
-            }
+            var currentPlayer = state.GetPlayer(move.PlayerId);
+            state = TriggerSystem.FireNonInteractiveWhenYouTriggers(
+                state, move.PlayerId, currentPlayer, card, move.CardId);
+            var interactiveTriggers = TriggerSystem.CollectInteractiveWhenYouTriggers(
+                state, currentPlayer, card, move.CardId);
+            if (interactiveTriggers.Length > 0)
+                state = state with { TriggerQueue = interactiveTriggers };
             return state with { PendingAction = pending };
         }
 

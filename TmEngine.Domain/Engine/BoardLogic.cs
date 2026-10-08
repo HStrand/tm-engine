@@ -22,21 +22,30 @@ public static class BoardLogic
         {
             TileType.Ocean => GetValidOceanPlacements(state),
             TileType.Greenery => GetValidGreeneryPlacements(state, playerId),
-            TileType.City => GetValidCityPlacements(state),
-            TileType.Capital => GetValidCapitalPlacements(state),
-            TileType.LavaFlows => GetValidLavaFlowsPlacements(state),
+            TileType.City => GetValidCityPlacements(state, playerId),
+            TileType.Capital => GetValidCapitalPlacements(state, playerId),
+            TileType.LavaFlows => GetValidLavaFlowsPlacements(state, playerId),
             TileType.MoholeArea => GetValidOceanPlacements(state), // placed on ocean-reserved area
-            TileType.NuclearZone => GetValidLandPlacements(state),
-            TileType.NaturalPreserve => GetValidIsolatedPlacements(state),
-            TileType.IndustrialCenter => GetValidAdjacentToCityPlacements(state),
-            TileType.CommercialDistrict => GetValidLandPlacements(state),
+            TileType.NuclearZone => GetValidLandPlacements(state, playerId),
+            TileType.NaturalPreserve => GetValidIsolatedPlacements(state, playerId),
+            TileType.IndustrialCenter => GetValidAdjacentToCityPlacements(state, playerId),
+            TileType.CommercialDistrict => GetValidLandPlacements(state, playerId),
             TileType.EcologicalZone => GetValidAdjacentToGreeneryPlacements(state, playerId),
-            TileType.RestrictedArea => GetValidLandPlacements(state),
+            TileType.RestrictedArea => GetValidLandPlacements(state, playerId),
             TileType.MiningArea => GetValidMiningAreaPlacements(state, playerId),
-            TileType.MiningRights => GetValidMiningRightsPlacements(state),
-            _ => GetValidLandPlacements(state),
+            TileType.MiningRights => GetValidMiningRightsPlacements(state, playerId),
+            _ => GetValidLandPlacements(state, playerId),
         };
     }
+
+    /// <summary>
+    /// A land hex that can take a tile from this player: not an ocean space, empty, and not
+    /// claimed by another player through Land Claim. Every land placement rule starts here.
+    /// </summary>
+    private static bool IsOpenLand(GameState state, HexCoord coord, HexDefinition hex, int? playerId) =>
+        hex.Type != HexType.OceanReserved
+        && !state.PlacedTiles.ContainsKey(coord)
+        && !IsClaimedByOther(state, coord, playerId);
 
     /// <summary>
     /// Returns valid ocean-reserved hexes that are not yet occupied.
@@ -70,7 +79,7 @@ public static class BoardLogic
 
         foreach (var (coord, hex) in map.Hexes)
         {
-            if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
+            if (!IsOpenLand(state, coord, hex, playerId))
                 continue;
             if (IsReservedHex(hex))
                 continue;
@@ -89,14 +98,14 @@ public static class BoardLogic
     /// Returns valid city placements. Cities cannot be placed adjacent to other cities.
     /// Excludes reserved-name hexes (Noctis City has its own placement).
     /// </summary>
-    public static ImmutableArray<HexCoord> GetValidCityPlacements(GameState state)
+    public static ImmutableArray<HexCoord> GetValidCityPlacements(GameState state, int? playerId = null)
     {
         var map = MapDefinitions.GetMap(state.Map);
         var builder = ImmutableArray.CreateBuilder<HexCoord>();
 
         foreach (var (coord, hex) in map.Hexes)
         {
-            if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
+            if (!IsOpenLand(state, coord, hex, playerId))
                 continue;
             if (IsReservedHex(hex))
                 continue;
@@ -113,14 +122,14 @@ public static class BoardLogic
     /// Capital city: follows normal city placement rules (no adjacent cities).
     /// VP for adjacent oceans is handled by scoring, not placement.
     /// </summary>
-    private static ImmutableArray<HexCoord> GetValidCapitalPlacements(GameState state)
+    private static ImmutableArray<HexCoord> GetValidCapitalPlacements(GameState state, int? playerId = null)
     {
         var map = MapDefinitions.GetMap(state.Map);
         var builder = ImmutableArray.CreateBuilder<HexCoord>();
 
         foreach (var (coord, hex) in map.Hexes)
         {
-            if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
+            if (!IsOpenLand(state, coord, hex, playerId))
                 continue;
             if (IsReservedHex(hex))
                 continue;
@@ -138,7 +147,7 @@ public static class BoardLogic
     /// On Hellas (no volcanos), returns the given fallback placements.
     /// </summary>
     public static ImmutableArray<HexCoord> GetValidVolcanicPlacements(
-        GameState state, ImmutableArray<HexCoord> hellasFallback)
+        GameState state, ImmutableArray<HexCoord> hellasFallback, int? playerId = null)
     {
         var map = MapDefinitions.GetMap(state.Map);
 
@@ -148,27 +157,27 @@ public static class BoardLogic
         var builder = ImmutableArray.CreateBuilder<HexCoord>();
         foreach (var coord in map.VolcanicAreas)
         {
-            if (!state.PlacedTiles.ContainsKey(coord))
+            if (!state.PlacedTiles.ContainsKey(coord) && !IsClaimedByOther(state, coord, playerId))
                 builder.Add(coord);
         }
 
         return builder.ToImmutable();
     }
 
-    private static ImmutableArray<HexCoord> GetValidLavaFlowsPlacements(GameState state) =>
-        GetValidVolcanicPlacements(state, GetValidLandPlacements(state));
+    private static ImmutableArray<HexCoord> GetValidLavaFlowsPlacements(GameState state, int? playerId) =>
+        GetValidVolcanicPlacements(state, GetValidLandPlacements(state, playerId), playerId);
 
     /// <summary>
     /// Tiles that must be placed next to no other tile (Nuclear Zone, Natural Preserve).
     /// </summary>
-    private static ImmutableArray<HexCoord> GetValidIsolatedPlacements(GameState state)
+    private static ImmutableArray<HexCoord> GetValidIsolatedPlacements(GameState state, int? playerId = null)
     {
         var map = MapDefinitions.GetMap(state.Map);
         var builder = ImmutableArray.CreateBuilder<HexCoord>();
 
         foreach (var (coord, hex) in map.Hexes)
         {
-            if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
+            if (!IsOpenLand(state, coord, hex, playerId))
                 continue;
             if (IsReservedHex(hex))
                 continue;
@@ -194,14 +203,14 @@ public static class BoardLogic
     /// <summary>
     /// Tiles that must be placed adjacent to a city tile (Industrial Center, Commercial District).
     /// </summary>
-    private static ImmutableArray<HexCoord> GetValidAdjacentToCityPlacements(GameState state)
+    private static ImmutableArray<HexCoord> GetValidAdjacentToCityPlacements(GameState state, int? playerId = null)
     {
         var map = MapDefinitions.GetMap(state.Map);
         var builder = ImmutableArray.CreateBuilder<HexCoord>();
 
         foreach (var (coord, hex) in map.Hexes)
         {
-            if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
+            if (!IsOpenLand(state, coord, hex, playerId))
                 continue;
             if (IsReservedHex(hex))
                 continue;
@@ -223,7 +232,7 @@ public static class BoardLogic
 
         foreach (var (coord, hex) in map.Hexes)
         {
-            if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
+            if (!IsOpenLand(state, coord, hex, playerId))
                 continue;
             if (IsReservedHex(hex))
                 continue;
@@ -252,7 +261,7 @@ public static class BoardLogic
 
         foreach (var (coord, hex) in map.Hexes)
         {
-            if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
+            if (!IsOpenLand(state, coord, hex, playerId))
                 continue;
 
             if (!HasMiningBonus(hex))
@@ -268,14 +277,14 @@ public static class BoardLogic
     /// <summary>
     /// Mining Rights: must be placed on a hex with steel or titanium bonus.
     /// </summary>
-    private static ImmutableArray<HexCoord> GetValidMiningRightsPlacements(GameState state)
+    private static ImmutableArray<HexCoord> GetValidMiningRightsPlacements(GameState state, int? playerId = null)
     {
         var map = MapDefinitions.GetMap(state.Map);
         var builder = ImmutableArray.CreateBuilder<HexCoord>();
 
         foreach (var (coord, hex) in map.Hexes)
         {
-            if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
+            if (!IsOpenLand(state, coord, hex, playerId))
                 continue;
 
             if (HasMiningBonus(hex))
@@ -296,11 +305,9 @@ public static class BoardLogic
 
         foreach (var (coord, hex) in map.Hexes)
         {
-            if (hex.Type == HexType.OceanReserved || state.PlacedTiles.ContainsKey(coord))
+            if (!IsOpenLand(state, coord, hex, playerId))
                 continue;
             if (IsReservedHex(hex))
-                continue;
-            if (IsClaimedByOther(state, coord, playerId))
                 continue;
 
             builder.Add(coord);

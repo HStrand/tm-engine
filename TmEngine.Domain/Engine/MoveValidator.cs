@@ -267,7 +267,7 @@ public static class MoveValidator
         if (Wallet.Spendable(player) < total)
             return $"Need {total} MC for City{(extra > 0 ? " (incl. South Pole 6 MC)" : "")}, have {player.Resources.MegaCredits}.";
 
-        var validPlacements = BoardLogic.GetValidCityPlacements(state);
+        var validPlacements = BoardLogic.GetValidCityPlacements(state, move.PlayerId);
         return validPlacements.Contains(move.Location) ? null : "Invalid city placement location.";
     }
 
