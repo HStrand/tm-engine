@@ -21,4 +21,10 @@ public interface IGameStore
 
     /// <summary>Every state of the game from the first to the latest, in move order.</summary>
     Task<IReadOnlyList<GameState>> LoadAllStatesAsync(string gameId);
+
+    /// <summary>
+    /// Makes the state after the given move the latest again, discarding every later one. Returns that state.
+    /// Throws <see cref="InvalidOperationException"/> when the game has no such move.
+    /// </summary>
+    Task<GameState> RewindAsync(string gameId, int toMoveNumber);
 }

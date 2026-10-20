@@ -104,6 +104,48 @@ public class TableFunction
         return JsonResult(HttpStatusCode.OK, BuildTable(newState, newState.MoveNumber, await _store.LoadMetaAsync(id)));
     }
 
+    /// <summary>
+    /// Take back the latest move and return the table as it stood before it. The request names the move, which
+    /// must be the latest one; the position the game started from cannot be taken back.
+    /// </summary>
+    [FunctionName("UndoTableMove")]
+    public async Task<IActionResult> Undo(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "games/{id}/table/undo")] HttpRequest req,
+        string id)
+    {
+        UndoRequest? request;
+        try
+        {
+            request = JsonConvert.DeserializeObject<UndoRequest>(await new StreamReader(req.Body).ReadToEndAsync(), _jsonSettings);
+        }
+        catch (JsonException ex)
+        {
+            return JsonResult(HttpStatusCode.BadRequest, new ErrorResponse(ex.Message));
+        }
+        if (request == null)
+            return JsonResult(HttpStatusCode.BadRequest, new ErrorResponse("Say which move to take back."));
+
+        GameState latest;
+        try
+        {
+            latest = await _store.LoadStateAsync(id);
+        }
+        catch (InvalidOperationException)
+        {
+            return JsonResult(HttpStatusCode.NotFound, new ErrorResponse($"Game '{id}' not found."));
+        }
+
+        if (request.MoveNumber != latest.MoveNumber)
+            return JsonResult(HttpStatusCode.Conflict,
+                new ErrorResponse($"Move {request.MoveNumber} is not the latest move; the game is at move {latest.MoveNumber}. Reload and retry."));
+        if (latest.LastMove == null)
+            return JsonResult(HttpStatusCode.BadRequest, new ErrorResponse("There is no move to take back."));
+
+        var state = await _store.RewindAsync(id, latest.MoveNumber - 1);
+        _logger.LogInformation("Game {GameId} move {MoveNumber} taken back", id, latest.MoveNumber);
+        return JsonResult(HttpStatusCode.OK, BuildTable(state, state.MoveNumber, await _store.LoadMetaAsync(id)));
+    }
+
     /// <summary>The moves played so far, for showing a move list.</summary>
     [FunctionName("GetGameHistory")]
     public async Task<IActionResult> GetHistory(

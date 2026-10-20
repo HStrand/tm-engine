@@ -89,6 +89,59 @@ public class TableFunctionTests
     }
 
     [Fact]
+    public async Task Undo_TakesBackTheLatestMove_AndOffersMovesAgain()
+    {
+        var state = await ImportGeneration4();
+        await Function().SubmitMove(Post("""{"type":"Pass","playerId":1}"""), state.GameId);
+
+        var table = Body(await Function().Undo(Post("""{"moveNumber":1}"""), state.GameId), HttpStatusCode.OK);
+
+        Assert.Equal(0, table["state"]!.Value<int>("moveNumber"));
+        Assert.Equal(0, table.Value<int>("latestMoveNumber"));
+        Assert.False(table["state"]!["players"]![1]!.Value<bool>("passed"));
+        Assert.Equal(["1"], ((JObject)table["legalMoves"]!).Properties().Select(p => p.Name));
+        Assert.Equal(0, (await _store.LoadStateAsync(state.GameId)).MoveNumber);
+        Assert.Empty(Body(await Function().GetHistory(new DefaultHttpContext().Request, state.GameId), HttpStatusCode.OK)["moves"]!);
+    }
+
+    [Fact]
+    public async Task Undo_ThenADifferentMove_TakesTheMoveNumberOver()
+    {
+        var state = await ImportGeneration4();
+        await Function().SubmitMove(Post("""{"type":"Pass","playerId":1}"""), state.GameId);
+        await Function().Undo(Post("""{"moveNumber":1}"""), state.GameId);
+
+        var table = Body(await Function().SubmitMove(Post("""{"type":"PowerPlant","playerId":1}"""), state.GameId), HttpStatusCode.OK);
+
+        Assert.Equal(1, table["state"]!.Value<int>("moveNumber"));
+        Assert.False(table["state"]!["players"]![1]!.Value<bool>("passed"));
+        var history = Body(await Function().GetHistory(new DefaultHttpContext().Request, state.GameId), HttpStatusCode.OK);
+        Assert.Equal(["PowerPlant"], history["moves"]!.Select(m => m["move"]!.Value<string>("type")));
+    }
+
+    [Fact]
+    public async Task Undo_RefusesAMoveThatIsNotTheLatest()
+    {
+        var state = await ImportGeneration4();
+        await Function().SubmitMove(Post("""{"type":"Pass","playerId":1}"""), state.GameId);
+        await Function().SubmitMove(Post("""{"type":"Pass","playerId":0}"""), state.GameId);
+
+        Body(await Function().Undo(Post("""{"moveNumber":1}"""), state.GameId), HttpStatusCode.Conflict);
+
+        Assert.Equal(2, (await _store.LoadStateAsync(state.GameId)).MoveNumber);
+    }
+
+    [Fact]
+    public async Task Undo_RefusesToTakeBackTheStartingPosition()
+    {
+        var state = await ImportGeneration4();
+
+        Body(await Function().Undo(Post("""{"moveNumber":0}"""), state.GameId), HttpStatusCode.BadRequest);
+
+        Assert.Equal(0, (await _store.LoadStateAsync(state.GameId)).MoveNumber);
+    }
+
+    [Fact]
     public async Task GetHistory_ListsTheMovesPlayed()
     {
         var state = await ImportGeneration4();

@@ -77,6 +77,9 @@ public sealed record TableResponse(
     TmEngine.BgaImport.GameMeta? Meta);
 
 /// <summary>The moves played so far. CardNames covers every card, since moves name cards that have since left play.</summary>
+/// <summary>Takes back the latest move. <c>MoveNumber</c> names it, so a stale client cannot take back a move it never saw.</summary>
+public sealed record UndoRequest(int MoveNumber);
+
 public sealed record HistoryResponse(ImmutableList<HistoryEntry> Moves, ImmutableDictionary<string, string> CardNames);
 
 public sealed record HistoryEntry(int MoveNumber, int Generation, TmEngine.Domain.Moves.Move Move);

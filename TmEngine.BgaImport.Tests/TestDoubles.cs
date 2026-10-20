@@ -57,6 +57,14 @@ internal sealed class InMemoryGameStore : IGameStore
         return states;
     }
 
+    public async Task<GameState> RewindAsync(string gameId, int toMoveNumber)
+    {
+        var target = await LoadStateAtAsync(gameId, toMoveNumber);
+        foreach (var key in _states.Keys.Where(k => k.GameId == gameId && k.MoveNumber > toMoveNumber).ToList())
+            _states.TryRemove(key, out _);
+        return target;
+    }
+
     public Task SaveMetaAsync(string gameId, GameMeta meta)
     {
         _meta[gameId] = JsonConvert.SerializeObject(meta, Json);

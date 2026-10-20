@@ -134,12 +134,15 @@ For one person controlling every seat (the web client's play page). Each respons
 ```
 GET  /games/{id}/table?at={moveNumber}
 POST /games/{id}/table/moves
+POST /games/{id}/table/undo
 GET  /games/{id}/history
 ```
 
 `table` returns the state with all hands visible (the piles stay hidden), plus `players` (each player's score breakdown, tile and tag counts, as in Get Player Status), `legalMoves` (player id → legal moves, only for players who can act), `cardNames`, the pile sizes, `latestMoveNumber`, and `meta` for imported games. With `at`, it returns the position after that move instead, with no legal moves: moves can only be made from the latest position.
 
 `table/moves` takes a move object as in Submit Move (the player is the move's `playerId`) and returns the new table, or `400` with `error` when the move is not legal.
+
+`table/undo` takes `{ "moveNumber": N }`, the latest move, and takes it back: the position before it becomes the latest again and is returned as a table, with legal moves. The later state is deleted from storage. `409` when `N` is not the latest move (another tab has moved on), `400` when the game is at the position it started from. The draw pile is part of the state, so after an undo the same cards are drawn again.
 
 `history` returns the moves played so far as `{ moveNumber, generation, move }`, with the names of all cards.
 

@@ -184,6 +184,23 @@ public class BlobGameStore : IGameStore
         return states.OrderBy(s => s.MoveNumber).ToList();
     }
 
+    public async Task<GameState> RewindAsync(string gameId, int toMoveNumber)
+    {
+        await EnsureContainerAsync();
+        var target = await LoadStateAtAsync(gameId, toMoveNumber);
+
+        // Delete the later states first, then move the head: a crash in between leaves a game that is shorter
+        // than intended, never a head pointing at a state that is gone.
+        var prefix = $"{gameId}/{gameId}_";
+        await foreach (var blob in _container.GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix, CancellationToken.None))
+        {
+            if (ParseMoveNumber(blob.Name, gameId) > toMoveNumber)
+                await _container.GetBlobClient(blob.Name).DeleteIfExistsAsync();
+        }
+        Remember(gameId, target, await WriteHead(gameId, toMoveNumber));
+        return target;
+    }
+
     private sealed record HeadRecord(int MoveNumber);
 
     private static string HeadBlobName(string gameId) => $"{gameId}/head.json";
