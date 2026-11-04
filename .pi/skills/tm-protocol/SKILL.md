@@ -218,8 +218,10 @@ Game ends when all three globals max:
 - Oxygen: **14 %**
 - Oceans: **9 / 9**
 
-Then a final-greenery phase runs (you can Convert Plants for free
-greeneries if you have ≥ threshold). Submit `Pass` to exit that phase.
+Then a final-greenery phase runs, one player at a time from the first
+player (you can Convert Plants for free greeneries if you have ≥
+threshold, as many times as you can afford). You keep the turn until you
+submit `Pass`, which ends your conversions for good.
 
 After game over:
 

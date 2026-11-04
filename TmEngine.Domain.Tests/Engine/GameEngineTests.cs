@@ -735,6 +735,64 @@ public class GameEngineTests
     }
 
     [Fact]
+    public void FinalGreeneryConversion_PlayerKeepsTurnUntilPassing()
+    {
+        var state = CreateTestGame(playerCount: 3) with
+        {
+            Phase = GamePhase.FinalGreeneryConversion,
+            ActivePlayerId = 1,
+            FirstPlayerId = 1,
+        };
+
+        // The first player converts twice in a row without the turn moving on
+        var first = BoardLogic.GetValidGreeneryPlacements(state, 1)[0];
+        var (s1, r1) = GameEngine.Apply(state, new ConvertPlantsMove(1, first));
+        Assert.True(r1.IsSuccess);
+        Assert.Equal(1, s1.ActivePlayerId);
+
+        var second = BoardLogic.GetValidGreeneryPlacements(s1, 1)[0];
+        var (s2, r2) = GameEngine.Apply(s1, new ConvertPlantsMove(1, second));
+        Assert.True(r2.IsSuccess);
+        Assert.Equal(1, s2.ActivePlayerId);
+
+        // The next player has to wait for the pass
+        var other = BoardLogic.GetValidGreeneryPlacements(s2, 2)[0];
+        var (_, early) = GameEngine.Apply(s2, new ConvertPlantsMove(2, other));
+        Assert.False(early.IsSuccess);
+
+        // Passing hands over in turn order, wrapping past the last seat
+        var (s3, _) = GameEngine.Apply(s2, new PassMove(1));
+        Assert.Equal(2, s3.ActivePlayerId);
+        Assert.Equal(GamePhase.FinalGreeneryConversion, s3.Phase);
+
+        var (s4, r4) = GameEngine.Apply(s3, new ConvertPlantsMove(2, other));
+        Assert.True(r4.IsSuccess);
+        Assert.Equal(2, s4.ActivePlayerId);
+
+        var (s5, _) = GameEngine.Apply(s4, new PassMove(2));
+        Assert.Equal(0, s5.ActivePlayerId);
+
+        var (s6, _) = GameEngine.Apply(s5, new PassMove(0));
+        Assert.Equal(GamePhase.GameEnd, s6.Phase);
+    }
+
+    [Fact]
+    public void FinalGreeneryConversion_PassedPlayerCannotConvertAgain()
+    {
+        var state = CreateTestGame() with
+        {
+            Phase = GamePhase.FinalGreeneryConversion,
+        };
+
+        var (s1, _) = GameEngine.Apply(state, new PassMove(0));
+
+        var location = BoardLogic.GetValidGreeneryPlacements(s1, 0)[0];
+        var (_, result) = GameEngine.Apply(s1, new ConvertPlantsMove(0, location));
+        Assert.False(result.IsSuccess);
+        Assert.Equal(1, s1.ActivePlayerId);
+    }
+
+    [Fact]
     public void BothPlayersTake2Actions_ActivePlayerCyclesCorrectly()
     {
         var state = CreateTestGame();
