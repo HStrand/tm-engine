@@ -197,7 +197,8 @@ public static class PhaseManager
     }
 
     /// <summary>
-    /// After the final production phase, players get one chance to convert plants to greeneries.
+    /// After the final production phase, players convert plants to greeneries in turn order from
+    /// the first player. Each player converts as many times as they like, then passes to end their turn.
     /// </summary>
     public static GameState StartFinalGreeneryConversion(GameState state)
     {
@@ -211,7 +212,8 @@ public static class PhaseManager
     }
 
     /// <summary>
-    /// Advance in the final greenery conversion phase. If all players pass, end the game.
+    /// Called when a player passes in the final greenery conversion phase: the next player
+    /// takes their turn. Once all players have passed, the game ends.
     /// </summary>
     public static GameState AdvanceFinalGreeneryConversion(GameState state)
     {

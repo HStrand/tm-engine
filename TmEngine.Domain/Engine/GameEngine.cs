@@ -287,8 +287,9 @@ public static class GameEngine
         // Place greenery and raise oxygen
         state = GlobalParameters.PlaceGreenery(state, move.PlayerId, move.Location);
 
+        // Final conversions go one player at a time: the player keeps the turn until they pass
         if (state.Phase == GamePhase.FinalGreeneryConversion)
-            return PhaseManager.AdvanceFinalGreeneryConversion(state);
+            return state;
 
         if (state.PendingAction != null) return state;
         return PhaseManager.AfterAction(state);
