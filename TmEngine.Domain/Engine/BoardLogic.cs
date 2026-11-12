@@ -496,7 +496,9 @@ public static class BoardLogic
     /// Returns the extra MC cost (beyond any card or standard project cost) the
     /// player must pay to place a tile on this hex: 6 MC on the Hellas South Pole
     /// (the hex with the Ocean placement bonus) and 4 MC on the Vastitas Borealis
-    /// centre hex (the hex with the Temperature placement bonus).
+    /// centre hex (the hex with the Temperature placement bonus). The centre hex pays out
+    /// its ocean-adjacency money before the 4 MC is charged, so that money counts towards
+    /// it: the cost here is what the player must hold before placing.
     /// </summary>
     public static int GetExtraPlacementCost(GameState state, HexCoord location)
     {
@@ -506,7 +508,8 @@ public static class BoardLogic
         if (hex.Bonuses.Contains(PlacementBonus.Ocean))
             return Constants.HellasSouthPoleCost;
         if (hex.Bonuses.Contains(PlacementBonus.Temperature))
-            return Constants.VastitasCentreCost;
+            return Math.Max(0, Constants.VastitasCentreCost
+                - CountAdjacentOceans(state, location) * Constants.OceanAdjacencyBonus);
         return 0;
     }
 

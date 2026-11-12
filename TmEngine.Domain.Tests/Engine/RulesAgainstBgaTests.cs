@@ -445,4 +445,24 @@ public class RulesAgainstBgaTests
         Assert.Equal(1, afterChoice.GetPlayer(0).CardResources[Fish]);
         Assert.Equal(2, afterChoice.GetPlayer(1).Production.Plants);
     }
+
+    [Fact]
+    public void OptimalAerobraking_GivesThreeMegaCreditsAndThreeHeat()
+    {
+        // It gave 6 M€ and no heat (reported on table 946085904).
+        const string optimalAerobraking = "031";
+        const string nitrogenRichAsteroid = "037"; // space event, 31 M€
+        var state = CreateState(p => p with
+        {
+            PlayedCards = [optimalAerobraking],
+            Hand = [nitrogenRichAsteroid],
+            Resources = new ResourceSet(MegaCredits: 31),
+        });
+
+        var (after, result) = GameEngine.Apply(state, new PlayCardMove(0, nitrogenRichAsteroid, new PaymentInfo(MegaCredits: 31)));
+
+        Assert.True(result.IsSuccess, (result as Error)?.Message);
+        Assert.Equal(3 + 4, after.GetPlayer(0).Resources.MegaCredits); // and Credicor's 4 for a card of 20 or more
+        Assert.Equal(3, after.GetPlayer(0).Resources.Heat);
+    }
 }

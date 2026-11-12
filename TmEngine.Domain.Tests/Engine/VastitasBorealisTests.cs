@@ -132,6 +132,28 @@ public class VastitasBorealisTests
         Assert.Equal(20 + Constants.OceanAdjacencyBonus - 4, newState.Players[0].Resources.MegaCredits);
     }
 
+    [Theory]
+    [InlineData(0, 3, false)]
+    [InlineData(1, 1, false)]
+    [InlineData(1, 2, true)]
+    [InlineData(2, 0, true)]
+    public void CentreHex_CanBePaidForWithItsOceanAdjacencyMoney(int oceans, int megaCredits, bool offered)
+    {
+        // BGA lets a player with less than 4 M€ place there when the oceans around it cover the rest.
+        HexCoord[] oceanSpaces = [new(6, 5), new(4, 5)];
+        var state = WithOceans(WithMoney(CreateTestState(), megaCredits), oceanSpaces[..oceans]);
+        state = WithTiles(state, 0, TileType.Greenery, new HexCoord(5, 4)) // a greenery of their own to build next to
+            .UpdatePlayer(0, p => p with { Resources = p.Resources with { Plants = 8 } });
+
+        var locations = LegalMoveGenerator.GetLegalMoves(state, 0).Actions!.ValidGreeneryLocations;
+        var (after, result) = GameEngine.Apply(state, new Moves.ConvertPlantsMove(0, Centre));
+
+        Assert.Equal(offered, locations.Contains(Centre));
+        Assert.Equal(offered, result.IsSuccess);
+        if (offered)
+            Assert.Equal(megaCredits + oceans * Constants.OceanAdjacencyBonus - 4, after.Players[0].Resources.MegaCredits);
+    }
+
     [Fact]
     public void OtherHexes_CostNothingExtra()
     {

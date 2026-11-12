@@ -1594,19 +1594,8 @@ public static class GameEngine
         return EffectExecutor.ExecuteSequential(state, playerId, effects, indices, entry.OwnerCardId);
     }
 
-    private static Effect? GetTriggerInnerEffect(TriggerQueueEntry entry)
-    {
-        if (entry.Trigger == null)
-            return null;
-        if (!CardRegistry.TryGet(entry.OwnerCardId, out var cardEntry))
-            return null;
-        foreach (var effect in cardEntry.OngoingEffects)
-        {
-            if (effect is WhenYouEffect whenYou && whenYou.Trigger == entry.Trigger)
-                return whenYou.Effect;
-        }
-        return null;
-    }
+    private static Effect? GetTriggerInnerEffect(TriggerQueueEntry entry) =>
+        TriggerSystem.GetInnerEffect(entry);
 
     // ── Formatting ─────────────────────────────────────────────
 

@@ -87,10 +87,11 @@ public static class TriggerSystem
         void CheckCard(string cardId)
         {
             if (!CardRegistry.TryGet(cardId, out var entry)) return;
+            var index = 0;
             foreach (var effect in entry.OngoingEffects)
             {
                 if (effect is WhenYouEffect whenYou && whenYou.Trigger == condition)
-                    result.Add(new TriggerQueueEntry(cardId, condition, triggeringCardId));
+                    result.Add(new TriggerQueueEntry(cardId, condition, triggeringCardId) { EffectIndex = index++ });
             }
         }
 
@@ -214,15 +215,16 @@ public static class TriggerSystem
         return EffectExecutor.ExecuteSequential(state, playerId, effects, indices, entry.OwnerCardId);
     }
 
-    private static Effect? GetInnerEffect(TriggerQueueEntry entry)
+    public static Effect? GetInnerEffect(TriggerQueueEntry entry)
     {
         if (entry.Trigger == null)
             return null;
         if (!CardRegistry.TryGet(entry.OwnerCardId, out var cardEntry))
             return null;
+        var index = 0;
         foreach (var effect in cardEntry.OngoingEffects)
         {
-            if (effect is WhenYouEffect whenYou && whenYou.Trigger == entry.Trigger)
+            if (effect is WhenYouEffect whenYou && whenYou.Trigger == entry.Trigger && index++ == entry.EffectIndex)
                 return whenYou.Effect;
         }
         return null;

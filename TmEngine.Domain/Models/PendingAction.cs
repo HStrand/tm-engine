@@ -145,6 +145,12 @@ public sealed record TriggerQueueEntry(
     /// For on-play entries only: which of the card's on-play effects still need executing.
     /// </summary>
     public ImmutableArray<int> DeferredEffectIndices { get; init; } = [];
+
+    /// <summary>
+    /// For triggered entries: which of the owner card's effects for this trigger, when it has more than one
+    /// (Optimal Aerobraking gives MC and heat as two effects).
+    /// </summary>
+    public int EffectIndex { get; init; }
 }
 
 /// <summary>
